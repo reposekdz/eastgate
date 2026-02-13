@@ -9,17 +9,17 @@ import type {
 } from "./types/enums";
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("rw-RW", {
     style: "currency",
-    currency: "USD",
+    currency: "RWF",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 }
 
 export function formatCompactCurrency(amount: number): string {
-  if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
-  if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
+  if (amount >= 1000000) return `RWF ${(amount / 1000000).toFixed(1)}M`;
+  if (amount >= 1000) return `RWF ${(amount / 1000).toFixed(0)}K`;
   return formatCurrency(amount);
 }
 
@@ -114,8 +114,10 @@ export function getDepartmentLabel(dept: Department): string {
 export function getRoleLabel(role: UserRole): string {
   const labels: Record<UserRole, string> = {
     super_admin: "Super Admin",
+    super_manager: "Super Manager",
     branch_manager: "Branch Manager",
     receptionist: "Receptionist",
+    waiter: "Waiter",
     housekeeping: "Housekeeping",
     restaurant_staff: "Restaurant Staff",
     accountant: "Accountant",

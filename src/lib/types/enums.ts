@@ -1,7 +1,9 @@
 export type UserRole =
   | "super_admin"
+  | "super_manager"
   | "branch_manager"
   | "receptionist"
+  | "waiter"
   | "housekeeping"
   | "restaurant_staff"
   | "accountant"

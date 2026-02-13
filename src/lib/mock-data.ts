@@ -17,38 +17,46 @@ export const branches: Branch[] = [
   {
     id: "br-001",
     name: "Kigali Main",
-    location: "KG 7 Ave, Kigali",
+    location: "KG 7 Ave, Kigali City",
     manager: "Jean-Pierre Habimana",
     totalRooms: 120,
     occupancyRate: 78,
   },
   {
     id: "br-002",
-    name: "Musanze Lodge",
-    location: "Musanze, Northern Province",
+    name: "Ngoma Branch",
+    location: "Ngoma District, Eastern Province",
     manager: "Diane Uwimana",
-    totalRooms: 60,
-    occupancyRate: 85,
+    totalRooms: 80,
+    occupancyRate: 72,
   },
   {
     id: "br-003",
-    name: "Gisenyi Lakeside",
-    location: "Rubavu, Lake Kivu",
+    name: "Kirehe Branch",
+    location: "Kirehe District, Eastern Province",
     manager: "Patrick Niyonsaba",
-    totalRooms: 45,
-    occupancyRate: 72,
+    totalRooms: 65,
+    occupancyRate: 68,
+  },
+  {
+    id: "br-004",
+    name: "Gatsibo Branch",
+    location: "Gatsibo District, Eastern Province",
+    manager: "Emmanuel Mugisha",
+    totalRooms: 75,
+    occupancyRate: 75,
   },
 ];
 
 // ─── KPIs ─────────────────────────────────────────────────
 export const kpiData: KpiData = {
-  totalRevenue: 2847500,
+  totalRevenue: 3702750000,
   revenueChange: 12.5,
   occupancyRate: 78,
   occupancyChange: 3.2,
-  adr: 385,
+  adr: 500500,
   adrChange: 8.1,
-  revpar: 300,
+  revpar: 390000,
   revparChange: 5.7,
 };
 
@@ -176,7 +184,8 @@ export const expenseData = [
 ];
 
 export const branchComparison = [
-  { branch: "Kigali Main", revenue: 1650000, occupancy: 78, adr: 385 },
-  { branch: "Musanze Lodge", revenue: 720000, occupancy: 85, adr: 320 },
-  { branch: "Gisenyi Lakeside", revenue: 477500, occupancy: 72, adr: 295 },
+  { branch: "Kigali Main", revenue: 1650000, occupancy: 78, adr: 385000 },
+  { branch: "Ngoma Branch", revenue: 980000, occupancy: 72, adr: 320000 },
+  { branch: "Kirehe Branch", revenue: 720000, occupancy: 68, adr: 295000 },
+  { branch: "Gatsibo Branch", revenue: 850000, occupancy: 75, adr: 310000 },
 ];
