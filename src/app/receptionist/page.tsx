@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,8 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { bookings } from "@/lib/mock-data";
+import { bookings, staff, branches } from "@/lib/mock-data";
 import { formatCurrency, formatDate, getBookingStatusLabel } from "@/lib/format";
+import { useAuthStore } from "@/lib/store/auth-store";
 import {
   UserPlus,
   LogIn,
@@ -39,10 +40,17 @@ import {
   Calendar,
   Clock,
   UserCheck,
+  Building2,
+  Users,
+  TrendingUp,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ReceptionistDashboard() {
+  const { user } = useAuthStore();
+  const userBranchId = user?.branchId || "br-001";
+  const userBranchName = user?.branchName || "Kigali Main";
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [checkInName, setCheckInName] = useState("");
@@ -50,7 +58,10 @@ export default function ReceptionistDashboard() {
   const [checkInEmail, setCheckInEmail] = useState("");
   const [checkInPhone, setCheckInPhone] = useState("");
 
-  const todayBookings = bookings.filter(
+  // Filter bookings by branch
+  const branchBookings = bookings.filter((b) => b.branchId === userBranchId);
+  
+  const todayBookings = branchBookings.filter(
     (b) => b.checkIn === new Date().toISOString().split("T")[0] || b.status === "checked_in"
   );
 
@@ -61,6 +72,10 @@ export default function ReceptionistDashboard() {
     const matchesStatus = statusFilter === "all" || b.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Branch stats
+  const branchStaff = staff.filter((s) => s.branchId === userBranchId);
+  const branchInfo = branches.find((b) => b.id === userBranchId);
 
   const handleCheckIn = (bookingId: string) => {
     toast.success(`Guest checked in successfully to Room ${checkInRoom}`);
@@ -86,11 +101,19 @@ export default function ReceptionistDashboard() {
     <div className="min-h-screen bg-pearl/30 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="heading-md text-charcoal">Reception Desk</h1>
-            <p className="body-sm text-text-muted-custom mt-1">
-              Manage guest check-ins and check-outs
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 bg-emerald rounded-lg flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="heading-sm text-charcoal">{userBranchName}</h1>
+                <p className="text-xs text-text-muted-custom">Reception Desk</p>
+              </div>
+            </div>
+            <p className="body-sm text-text-muted-custom">
+              Manage guest check-ins and check-outs • {branchInfo?.location}
             </p>
           </div>
           <div className="flex gap-3">
@@ -158,64 +181,83 @@ export default function ReceptionistDashboard() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-text-muted-custom">Expected Check-ins</p>
-                  <p className="text-2xl font-bold text-charcoal mt-1">
-                    {bookings.filter((b) => b.status === "confirmed").length}
+                  <p className="text-sm font-medium text-blue-900">Expected Check-ins</p>
+                  <p className="text-2xl font-bold text-blue-700 mt-1">
+                    {branchBookings.filter((b) => b.status === "confirmed").length}
                   </p>
+                  <p className="text-xs text-blue-600 mt-1">Today</p>
                 </div>
-                <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <LogIn className="h-6 w-6 text-blue-600" />
+                <div className="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <LogIn className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-text-muted-custom">Checked In</p>
-                  <p className="text-2xl font-bold text-charcoal mt-1">
-                    {bookings.filter((b) => b.status === "checked_in").length}
+                  <p className="text-sm font-medium text-emerald-900">Checked In</p>
+                  <p className="text-2xl font-bold text-emerald-700 mt-1">
+                    {branchBookings.filter((b) => b.status === "checked_in").length}
                   </p>
+                  <p className="text-xs text-emerald-600 mt-1">Active</p>
                 </div>
-                <div className="h-12 w-12 bg-emerald/20 rounded-full flex items-center justify-center">
-                  <UserCheck className="h-6 w-6 text-emerald" />
+                <div className="h-12 w-12 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <UserCheck className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-text-muted-custom">Expected Check-outs</p>
-                  <p className="text-2xl font-bold text-charcoal mt-1">
-                    {bookings.filter((b) => b.status === "checked_in" && b.checkOut === new Date().toISOString().split("T")[0]).length}
+                  <p className="text-sm font-medium text-orange-900">Expected Check-outs</p>
+                  <p className="text-2xl font-bold text-orange-700 mt-1">
+                    {branchBookings.filter((b) => b.status === "checked_in" && b.checkOut === new Date().toISOString().split("T")[0]).length}
                   </p>
+                  <p className="text-xs text-orange-600 mt-1">Today</p>
                 </div>
-                <div className="h-12 w-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <LogOut className="h-6 w-6 text-orange-600" />
+                <div className="h-12 w-12 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <LogOut className="h-6 w-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-text-muted-custom">Total Guests</p>
-                  <p className="text-2xl font-bold text-charcoal mt-1">{todayBookings.length}</p>
+                  <p className="text-sm font-medium text-purple-900">Total Guests</p>
+                  <p className="text-2xl font-bold text-purple-700 mt-1">{todayBookings.length}</p>
+                  <p className="text-xs text-purple-600 mt-1">Today</p>
                 </div>
-                <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <UserPlus className="h-6 w-6 text-purple-600" />
+                <div className="h-12 w-12 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <UserPlus className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-gold/20 to-gold/10 border-gold/30">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-charcoal">Branch Staff</p>
+                  <p className="text-2xl font-bold text-gold-dark mt-1">{branchStaff.length}</p>
+                  <p className="text-xs text-text-muted-custom mt-1">Active team</p>
+                </div>
+                <div className="h-12 w-12 bg-gold rounded-xl flex items-center justify-center shadow-lg">
+                  <Users className="h-6 w-6 text-charcoal" />
                 </div>
               </div>
             </CardContent>
