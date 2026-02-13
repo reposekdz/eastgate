@@ -17,6 +17,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { branches } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/format";
 import { format } from "date-fns";
@@ -31,9 +32,13 @@ import {
   Sparkles,
   Shield,
   Clock,
+  UtensilsCrossed,
+  ShoppingCart,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { MenuOrderDialog, type CartItem } from "@/components/MenuOrderDialog";
 
 const roomTypes = [
   { value: "standard", label: "Standard Room", price: 234000, capacity: 2, description: "Comfortable room with essential amenities" },
@@ -55,6 +60,8 @@ export default function BookingPage() {
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
+  const [menuCart, setMenuCart] = useState<CartItem[]>([]);
+  const [showMenuDialog, setShowMenuDialog] = useState(false);
 
   const selectedRoom = roomTypes.find((r) => r.value === roomType);
   const selectedBranch = branches.find((b) => b.id === branch);
@@ -88,15 +95,22 @@ export default function BookingPage() {
       setGuestEmail("");
       setGuestPhone("");
       setSpecialRequests("");
+      setMenuCart([]);
     }, 2000);
+  };
+
+  const removeFromCart = (itemId: string) => {
+    setMenuCart(menuCart.filter((c) => c.item.id !== itemId));
   };
 
   const numberOfNights = checkIn && checkOut 
     ? Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
-  const totalAmount = selectedRoom && numberOfNights > 0 
+  const roomTotal = selectedRoom && numberOfNights > 0 
     ? selectedRoom.price * numberOfNights 
     : 0;
+  const menuTotal = menuCart.reduce((sum, c) => sum + c.item.price * c.quantity, 0);
+  const totalAmount = roomTotal + menuTotal;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pearl via-ivory to-pearl py-16 px-4 sm:px-6">
@@ -383,6 +397,74 @@ export default function BookingPage() {
                     className="min-h-24"
                   />
                 </div>
+
+                {/* Menu Pre-Order Section */}
+                <div className="pt-4">
+                  <Separator className="mb-4" />
+                  <div className="bg-gradient-to-r from-gold/10 to-emerald/10 rounded-lg p-4">
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <UtensilsCrossed className="h-5 w-5 text-emerald" />
+                          <h3 className="font-heading font-semibold text-charcoal">
+                            Pre-Order from Our Menu
+                          </h3>
+                        </div>
+                        <p className="text-sm text-text-muted-custom">
+                          Add items to your booking and have them ready when you arrive
+                        </p>
+                      </div>
+                      {menuCart.length > 0 && (
+                        <Badge className="bg-emerald shrink-0">
+                          {menuCart.reduce((sum, c) => sum + c.quantity, 0)} items
+                        </Badge>
+                      )}
+                    </div>
+
+                    {menuCart.length > 0 && (
+                      <div className="space-y-2 mb-3">
+                        {menuCart.slice(0, 3).map(({ item, quantity }) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between text-sm bg-white rounded px-3 py-2"
+                          >
+                            <div className="flex-1">
+                              <span className="font-medium text-charcoal">{item.name}</span>
+                              <span className="text-text-muted-custom ml-2">× {quantity}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-emerald">
+                                {formatCurrency(item.price * quantity)}
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removeFromCart(item.id)}
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        {menuCart.length > 3 && (
+                          <p className="text-xs text-text-muted-custom text-center">
+                            +{menuCart.length - 3} more items
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={() => setShowMenuDialog(true)}
+                      variant="outline"
+                      className="w-full border-emerald text-emerald hover:bg-emerald hover:text-white"
+                    >
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      {menuCart.length > 0 ? "Update Menu Order" : "Browse Menu"}
+                    </Button>
+                  </div>
+                </div>
               </motion.div>
             )}
 
@@ -445,6 +527,27 @@ export default function BookingPage() {
                     </div>
                     <Separator />
 
+                    {menuCart.length > 0 && (
+                      <>
+                        <Separator />
+                        <div className="flex justify-between items-start">
+                          <span className="text-sm text-text-muted-custom">Menu Pre-Order</span>
+                          <div className="text-right max-w-[60%]">
+                            <div className="space-y-1">
+                              {menuCart.map(({ item, quantity }) => (
+                                <div key={item.id} className="text-xs text-text-muted-custom">
+                                  {item.name} × {quantity}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="font-semibold text-emerald text-sm mt-1">
+                              {formatCurrency(menuTotal)}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
                     <div className="flex justify-between items-start pt-4">
                       <span className="font-heading text-lg text-charcoal">Total Amount</span>
                       <div className="text-right">
@@ -453,6 +556,7 @@ export default function BookingPage() {
                         </div>
                         <div className="text-xs text-text-muted-custom">
                           {numberOfNights} {numberOfNights === 1 ? "night" : "nights"}
+                          {menuCart.length > 0 && " + menu items"}
                         </div>
                       </div>
                     </div>
@@ -524,8 +628,16 @@ export default function BookingPage() {
               <h3 className="font-semibold text-charcoal mb-1">{feature.title}</h3>
               <p className="text-sm text-text-muted-custom">{feature.desc}</p>
             </motion.div>
-          ))}\
+          ))}
         </div>
+
+        {/* Menu Order Dialog */}
+        <MenuOrderDialog
+          open={showMenuDialog}
+          onOpenChange={setShowMenuDialog}
+          cart={menuCart}
+          onUpdateCart={setMenuCart}
+        />
       </div>
     </div>
   );
