@@ -19,7 +19,6 @@ import {
   CalendarDays,
   Plus,
   Users,
-  MapPin,
   Clock,
   DollarSign,
   Building2,

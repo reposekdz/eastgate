@@ -25,7 +25,6 @@ import {
   BedDouble,
   UtensilsCrossed,
   UserCheck,
-  Clock,
   Target,
   Award,
   BarChart3,
@@ -162,7 +161,7 @@ export default function ManagerDashboard() {
               <p className="text-2xl font-bold text-orange-700">
                 {formatCurrency(restaurantRevenue)}
               </p>
-              <p className="text-xs text-orange-600 mt-2">Today's revenue</p>
+              <p className="text-xs text-orange-600 mt-2">Today&apos;s revenue</p>
             </CardContent>
           </Card>
         </div>
@@ -184,7 +183,7 @@ export default function ManagerDashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Activity className="h-5 w-5 text-emerald" />
-                    Today's Activity
+                    Today&apos;s Activity
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">

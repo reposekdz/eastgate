@@ -13,6 +13,7 @@ import {
 import { diningContent } from "@/lib/kw-data";
 import { images } from "@/lib/data";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function DiningPage() {
   const categories = [...new Set(diningContent.menuHighlights.map((m) => m.category))];
@@ -81,9 +82,11 @@ export default function DiningPage() {
             </SlideIn>
             <SlideIn direction="right">
               <div className="relative overflow-hidden rounded-[4px]">
-                <img
+                <Image
                   src="https://images.pexels.com/photos/19689229/pexels-photo-19689229.jpeg"
                   alt="Bar n'Lounge — Ifoto na Anthony Rahayel kuri Pexels"
+                  width={800}
+                  height={600}
                   className="w-full h-64 sm:h-80 lg:h-[450px] object-cover transition-transform duration-700 hover:scale-105"
                 />
                 <div className="absolute -bottom-4 -right-4 -z-10 h-full w-full rounded-[4px] border-2 border-gold/30" />

@@ -16,11 +16,8 @@ import {
 import {
   FadeInUp,
   SlideIn,
-  StaggerContainer,
-  StaggerItem,
 } from "@/components/animations/MotionWrapper";
 import { contactContent } from "@/lib/kw-data";
-import { images } from "@/lib/data";
 import {
   MapPin,
   Phone,

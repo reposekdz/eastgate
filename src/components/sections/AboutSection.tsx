@@ -1,6 +1,6 @@
 "use client";
 
-import { FadeInUp, SlideIn } from "@/components/animations/MotionWrapper";
+import { SlideIn } from "@/components/animations/MotionWrapper";
 import { Button } from "@/components/ui/button";
 import { images } from "@/lib/data";
 

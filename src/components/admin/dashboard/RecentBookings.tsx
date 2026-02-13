@@ -11,9 +11,8 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { bookings } from "@/lib/mock-data";
-import { formatCurrency, formatDate, getBookingStatusLabel, getRoomTypeLabel } from "@/lib/format";
+import { formatCurrency, formatDate, getRoomTypeLabel } from "@/lib/format";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import BookingStatusBadge from "@/components/admin/shared/BookingStatusBadge";

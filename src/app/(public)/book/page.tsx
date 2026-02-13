@@ -16,10 +16,9 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { branches } from "@/lib/mock-data";
-import { formatCurrency, getRoomTypeLabel } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { format } from "date-fns";
 import {
   MapPin,
@@ -280,13 +279,13 @@ export default function BookingPage() {
                           <SelectItem key={n} value={n.toString()}>
                             {n} {n === 1 ? "Child" : "Children"}
                           </SelectItem>
-                        ))}
+                        ))}\
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               </motion.div>
-            )}
+            )}\
 
             {/* Step 2: Room Selection */}
             {step === 2 && (
@@ -465,7 +464,7 @@ export default function BookingPage() {
                   <div>
                     <h4 className="font-semibold text-sm text-blue-900 mb-1">Secure Booking</h4>
                     <p className="text-xs text-blue-700">
-                      Your information is encrypted and secure. You'll receive a confirmation email
+                      Your information is encrypted and secure. You&apos;ll receive a confirmation email
                       within minutes.
                     </p>
                   </div>
@@ -483,7 +482,7 @@ export default function BookingPage() {
                 >
                   Back
                 </Button>
-              )}
+              )}\
               {step < 4 ? (
                 <Button
                   onClick={handleNext}
@@ -500,7 +499,7 @@ export default function BookingPage() {
                   <Check className="mr-2 h-4 w-4" />
                   Confirm Booking
                 </Button>
-              )}
+              )}\
             </div>
           </CardContent>
         </Card>
@@ -525,7 +524,7 @@ export default function BookingPage() {
               <h3 className="font-semibold text-charcoal mb-1">{feature.title}</h3>
               <p className="text-sm text-text-muted-custom">{feature.desc}</p>
             </motion.div>
-          ))}
+          ))}\
         </div>
       </div>
     </div>

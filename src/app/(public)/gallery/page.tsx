@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   FadeInUp,
-  StaggerContainer,
-  StaggerItem,
 } from "@/components/animations/MotionWrapper";
 import { galleryContent } from "@/lib/kw-data";
 import { images } from "@/lib/data";

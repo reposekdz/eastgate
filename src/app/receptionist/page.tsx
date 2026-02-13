@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,14 +36,10 @@ import {
   LogIn,
   LogOut,
   Search,
-  Filter,
   Calendar,
-  Clock,
   UserCheck,
   Building2,
   Users,
-  TrendingUp,
-  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -77,11 +73,11 @@ export default function ReceptionistDashboard() {
   const branchStaff = staff.filter((s) => s.branchId === userBranchId);
   const branchInfo = branches.find((b) => b.id === userBranchId);
 
-  const handleCheckIn = (bookingId: string) => {
+  const handleCheckIn = (_bookingId: string) => {
     toast.success(`Guest checked in successfully to Room ${checkInRoom}`);
   };
 
-  const handleCheckOut = (bookingId: string, roomNumber: string) => {
+  const handleCheckOut = (_bookingId: string, roomNumber: string) => {
     toast.success(`Guest checked out from Room ${roomNumber}`);
   };
 
@@ -268,7 +264,7 @@ export default function ReceptionistDashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Today's Bookings</CardTitle>
+              <CardTitle>Today&apos;s Bookings</CardTitle>
               <div className="flex gap-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted-custom" />

@@ -16,7 +16,6 @@ import {
   DollarSign,
   Plus,
   User,
-  CreditCard,
   BedDouble,
 } from "lucide-react";
 

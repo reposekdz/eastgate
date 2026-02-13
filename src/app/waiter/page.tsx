@@ -40,10 +40,6 @@ import {
   Plus,
   Minus,
   ShoppingCart,
-  Building2,
-  Users,
-  TrendingUp,
-  DollarSign,
   ChefHat,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -63,7 +59,6 @@ export default function WaiterDashboard() {
   const activeOrders = branchOrders.filter((o) => o.status !== "served");
   
   // Branch stats
-  const branchStaff = staff.filter((s) => s.branchId === userBranchId && s.role === "waiter");
   const branchInfo = branches.find((b) => b.id === userBranchId);
   
   const filteredOrders = activeOrders.filter((o) => {

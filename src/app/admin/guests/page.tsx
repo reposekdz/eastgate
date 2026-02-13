@@ -25,11 +25,10 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { guests } from "@/lib/mock-data";
-import { formatCurrency, formatDate, getLoyaltyTierLabel } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import LoyaltyBadge from "@/components/admin/shared/LoyaltyBadge";
 import type { Guest } from "@/lib/types/schema";
 import {

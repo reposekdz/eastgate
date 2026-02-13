@@ -1,6 +1,6 @@
 "use client";
 
-import { SlideIn, FadeInUp } from "@/components/animations/MotionWrapper";
+import { SlideIn } from "@/components/animations/MotionWrapper";
 import { Button } from "@/components/ui/button";
 import { images, spaServices } from "@/lib/data";
 import { Leaf } from "lucide-react";

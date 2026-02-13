@@ -13,6 +13,7 @@ import { aboutContent } from "@/lib/kw-data";
 import { images } from "@/lib/data";
 import { Target, Eye, Heart, Shield, Globe, Award, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 const valueIcons = [Heart, Shield, Globe, Award];
 
@@ -89,9 +90,11 @@ export default function AboutPage() {
             <SlideIn direction="right">
               <div className="relative">
                 <div className="overflow-hidden rounded-[4px]">
-                  <img
+                  <Image
                     src={images.lobby}
                     alt={images.lobbyAlt}
+                    width={800}
+                    height={600}
                     className="h-64 sm:h-80 lg:h-[450px] w-full object-cover transition-transform duration-700 hover:scale-105"
                   />
                 </div>
@@ -219,9 +222,11 @@ export default function AboutPage() {
               <StaggerItem key={member.name}>
                 <Card className="group bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-1 h-full overflow-hidden">
                   <div className="relative h-56 sm:h-64 overflow-hidden">
-                    <img
+                    <Image
                       src={member.avatar}
                       alt={member.name}
+                      width={400}
+                      height={400}
                       className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
