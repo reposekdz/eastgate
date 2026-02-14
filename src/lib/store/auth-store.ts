@@ -38,7 +38,7 @@ const staffUsers: (User & { password: string })[] = [
   {
     id: "u-000",
     name: "EastGate Admin",
-    email: "eastgate@gmail.com",
+    email: "admin@eastgates.com",
     password: "2026",
     role: "super_admin",
     branchId: "all",
@@ -46,17 +46,17 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=eastgate-admin",
   },
   {
-    id: "u-000b",
-    name: "EastGate Manager",
-    email: "eastgate@hmail.com",
+    id: "u-001",
+    name: "Manager Chief",
+    email: "manager@eastgates.com",
     password: "2026",
     role: "super_manager",
     branchId: "all",
     branchName: "All Branches",
-    avatar: "https://i.pravatar.cc/40?u=eastgate-manager",
+    avatar: "https://i.pravatar.cc/40?u=manager",
   },
   {
-    id: "u-001",
+    id: "u-002",
     name: "Admin Superuser",
     email: "admin@eastgate.rw",
     password: "admin123",
@@ -66,19 +66,19 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=admin",
   },
   {
-    id: "u-002",
-    name: "Manager Chief",
+    id: "u-003",
+    name: "Manager Superuser",
     email: "manager@eastgate.rw",
     password: "manager123",
     role: "super_manager",
     branchId: "all",
     branchName: "All Branches",
-    avatar: "https://i.pravatar.cc/40?u=manager",
+    avatar: "https://i.pravatar.cc/40?u=manager-rw",
   },
 
   // ═══ Kigali Main Branch (br-001) ═══
   {
-    id: "u-003",
+    id: "u-004",
     name: "Jean-Pierre Habimana",
     email: "jp@eastgate.rw",
     password: "jp123",
@@ -88,7 +88,7 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=jp-habimana",
   },
   {
-    id: "u-004",
+    id: "u-005",
     name: "Grace Uwase",
     email: "grace@eastgate.rw",
     password: "grace123",
@@ -98,7 +98,7 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=grace-uwase",
   },
   {
-    id: "u-005",
+    id: "u-006",
     name: "Patrick Bizimana",
     email: "patrick@eastgate.rw",
     password: "patrick123",
@@ -108,7 +108,7 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=patrick-b",
   },
   {
-    id: "u-006",
+    id: "u-007",
     name: "Aimée Kamikazi",
     email: "aimee@eastgate.rw",
     password: "aimee123",
@@ -120,7 +120,7 @@ const staffUsers: (User & { password: string })[] = [
 
   // ═══ Ngoma Branch (br-002) ═══
   {
-    id: "u-007",
+    id: "u-008",
     name: "Diane Uwimana",
     email: "diane@eastgate.rw",
     password: "diane123",
@@ -130,7 +130,7 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=diane-uwimana",
   },
   {
-    id: "u-008",
+    id: "u-009",
     name: "Eric Ndikumana",
     email: "eric.n@eastgate.rw",
     password: "eric123",
@@ -140,7 +140,7 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=eric-n",
   },
   {
-    id: "u-009",
+    id: "u-010",
     name: "Joseph Habiyaremye",
     email: "joseph@eastgate.rw",
     password: "joseph123",
@@ -152,7 +152,7 @@ const staffUsers: (User & { password: string })[] = [
 
   // ═══ Kirehe Branch (br-003) ═══
   {
-    id: "u-010",
+    id: "u-011",
     name: "Patrick Niyonsaba",
     email: "patrick.n@eastgate.rw",
     password: "patrick.n123",
@@ -162,7 +162,7 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=patrick-n",
   },
   {
-    id: "u-011",
+    id: "u-012",
     name: "Esperance Mukamana",
     email: "esperance@eastgate.rw",
     password: "esperance123",
@@ -172,7 +172,7 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=esperance-m",
   },
   {
-    id: "u-012",
+    id: "u-013",
     name: "Angelique Uwera",
     email: "angelique@eastgate.rw",
     password: "angelique123",
@@ -184,7 +184,7 @@ const staffUsers: (User & { password: string })[] = [
 
   // ═══ Gatsibo Branch (br-004) ═══
   {
-    id: "u-013",
+    id: "u-014",
     name: "Emmanuel Mugisha",
     email: "emmanuel.m@eastgate.rw",
     password: "emmanuel123",
@@ -194,7 +194,7 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=emmanuel-m",
   },
   {
-    id: "u-014",
+    id: "u-015",
     name: "Sylvie Uwamahoro",
     email: "sylvie@eastgate.rw",
     password: "sylvie123",
@@ -204,7 +204,7 @@ const staffUsers: (User & { password: string })[] = [
     avatar: "https://i.pravatar.cc/40?u=sylvie-u",
   },
   {
-    id: "u-015",
+    id: "u-016",
     name: "Chantal Uwase",
     email: "chantal@eastgate.rw",
     password: "chantal123",

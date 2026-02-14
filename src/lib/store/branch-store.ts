@@ -7,9 +7,6 @@ import {
   restaurantOrders,
   menuItems,
   events,
-  revenueData,
-  kpiData,
-  occupancyData,
 } from "@/lib/mock-data";
 import type {
   Branch,
@@ -162,7 +159,7 @@ interface BranchStore {
 const isSuperRole = (role: UserRole) =>
   role === "super_admin" || role === "super_manager";
 
-export const useBranchStore = create<BranchStore>()((set, get) => ({
+export const useBranchStore = create<BranchStore>()((set) => ({
   selectedBranchId: "br-001",
 
   setSelectedBranch: (branchId: string) => set({ selectedBranchId: branchId }),

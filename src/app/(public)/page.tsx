@@ -235,6 +235,29 @@ export default function HomePage() {
           </motion.div>
 
           <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1.3 }}
+            className="mt-6"
+          >
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="border border-emerald/40 text-emerald bg-emerald/10 hover:bg-emerald/20 hover:border-emerald px-6 py-5 rounded-[2px] uppercase tracking-wider text-xs backdrop-blur-sm transition-all duration-300"
+            >
+              <Link href="/staff-login">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                  <path d="M18 20a6 6 0 0 0-12 0"/>
+                  <circle cx="12" cy="10" r="4"/>
+                  <circle cx="12" cy="12" r="10"/>
+                </svg>
+                Staff Login
+              </Link>
+            </Button>
+          </motion.div>
+
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 1.5 }}

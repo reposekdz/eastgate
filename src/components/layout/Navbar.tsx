@@ -2,25 +2,27 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, UtensilsCrossed } from "lucide-react";
+import { Menu, X, UtensilsCrossed, Search, Globe, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useI18n } from "@/lib/i18n/context";
-import LanguageSelector from "@/components/shared/LanguageSelector";
-import CurrencySelector from "@/components/shared/CurrencySelector";
-import LiveClock from "@/components/shared/LiveClock";
-import { GlobalSearch } from "@/components/search/GlobalSearch";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MenuOrderDialog, type CartItem } from "@/components/MenuOrderDialog";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [showMenuOrder, setShowMenuOrder] = useState(false);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentTime, setCurrentTime] = useState(new Date());
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const { t } = useI18n();
+  const { t, locale, setLocale } = useI18n();
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const navLinks = [
     { label: t("nav", "about"), href: "/about" },
@@ -48,7 +50,12 @@ export default function Navbar() {
     ? "bg-charcoal/95 backdrop-blur-sm shadow-lg"
     : "bg-transparent";
 
-  const totalCartItems = cart.reduce((sum, c) => sum + c.quantity, 0);
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
+    }
+  };
 
   return (
     <>
@@ -58,6 +65,40 @@ export default function Navbar() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${navBg}`}
       >
+        {/* Top Bar with Search, Time, Language */}
+        <div className="border-b border-white/10 py-2 hidden lg:block">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+            <form onSubmit={handleSearch} className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+              <Input
+                placeholder="Search rooms, dining, spa..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-9 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+              />
+            </form>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-white/70 text-sm">
+                <Clock className="h-4 w-4" />
+                <span>{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <Select value={locale} onValueChange={setLocale}>
+                <SelectTrigger className="w-32 h-9 bg-white/10 border-white/20 text-white">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    <SelectValue />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="rw">Kinyarwanda</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Navigation */}
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           {/* Menu Icon (always visible on mobile/tablet) + Logo */}
           <div className="flex items-center gap-3">
@@ -98,16 +139,13 @@ export default function Navbar() {
           {/* CTA Desktop */}
           <div className="hidden lg:flex items-center gap-2">
             <Button
-              onClick={() => setShowMenuOrder(true)}
-              className="bg-emerald hover:bg-emerald-dark text-white font-semibold px-4 py-2 rounded-[2px] tracking-wide uppercase text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(11,110,79,0.3)] gap-2 relative"
+              asChild
+              className="bg-emerald hover:bg-emerald-dark text-white font-semibold px-4 py-2 rounded-[2px] tracking-wide uppercase text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(11,110,79,0.3)] gap-2"
             >
-              <UtensilsCrossed size={16} />
-              Order Food
-              {totalCartItems > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-gold text-charcoal text-[10px] font-bold flex items-center justify-center">
-                  {totalCartItems}
-                </span>
-              )}
+              <Link href="/order-food">
+                <UtensilsCrossed size={16} />
+                Order Food
+              </Link>
             </Button>
             <Button
               asChild
@@ -115,22 +153,37 @@ export default function Navbar() {
             >
               <Link href="/book">{t("nav", "bookRoom")}</Link>
             </Button>
+            {pathname === "/" && (
+              <Button
+                asChild
+                variant="outline"
+                className="border-white/20 text-white hover:bg-white/10 font-semibold px-6 py-2 rounded-[2px] tracking-wide uppercase text-sm"
+              >
+                <Link href="/login">Login</Link>
+              </Button>
+            )}
           </div>
 
-          {/* Mobile: order button */}
+          {/* Mobile: order button + language */}
           <div className="flex items-center gap-2 lg:hidden">
+            <Select value={locale} onValueChange={setLocale}>
+              <SelectTrigger className="w-16 h-8 bg-white/10 border-white/20 text-white p-1">
+                <Globe className="h-4 w-4" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">EN</SelectItem>
+                <SelectItem value="rw">RW</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
-              onClick={() => setShowMenuOrder(true)}
+              asChild
               size="sm"
-              className="bg-emerald hover:bg-emerald-dark text-white rounded-[2px] gap-1 relative h-8 px-2.5 text-xs"
+              className="bg-emerald hover:bg-emerald-dark text-white rounded-[2px] gap-1 h-8 px-2.5 text-xs"
             >
-              <UtensilsCrossed size={14} />
-              <span className="hidden sm:inline">Order Food</span>
-              {totalCartItems > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-gold text-charcoal text-[9px] font-bold flex items-center justify-center">
-                  {totalCartItems}
-                </span>
-              )}
+              <Link href="/order-food">
+                <UtensilsCrossed size={14} />
+                <span className="hidden sm:inline">Order Food</span>
+              </Link>
             </Button>
           </div>
         </nav>
@@ -160,19 +213,13 @@ export default function Navbar() {
                   </Link>
                 ))}
                 <Button
-                  onClick={() => {
-                    setShowMenuOrder(true);
-                    setMobileOpen(false);
-                  }}
-                  className="bg-emerald hover:bg-emerald-dark text-white font-semibold rounded-[2px] uppercase tracking-wide gap-2 relative mt-2"
+                  asChild
+                  className="bg-emerald hover:bg-emerald-dark text-white font-semibold rounded-[2px] uppercase tracking-wide gap-2 mt-2"
                 >
-                  <UtensilsCrossed size={16} />
-                  Order Food
-                  {totalCartItems > 0 && (
-                    <span className="ml-1 h-5 w-5 rounded-full bg-gold text-charcoal text-[10px] font-bold flex items-center justify-center">
-                      {totalCartItems}
-                    </span>
-                  )}
+                  <Link href="/order-food">
+                    <UtensilsCrossed size={16} />
+                    Order Food
+                  </Link>
                 </Button>
                 <Button
                   asChild
@@ -180,19 +227,20 @@ export default function Navbar() {
                 >
                   <Link href="/book">{t("nav", "bookRoom")}</Link>
                 </Button>
+                {pathname === "/" && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="border-white/20 text-white hover:bg-white/10 font-semibold rounded-[2px] uppercase tracking-wide"
+                  >
+                    <Link href="/login">Login</Link>
+                  </Button>
+                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </motion.header>
-
-      {/* Menu Order Dialog */}
-      <MenuOrderDialog
-        open={showMenuOrder}
-        onOpenChange={setShowMenuOrder}
-        cart={cart}
-        onUpdateCart={setCart}
-      />
     </>
   );
 }

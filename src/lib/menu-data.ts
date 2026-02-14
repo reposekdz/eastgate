@@ -37,6 +37,7 @@ export interface MenuItemDetail {
   popular?: boolean;
   spicy?: boolean;
   vegetarian?: boolean;
+  image?: string;
 }
 
 export const menuCategories: Array<{

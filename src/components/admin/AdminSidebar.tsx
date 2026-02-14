@@ -59,6 +59,7 @@ const navGroups = [
     items: [
       { title: "Finance", href: "/admin/finance", icon: DollarSign },
       { title: "Staff", href: "/admin/staff", icon: UserCog },
+      { title: "Staff Management", href: "/admin/staff-management", icon: ShieldCheck },
       { title: "Settings", href: "/admin/settings", icon: Settings },
     ],
   },

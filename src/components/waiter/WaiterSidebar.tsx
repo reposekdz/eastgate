@@ -10,6 +10,7 @@ import {
   Grid3X3,
   Bell,
   CoffeeIcon,
+  ChefHat,
 } from "lucide-react";
 
 const navGroups: NavGroup[] = [
@@ -22,6 +23,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Restaurant",
     items: [
+      { title: "Kitchen Display", href: "/waiter/kitchen-display", icon: ChefHat },
       { title: "Table Map", href: "/waiter/tables", icon: Grid3X3 },
       { title: "Orders", href: "/waiter/orders", icon: UtensilsCrossed, badge: "3" },
       { title: "New Order", href: "/waiter/new-order", icon: CoffeeIcon },
