@@ -92,7 +92,7 @@ export default function Navbar() {
                     <span>{languageFlags[locale]} {languageNames[locale]}</span>
                   </div>
                 </SelectTrigger>
-                <SelectContent className="max-h-80 z-[100] bg-white">
+                <SelectContent className="z-[9999] bg-white border shadow-lg" position="popper" sideOffset={5}>
                   <SelectItem value="en">{languageFlags.en} {languageNames.en}</SelectItem>
                   <SelectItem value="rw">{languageFlags.rw} {languageNames.rw}</SelectItem>
                   <SelectItem value="fr">{languageFlags.fr} {languageNames.fr}</SelectItem>
@@ -152,19 +152,19 @@ export default function Navbar() {
                 alt="EastGate Hotel" 
                 width={150} 
                 height={60}
-                className="h-12 sm:h-14 lg:h-16 w-auto object-contain drop-shadow-lg rounded-xl"
+                className="h-10 sm:h-12 lg:h-14 xl:h-16 w-auto object-contain drop-shadow-lg rounded-xl"
                 priority
               />
             </Link>
           </div>
 
           {/* Desktop Nav */}
-          <div className="hidden items-center gap-4 xl:gap-6 lg:flex">
+          <div className="hidden items-center gap-2 xl:gap-4 lg:flex">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`body-sm transition-colors duration-300 font-medium tracking-wide uppercase ${
+                className={`text-xs xl:text-sm transition-colors duration-300 font-medium tracking-wide uppercase whitespace-nowrap ${
                   pathname === link.href
                     ? "text-gold"
                     : "text-white/80 hover:text-gold"
@@ -176,25 +176,27 @@ export default function Navbar() {
           </div>
 
           {/* CTA Desktop */}
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2">
             <Button
               asChild
-              className="bg-emerald hover:bg-emerald-dark text-white font-semibold px-4 py-2 rounded-[2px] tracking-wide uppercase text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(11,110,79,0.3)] gap-2"
+              className="bg-emerald hover:bg-emerald-dark text-white font-semibold px-2 xl:px-4 py-1.5 xl:py-2 rounded-[2px] tracking-wide uppercase text-[10px] xl:text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(11,110,79,0.3)] gap-1 xl:gap-2 whitespace-nowrap"
             >
               <Link href="/menu">
-                <UtensilsCrossed size={16} />                {t("nav", "orderFood")}
+                <UtensilsCrossed size={14} className="xl:w-4 xl:h-4" />
+                <span className="hidden xl:inline">{t("nav", "orderFood")}</span>
+                <span className="xl:hidden">Order</span>
               </Link>
             </Button>
             <Button
               asChild
-              className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-6 py-2 rounded-[2px] tracking-wide uppercase text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(200,169,81,0.3)]"
+              className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-3 xl:px-6 py-1.5 xl:py-2 rounded-[2px] tracking-wide uppercase text-[10px] xl:text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(200,169,81,0.3)] whitespace-nowrap"
             >
               <Link href="/book">{t("nav", "bookRoom")}</Link>
             </Button>
             {pathname === "/" && (
               <Button
                 asChild
-                className="bg-gradient-to-r from-gold to-gold-dark hover:from-gold-dark hover:to-gold text-charcoal font-bold px-8 py-2.5 rounded-full tracking-wide uppercase text-sm transition-all duration-300 hover:shadow-[0_0_25px_rgba(200,169,81,0.5)] hover:scale-105 border-2 border-gold-light"
+                className="bg-gradient-to-r from-gold to-gold-dark hover:from-gold-dark hover:to-gold text-charcoal font-bold px-4 xl:px-8 py-1.5 xl:py-2.5 rounded-full tracking-wide uppercase text-[10px] xl:text-sm transition-all duration-300 hover:shadow-[0_0_25px_rgba(200,169,81,0.5)] hover:scale-105 border-2 border-gold-light whitespace-nowrap"
               >
                 <Link href="/login">{t("auth", "signIn")}</Link>
               </Button>
@@ -207,7 +209,7 @@ export default function Navbar() {
               <SelectTrigger className="w-20 h-8 bg-white/10 border-white/20 text-white p-1 hover:bg-white/20 transition-colors">
                 <span className="text-sm">{languageFlags[locale]}</span>
               </SelectTrigger>
-              <SelectContent className="max-h-80 z-[100] bg-white">
+              <SelectContent className="z-[9999] bg-white border shadow-lg" position="popper" sideOffset={5}>
                 <SelectItem value="en">{languageFlags.en} EN</SelectItem>
                 <SelectItem value="rw">{languageFlags.rw} RW</SelectItem>
                 <SelectItem value="fr">{languageFlags.fr} FR</SelectItem>

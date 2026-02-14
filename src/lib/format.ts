@@ -9,12 +9,7 @@ import type {
 } from "./types/enums";
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("rw-RW", {
-    style: "currency",
-    currency: "RWF",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return `RWF ${amount.toLocaleString('en-US')}`;
 }
 
 export function formatCompactCurrency(amount: number): string {
