@@ -37,16 +37,18 @@ export default function BottomNav() {
 
   const bottomNavLinks = [
     { label: t("nav", "home"), href: "/", icon: "Home" as const },
-    { label: t("nav", "rooms"), href: "/rooms", icon: "Bed" as const },
+    { label: t("nav", "orderFood"), href: "/menu", icon: "UtensilsCrossed" as const },
+    { label: t("nav", "bookRoom"), href: "/book", icon: "Bed" as const },
     { label: t("nav", "gallery"), href: "/gallery", icon: "Images" as const },
-    { label: t("nav", "about"), href: "/about", icon: "Users" as const },
     { label: isRw ? "Byose" : "More", href: "#more", icon: "Menu" as const },
   ];
 
   const moreMenuLinks = [
+    { label: t("nav", "rooms"), href: "/rooms", icon: "Bed" as const },
     { label: t("nav", "dining"), href: "/dining", icon: "UtensilsCrossed" as const },
     { label: isRw ? "Spa n'Ubuzima" : "Spa & Wellness", href: "/spa", icon: "Sparkles" as const },
     { label: t("nav", "events"), href: "/events", icon: "CalendarDays" as const },
+    { label: t("nav", "about"), href: "/about", icon: "Users" as const },
     { label: t("nav", "contact"), href: "/contact", icon: "MessageCircle" as const },
   ];
 
