@@ -174,6 +174,7 @@ export default function RoomManagementPage() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </div>
       </section>

@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import KpiCards from "@/components/admin/dashboard/KpiCards";
 import RevenueChart from "@/components/admin/dashboard/RevenueChart";
 import OccupancyChart from "@/components/admin/dashboard/OccupancyChart";

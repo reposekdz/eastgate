@@ -50,7 +50,7 @@ export default function OrderFoodPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [cartOpen, setCartOpen] = useState(false);
-  const { items, addItem, removeItem, updateQuantity, getTotal, clearCart } = useCartStore();
+  const { items, addItem, removeItem, updateQuantity, totalAmount, clearCart } = useCartStore();
 
   const categories = ["all", ...Array.from(new Set(menuItems.map((item) => item.category)))];
 
@@ -67,13 +67,16 @@ export default function OrderFoodPage() {
     addItem({
       id: item.id,
       name: item.name,
+      nameEn: item.name,
       price: item.price,
-      quantity: 1,
+      image: menuImages[item.name] || "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg",
+      category: item.category,
+      description: item.description,
     });
     toast.success(`${item.name} added to cart`);
   };
 
-  const cartTotal = getTotal();
+  const cartTotal = totalAmount();
   const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -181,7 +184,7 @@ export default function OrderFoodPage() {
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             >
               {filteredItems.map((item, idx) => {
-                const cartItem = items.find((i) => i.id === item.id);
+                const cartItem = items.find((i) => i.item.id === item.id);
                 const Icon = categoryIcons[item.category as keyof typeof categoryIcons];
                 
                 return (
@@ -303,41 +306,41 @@ export default function OrderFoodPage() {
                     <p className="text-text-muted-custom">Your cart is empty</p>
                   </div>
                 ) : (
-                  items.map((item) => (
-                    <Card key={item.id} className="overflow-hidden">
+                  items.map((cartItem) => (
+                    <Card key={cartItem.item.id} className="overflow-hidden">
                       <CardContent className="p-3">
                         <div className="flex items-start gap-3">
                           <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
                             <Image
-                              src={menuImages[item.name] || "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg"}
-                              alt={item.name}
+                              src={cartItem.item.image}
+                              alt={cartItem.item.name}
                               fill
                               className="object-cover"
                             />
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-sm text-charcoal truncate">
-                              {item.name}
+                              {cartItem.item.name}
                             </h4>
                             <p className="text-sm text-emerald font-bold">
-                              {formatCurrency(item.price)}
+                              {formatCurrency(cartItem.item.price)}
                             </p>
                             <div className="flex items-center gap-2 mt-2">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                                onClick={() => updateQuantity(cartItem.item.id, Math.max(0, cartItem.quantity - 1))}
                                 className="h-7 w-7 p-0"
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
                               <span className="text-sm font-semibold w-8 text-center">
-                                {item.quantity}
+                                {cartItem.quantity}
                               </span>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(cartItem.item.id, cartItem.quantity + 1)}
                                 className="h-7 w-7 p-0"
                               >
                                 <Plus className="h-3 w-3" />
@@ -345,7 +348,7 @@ export default function OrderFoodPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => removeItem(item.id)}
+                                onClick={() => removeItem(cartItem.item.id)}
                                 className="h-7 w-7 p-0 ml-auto text-destructive hover:text-destructive"
                               >
                                 <X className="h-4 w-4" />

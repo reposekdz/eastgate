@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { translations, type Locale, type TranslationKey, type TranslationSubKey } from "./translations";
+import { isRTL } from "./multi-lang-translations";
+import { completeTranslations } from "./auto-translate";
 
 interface I18nContextType {
   locale: Locale;
@@ -11,6 +13,7 @@ interface I18nContextType {
   t: <T extends TranslationKey>(section: T, key: TranslationSubKey<T>) => string;
   isRw: boolean;
   isEn: boolean;
+  isRTL: boolean;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -26,19 +29,23 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") {
       localStorage.setItem("eastgate-locale", newLocale);
     }
+    // Set document language and direction
     document.documentElement.lang = newLocale;
+    document.documentElement.dir = isRTL(newLocale) ? "rtl" : "ltr";
   }, []);
 
   const setLanguage = useCallback((lang: string) => {
-    const newLocale = (lang === "rw" || lang === "en" ? lang : "en") as Locale;
+    const validLocales: Locale[] = ["en", "rw", "fr", "sw", "es", "de", "zh", "ar", "pt", "ja"];
+    const newLocale = (validLocales.includes(lang as Locale) ? lang : "en") as Locale;
     setLocale(newLocale);
   }, [setLocale]);
 
   const t = useCallback(
     <T extends TranslationKey>(section: T, key: TranslationSubKey<T>): string => {
-      const sectionData = translations[section];
+      // Use complete translations with auto-fill
+      const sectionData = completeTranslations[section] || translations[section];
       if (!sectionData) return String(key);
-      const entry = sectionData[key] as { en: string; rw: string } | undefined;
+      const entry = sectionData[key] as Record<Locale, string> | undefined;
       if (!entry) return String(key);
       return entry[locale] || entry.en || String(key);
     },
@@ -48,9 +55,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMounted(true);
     const saved = localStorage.getItem("eastgate-locale") as Locale | null;
-    if (saved && (saved === "en" || saved === "rw")) {
+    const validLocales: Locale[] = ["en", "rw", "fr", "sw", "es", "de", "zh", "ar", "pt", "ja"];
+    if (saved && validLocales.includes(saved)) {
       setLocaleState(saved);
       setLanguageState(saved);
+      // Set initial direction
+      document.documentElement.dir = isRTL(saved) ? "rtl" : "ltr";
     }
   }, []);
 
@@ -68,6 +78,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         t,
         isRw: locale === "rw",
         isEn: locale === "en",
+        isRTL: isRTL(locale),
       }}
     >
       {children}
@@ -78,7 +89,23 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 export function useI18n() {
   const context = useContext(I18nContext);
   if (!context) {
-    throw new Error("useI18n must be used within an I18nProvider");
+    // Return default values for SSR/build time
+    return {
+      locale: "en" as Locale,
+      language: "en",
+      setLocale: () => {},
+      setLanguage: () => {},
+      t: <T extends TranslationKey>(section: T, key: TranslationSubKey<T>): string => {
+        const sectionData = completeTranslations[section] || translations[section];
+        if (!sectionData) return String(key);
+        const entry = sectionData[key] as Record<Locale, string> | undefined;
+        if (!entry) return String(key);
+        return entry.en || String(key);
+      },
+      isRw: false,
+      isEn: true,
+      isRTL: false,
+    };
   }
   return context;
 }

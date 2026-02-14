@@ -5,6 +5,7 @@ export type UserRole =
   | "receptionist"
   | "waiter"
   | "housekeeping"
+  | "kitchen_staff"
   | "restaurant_staff"
   | "accountant"
   | "event_manager"

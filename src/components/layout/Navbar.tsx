@@ -1,30 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, UtensilsCrossed, Search, Globe, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { languageNames, languageFlags } from "@/lib/i18n/multi-lang-translations";
 import { useI18n } from "@/lib/i18n/context";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const pathname = usePathname();
   const isHome = pathname === "/";
   const { t, locale, setLocale } = useI18n();
 
   useEffect(() => {
+    setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const navLinks = [
+  const navLinks = useMemo(() => [
     { label: t("nav", "about"), href: "/about" },
     { label: t("nav", "rooms"), href: "/rooms" },
     { label: t("nav", "dining"), href: "/dining" },
@@ -34,7 +37,7 @@ export default function Navbar() {
     { label: t("nav", "gallery"), href: "/gallery" },
     { label: "FAQ", href: "/#faq" },
     { label: t("nav", "contact"), href: "/contact" },
-  ];
+  ], [t, locale]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -80,18 +83,26 @@ export default function Navbar() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-white/70 text-sm">
                 <Clock className="h-4 w-4" />
-                <span>{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                <span>{currentTime ? currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
               </div>
               <Select value={locale} onValueChange={setLocale}>
-                <SelectTrigger className="w-32 h-9 bg-white/10 border-white/20 text-white">
+                <SelectTrigger className="w-40 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20 transition-colors">
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4" />
-                    <SelectValue />
+                    <span>{languageFlags[locale]} {languageNames[locale]}</span>
                   </div>
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="rw">Kinyarwanda</SelectItem>
+                <SelectContent className="max-h-80 z-[100] bg-white">
+                  <SelectItem value="en">{languageFlags.en} {languageNames.en}</SelectItem>
+                  <SelectItem value="rw">{languageFlags.rw} {languageNames.rw}</SelectItem>
+                  <SelectItem value="fr">{languageFlags.fr} {languageNames.fr}</SelectItem>
+                  <SelectItem value="sw">{languageFlags.sw} {languageNames.sw}</SelectItem>
+                  <SelectItem value="es">{languageFlags.es} {languageNames.es}</SelectItem>
+                  <SelectItem value="de">{languageFlags.de} {languageNames.de}</SelectItem>
+                  <SelectItem value="zh">{languageFlags.zh} {languageNames.zh}</SelectItem>
+                  <SelectItem value="ar">{languageFlags.ar} {languageNames.ar}</SelectItem>
+                  <SelectItem value="pt">{languageFlags.pt} {languageNames.pt}</SelectItem>
+                  <SelectItem value="ja">{languageFlags.ja} {languageNames.ja}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -103,19 +114,47 @@ export default function Navbar() {
           {/* Menu Icon (always visible on mobile/tablet) + Logo */}
           <div className="flex items-center gap-3">
             {/* Mobile/Tablet hamburger - always visible below lg */}
-            <button
+            <motion.button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="text-white lg:hidden"
+              className="relative h-10 w-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white lg:hidden hover:bg-white/20 transition-all duration-300 border border-white/20"
               aria-label="Toggle menu"
+              whileTap={{ scale: 0.95 }}
             >
-              {mobileOpen ? <X size={26} /> : <Menu size={26} />}
-            </button>
+              <AnimatePresence mode="wait">
+                {mobileOpen ? (
+                  <motion.div
+                    key="close"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <X size={22} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="menu"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Menu size={22} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
 
             {/* Logo - always visible */}
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl sm:text-2xl font-heading font-bold text-white tracking-wider">
-                East<span className="text-gold">Gate</span>
-              </span>
+            <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
+              <Image 
+                src="/eastgatelogo.png" 
+                alt="EastGate Hotel" 
+                width={150} 
+                height={60}
+                className="h-12 sm:h-14 lg:h-16 w-auto object-contain drop-shadow-lg rounded-xl"
+                priority
+              />
             </Link>
           </div>
 
@@ -142,9 +181,8 @@ export default function Navbar() {
               asChild
               className="bg-emerald hover:bg-emerald-dark text-white font-semibold px-4 py-2 rounded-[2px] tracking-wide uppercase text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(11,110,79,0.3)] gap-2"
             >
-              <Link href="/order-food">
-                <UtensilsCrossed size={16} />
-                Order Food
+              <Link href="/menu">
+                <UtensilsCrossed size={16} />                {t("nav", "orderFood")}
               </Link>
             </Button>
             <Button
@@ -156,10 +194,9 @@ export default function Navbar() {
             {pathname === "/" && (
               <Button
                 asChild
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10 font-semibold px-6 py-2 rounded-[2px] tracking-wide uppercase text-sm"
+                className="bg-gradient-to-r from-gold to-gold-dark hover:from-gold-dark hover:to-gold text-charcoal font-bold px-8 py-2.5 rounded-full tracking-wide uppercase text-sm transition-all duration-300 hover:shadow-[0_0_25px_rgba(200,169,81,0.5)] hover:scale-105 border-2 border-gold-light"
               >
-                <Link href="/login">Login</Link>
+                <Link href="/login">{t("auth", "signIn")}</Link>
               </Button>
             )}
           </div>
@@ -167,12 +204,20 @@ export default function Navbar() {
           {/* Mobile: order button + language */}
           <div className="flex items-center gap-2 lg:hidden">
             <Select value={locale} onValueChange={setLocale}>
-              <SelectTrigger className="w-16 h-8 bg-white/10 border-white/20 text-white p-1">
-                <Globe className="h-4 w-4" />
+              <SelectTrigger className="w-20 h-8 bg-white/10 border-white/20 text-white p-1 hover:bg-white/20 transition-colors">
+                <span className="text-sm">{languageFlags[locale]}</span>
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">EN</SelectItem>
-                <SelectItem value="rw">RW</SelectItem>
+              <SelectContent className="max-h-80 z-[100] bg-white">
+                <SelectItem value="en">{languageFlags.en} EN</SelectItem>
+                <SelectItem value="rw">{languageFlags.rw} RW</SelectItem>
+                <SelectItem value="fr">{languageFlags.fr} FR</SelectItem>
+                <SelectItem value="sw">{languageFlags.sw} SW</SelectItem>
+                <SelectItem value="es">{languageFlags.es} ES</SelectItem>
+                <SelectItem value="de">{languageFlags.de} DE</SelectItem>
+                <SelectItem value="zh">{languageFlags.zh} ZH</SelectItem>
+                <SelectItem value="ar">{languageFlags.ar} AR</SelectItem>
+                <SelectItem value="pt">{languageFlags.pt} PT</SelectItem>
+                <SelectItem value="ja">{languageFlags.ja} JA</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -180,9 +225,9 @@ export default function Navbar() {
               size="sm"
               className="bg-emerald hover:bg-emerald-dark text-white rounded-[2px] gap-1 h-8 px-2.5 text-xs"
             >
-              <Link href="/order-food">
+              <Link href="/menu">
                 <UtensilsCrossed size={14} />
-                <span className="hidden sm:inline">Order Food</span>
+                <span className="hidden sm:inline">{t("nav", "orderFood")}</span>
               </Link>
             </Button>
           </div>
@@ -195,47 +240,60 @@ export default function Navbar() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="bg-charcoal/98 backdrop-blur-md px-6 pb-6 lg:hidden overflow-hidden"
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="bg-gradient-to-b from-charcoal via-charcoal/98 to-charcoal/95 backdrop-blur-xl px-6 pb-6 lg:hidden overflow-hidden border-t border-white/10"
             >
-              <div className="flex flex-col gap-2 pt-2">
-                {navLinks.map((link) => (
-                  <Link
+              <div className="flex flex-col gap-2 pt-4">
+                {navLinks.map((link, idx) => (
+                  <motion.div
                     key={link.href}
-                    href={link.href}
-                    className={`body-md py-2.5 border-b border-white/10 uppercase tracking-wide transition-colors ${
-                      pathname === link.href
-                        ? "text-gold"
-                        : "text-white/80 hover:text-gold"
-                    }`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05, duration: 0.3 }}
                   >
-                    {link.label}
-                  </Link>
+                    <Link
+                      href={link.href}
+                      className={`flex items-center gap-3 py-3 px-4 rounded-xl border transition-all duration-300 ${
+                        pathname === link.href
+                          ? "bg-gold/20 border-gold text-gold shadow-lg shadow-gold/20"
+                          : "bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:border-white/20 hover:text-gold"
+                      }`}
+                    >
+                      <span className="font-medium tracking-wide uppercase text-sm">{link.label}</span>
+                    </Link>
+                  </motion.div>
                 ))}
-                <Button
-                  asChild
-                  className="bg-emerald hover:bg-emerald-dark text-white font-semibold rounded-[2px] uppercase tracking-wide gap-2 mt-2"
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: navLinks.length * 0.05 + 0.1 }}
+                  className="space-y-2 mt-4 pt-4 border-t border-white/10"
                 >
-                  <Link href="/order-food">
-                    <UtensilsCrossed size={16} />
-                    Order Food
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  className="bg-gold hover:bg-gold-dark text-charcoal font-semibold rounded-[2px] uppercase tracking-wide"
-                >
-                  <Link href="/book">{t("nav", "bookRoom")}</Link>
-                </Button>
-                {pathname === "/" && (
                   <Button
                     asChild
-                    variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10 font-semibold rounded-[2px] uppercase tracking-wide"
+                    className="w-full bg-emerald hover:bg-emerald-dark text-white font-semibold rounded-xl uppercase tracking-wide gap-2 h-12 shadow-lg hover:shadow-emerald/30 transition-all duration-300"
                   >
-                    <Link href="/login">Login</Link>
+                    <Link href="/menu">
+                      <UtensilsCrossed size={18} />
+                      {t("nav", "orderFood")}
+                    </Link>
                   </Button>
-                )}
+                  <Button
+                    asChild
+                    className="w-full bg-gold hover:bg-gold-dark text-charcoal font-semibold rounded-xl uppercase tracking-wide h-12 shadow-lg hover:shadow-gold/30 transition-all duration-300"
+                  >
+                    <Link href="/book">{t("nav", "bookRoom")}</Link>
+                  </Button>
+                  {pathname === "/" && (
+                    <Button
+                      asChild
+                      className="w-full bg-gradient-to-r from-gold to-gold-dark hover:from-gold-dark hover:to-gold text-charcoal font-bold rounded-xl uppercase tracking-wide h-12 border-2 border-gold-light shadow-lg hover:shadow-gold/40 transition-all duration-300"
+                    >
+                      <Link href="/login">{t("auth", "signIn")}</Link>
+                    </Button>
+                  )}
+                </motion.div>
               </div>
             </motion.div>
           )}

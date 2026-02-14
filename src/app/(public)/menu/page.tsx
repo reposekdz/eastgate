@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useI18n } from "@/lib/i18n/context";
 import {
   fullMenu,
   menuCategories,
@@ -36,6 +37,7 @@ import { cn } from "@/lib/utils";
 type DietaryFilter = "all" | "vegetarian" | "spicy" | "popular";
 
 export default function MenuPage() {
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory | "all">("all");
   const [showCart, setShowCart] = useState(false);
@@ -173,7 +175,7 @@ export default function MenuPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted-custom" />
               <Input
-                placeholder="Search menu... (e.g., steak, chicken, pizza)"
+              placeholder={t("menuPage", "searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 h-10"
@@ -193,10 +195,10 @@ export default function MenuPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <SlidersHorizontal className="h-3.5 w-3.5 text-text-muted-custom shrink-0" />
             {[
-              { id: "all" as DietaryFilter, label: "All Items", icon: "all" },
-              { id: "popular" as DietaryFilter, label: "Popular", icon: null, lucide: Star },
-              { id: "vegetarian" as DietaryFilter, label: "Vegetarian", icon: null, lucide: Leaf },
-              { id: "spicy" as DietaryFilter, label: "Spicy", icon: null, lucide: Flame },
+              { id: "all" as DietaryFilter, label: t("menuPage", "allItems"), icon: "all" },
+              { id: "popular" as DietaryFilter, label: t("common", "popular"), icon: null, lucide: Star },
+              { id: "vegetarian" as DietaryFilter, label: t("menuPage", "vegetarian"), icon: null, lucide: Leaf },
+              { id: "spicy" as DietaryFilter, label: t("menuPage", "spicy"), icon: null, lucide: Flame },
             ].map((filter) => (
               <Button
                 key={filter.id}
@@ -269,7 +271,7 @@ export default function MenuPage() {
           {/* Results count */}
           <div className="flex items-center justify-between mb-6">
             <p className="text-sm text-text-muted-custom">
-              {filteredMenu.length} items found
+              {filteredMenu.length} {t("menuPage", "itemsFound")}
               {selectedCategory !== "all" && (
                 <span>
                   {" "}in{" "}
@@ -486,10 +488,10 @@ export default function MenuPage() {
               <div className="text-center py-20">
                 <div className="text-6xl mb-4">🔍</div>
                 <p className="font-heading text-lg text-charcoal mb-2">
-                  No items found
+                  {t("menuPage", "noItemsFound")}
                 </p>
                 <p className="text-sm text-text-muted-custom mb-4">
-                  Try adjusting your search or filter
+                  {t("menuPage", "tryDifferent")}
                 </p>
                 <Button
                   variant="outline"
@@ -499,7 +501,7 @@ export default function MenuPage() {
                     setDietaryFilter("all");
                   }}
                 >
-                  Clear Filters
+                  {t("common", "filter")}
                 </Button>
               </div>
             )}
@@ -521,7 +523,7 @@ export default function MenuPage() {
               className="w-full md:w-auto h-14 bg-emerald hover:bg-emerald-dark text-white shadow-2xl rounded-2xl px-6 text-base"
             >
               <ShoppingCart className="h-5 w-5 mr-2" />
-              <span className="font-semibold">View Cart</span>
+              <span className="font-semibold">{t("menuPage", "viewOrder")}</span>
               <Badge className="ml-3 bg-white text-emerald font-bold px-2">
                 {cartCount}
               </Badge>

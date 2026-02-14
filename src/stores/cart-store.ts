@@ -43,6 +43,7 @@ interface CartStore {
   // Computed Values
   totalItems: () => number;
   totalAmount: () => number;
+  getTotal: () => number;
   getItemQuantity: (itemId: string) => number;
 }
 
@@ -117,6 +118,13 @@ export const useCartStore = create<CartStore>()(
       },
 
       totalAmount: () => {
+        return get().items.reduce(
+          (sum, item) => sum + item.item.price * item.quantity,
+          0
+        );
+      },
+
+      getTotal: () => {
         return get().items.reduce(
           (sum, item) => sum + item.item.price * item.quantity,
           0

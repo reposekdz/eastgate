@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { useBranchStore } from "@/lib/store/branch-store";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { Department } from "@/lib/types/enums";
 import { UserPlus, Users, Mail, Phone, Eye, EyeOff, Copy, Check, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -50,7 +51,7 @@ export default function StaffManagementPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const deptMap: Record<string, string> = {
+    const deptMap: Record<string, Department> = {
       receptionist: "front_desk",
       waiter: "restaurant",
       kitchen_staff: "restaurant",
@@ -200,6 +201,7 @@ export default function StaffManagementPage() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </div>
       </section>

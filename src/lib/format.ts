@@ -119,6 +119,7 @@ export function getRoleLabel(role: UserRole): string {
     receptionist: "Receptionist",
     waiter: "Waiter",
     housekeeping: "Housekeeping",
+    kitchen_staff: "Kitchen Staff",
     restaurant_staff: "Restaurant Staff",
     accountant: "Accountant",
     event_manager: "Event Manager",
