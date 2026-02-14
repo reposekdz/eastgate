@@ -227,7 +227,7 @@ export const useBranchStore = create<BranchStore>()((set, get) => ({
   updateOrderStatus: (orderId, status) => {
     const order = restaurantOrders.find((o) => o.id === orderId);
     if (order) {
-      (order as Record<string, unknown>).status = status;
+      (order as unknown as Record<string, unknown>).status = status;
       set({});
     }
   },

@@ -14,6 +14,7 @@ export interface MenuItemDetail {
   available: boolean;
   popular?: boolean;
   vegetarian?: boolean;
+  vegan?: boolean;
   spicy?: boolean;
   glutenFree?: boolean;
   halal?: boolean;

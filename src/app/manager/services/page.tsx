@@ -15,7 +15,7 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
 import {
   ClipboardList, Search, AlertTriangle, Clock, CheckCircle2, XCircle,
-  Wrench, Shirt, Phone, BedDouble, Alarm,
+  Wrench, Shirt, Phone, BedDouble, AlarmClock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -52,7 +52,7 @@ export default function ServiceRequestsPage() {
       case "housekeeping": return <ClipboardList className="h-4 w-4" />;
       case "concierge": return <Phone className="h-4 w-4" />;
       case "laundry": return <Shirt className="h-4 w-4" />;
-      case "wake_up": return <Alarm className="h-4 w-4" />;
+      case "wake_up": return <AlarmClock className="h-4 w-4" />;
       default: return <ClipboardList className="h-4 w-4" />;
     }
   };
