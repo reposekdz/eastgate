@@ -293,13 +293,13 @@ export default function BookingPage() {
                           <SelectItem key={n} value={n.toString()}>
                             {n} {n === 1 ? "Child" : "Children"}
                           </SelectItem>
-                        ))}\
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               </motion.div>
-            )}\
+            )}
 
             {/* Step 2: Room Selection */}
             {step === 2 && (
@@ -586,7 +586,7 @@ export default function BookingPage() {
                 >
                   Back
                 </Button>
-              )}\
+              )}
               {step < 4 ? (
                 <Button
                   onClick={handleNext}
@@ -603,7 +603,7 @@ export default function BookingPage() {
                   <Check className="mr-2 h-4 w-4" />
                   Confirm Booking
                 </Button>
-              )}\
+              )}
             </div>
           </CardContent>
         </Card>

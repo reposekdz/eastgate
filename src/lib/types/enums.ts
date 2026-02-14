@@ -37,6 +37,8 @@ export type PaymentMethod =
   | "mastercard"
   | "mtn_mobile"
   | "airtel_money"
+  | "bank_transfer"
+  | "paypal"
   | "cash"
   | "split";
 

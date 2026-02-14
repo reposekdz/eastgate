@@ -20,6 +20,7 @@ import {
 } from "@/lib/menu-data-enhanced";
 import { useCartStore } from "@/stores/cart-store";
 import { formatCurrency } from "@/lib/format";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import {
   Search,
   ShoppingCart,
@@ -31,6 +32,7 @@ import {
   Star,
   X,
   ChefHat,
+  UtensilsCrossed,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -113,7 +115,9 @@ export function ModernMenuDialog({
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="heading-sm flex items-center gap-3">
-                <span className="text-3xl">🍽️</span>
+                <div className="h-12 w-12 rounded-xl bg-emerald/10 flex items-center justify-center">
+                  <UtensilsCrossed className="h-6 w-6 text-emerald" />
+                </div>
                 <div>
                   <div className="text-2xl font-heading font-bold text-charcoal">
                     Menu ya East Gate Hotel
@@ -164,12 +168,13 @@ export function ModernMenuDialog({
                   size="sm"
                   onClick={() => setSelectedCategory("all")}
                   className={cn(
-                    "shrink-0",
+                    "shrink-0 gap-1.5",
                     selectedCategory === "all" &&
                       "bg-emerald hover:bg-emerald-dark text-white"
                   )}
                 >
-                  🍽️ Byose
+                  <UtensilsCrossed className="h-3.5 w-3.5" />
+                  Byose
                 </Button>
                 {menuCategories.map((cat) => (
                   <Button
@@ -178,12 +183,12 @@ export function ModernMenuDialog({
                     size="sm"
                     onClick={() => setSelectedCategory(cat.id)}
                     className={cn(
-                      "shrink-0",
+                      "shrink-0 gap-1.5",
                       selectedCategory === cat.id &&
                         "bg-emerald hover:bg-emerald-dark text-white"
                     )}
                   >
-                    <span className="mr-1.5">{cat.icon}</span>
+                    <CategoryIcon categoryId={cat.id} size={14} />
                     <span className="hidden sm:inline">{cat.label}</span>
                     <span className="sm:hidden">{cat.labelEn}</span>
                   </Button>

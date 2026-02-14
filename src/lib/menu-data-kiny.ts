@@ -44,26 +44,26 @@ export const menuCategories: Array<{
   id: MenuCategory;
   label: string;
   labelEn: string;
-  icon: string;
+  icon: string; // Lucide icon key (mapped via getCategoryIcon)
 }> = [
-  { id: "bitangura-byoshye", label: "Bitangura Byoshye", labelEn: "Hot Starters", icon: "🍲" },
-  { id: "inyama-yinka", label: "Inyama y'Inka", labelEn: "Beef", icon: "🥩" },
-  { id: "inkoko", label: "Inkoko", labelEn: "Chicken", icon: "🍗" },
-  { id: "ifi", label: "Ifi", labelEn: "Fish", icon: "🐟" },
-  { id: "ibidasanzwe-akabenzi", label: "Ibidasanzwe - Akabenzi", labelEn: "Specials - Akabenzi", icon: "⭐" },
-  { id: "ibidasanzwe-agatogo", label: "Ibidasanzwe - Agatogo", labelEn: "Specials - Agatogo", icon: "🌟" },
-  { id: "pasta", label: "Pasta", labelEn: "Pasta", icon: "🍝" },
-  { id: "sandwich", label: "Sandwich", labelEn: "Sandwiches", icon: "🥪" },
-  { id: "barbeque", label: "Barbeque", labelEn: "Barbeque", icon: "🔥" },
-  { id: "ibigize-ifunguro", label: "Ibigize Ifunguro", labelEn: "Accompaniments", icon: "🍚" },
-  { id: "ibinywabura", label: "Ibinywabura", labelEn: "Desserts", icon: "🍰" },
-  { id: "ifunguro-ryo-mu-gitondo", label: "Ifunguro ryo mu gitondo", labelEn: "Breakfast", icon: "🍳" },
-  { id: "bifeti", label: "Bifeti", labelEn: "Buffet", icon: "🍽️" },
-  { id: "wines", label: "Vino", labelEn: "Wines", icon: "🍷" },
-  { id: "spirits", label: "Spirits", labelEn: "Spirits", icon: "🥃" },
-  { id: "ibinyobwa-byoroshye", label: "Ibinyobwa Byoroshye", labelEn: "Soft Drinks", icon: "🥤" },
-  { id: "ibinyobwa-byoshye", label: "Ibinyobwa Byoshye", labelEn: "Hot Beverages", icon: "☕" },
-  { id: "snacks", label: "Snacks", labelEn: "Snacks", icon: "🍿" },
+  { id: "bitangura-byoshye", label: "Bitangura Byoshye", labelEn: "Hot Starters", icon: "bitangura-byoshye" },
+  { id: "inyama-yinka", label: "Inyama y'Inka", labelEn: "Beef", icon: "inyama-yinka" },
+  { id: "inkoko", label: "Inkoko", labelEn: "Chicken", icon: "inkoko" },
+  { id: "ifi", label: "Ifi", labelEn: "Fish", icon: "ifi" },
+  { id: "ibidasanzwe-akabenzi", label: "Ibidasanzwe - Akabenzi", labelEn: "Specials - Akabenzi", icon: "ibidasanzwe-akabenzi" },
+  { id: "ibidasanzwe-agatogo", label: "Ibidasanzwe - Agatogo", labelEn: "Specials - Agatogo", icon: "ibidasanzwe-agatogo" },
+  { id: "pasta", label: "Pasta", labelEn: "Pasta", icon: "pasta" },
+  { id: "sandwich", label: "Sandwich", labelEn: "Sandwiches", icon: "sandwich" },
+  { id: "barbeque", label: "Barbeque", labelEn: "Barbeque", icon: "barbeque" },
+  { id: "ibigize-ifunguro", label: "Ibigize Ifunguro", labelEn: "Accompaniments", icon: "ibigize-ifunguro" },
+  { id: "ibinywabura", label: "Ibinywabura", labelEn: "Desserts", icon: "ibinywabura" },
+  { id: "ifunguro-ryo-mu-gitondo", label: "Ifunguro ryo mu gitondo", labelEn: "Breakfast", icon: "ifunguro-ryo-mu-gitondo" },
+  { id: "bifeti", label: "Bifeti", labelEn: "Buffet", icon: "bifeti" },
+  { id: "wines", label: "Vino", labelEn: "Wines", icon: "wines" },
+  { id: "spirits", label: "Spirits", labelEn: "Spirits", icon: "spirits" },
+  { id: "ibinyobwa-byoroshye", label: "Ibinyobwa Byoroshye", labelEn: "Soft Drinks", icon: "ibinyobwa-byoroshye" },
+  { id: "ibinyobwa-byoshye", label: "Ibinyobwa Byoshye", labelEn: "Hot Beverages", icon: "ibinyobwa-byoshye" },
+  { id: "snacks", label: "Snacks", labelEn: "Snacks", icon: "snacks" },
 ];
 
 export const fullMenuKiny: MenuItemDetail[] = [

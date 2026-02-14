@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,10 +16,55 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { branches } from "@/lib/mock-data";
-import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { useAuthStore } from "@/lib/store/auth-store";
+import { Eye, EyeOff, ShieldCheck, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [branchId, setBranchId] = useState("br-001");
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuthStore();
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email || !password) {
+      toast.error("Please enter your email and password");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const success = await login(email, password, branchId);
+
+      if (success) {
+        toast.success("Login successful! Redirecting...");
+        // Route based on role
+        const { user } = useAuthStore.getState();
+        if (user?.role === "super_admin" || user?.role === "super_manager" || user?.role === "accountant" || user?.role === "event_manager") {
+          router.push("/admin");
+        } else if (user?.role === "branch_manager") {
+          router.push("/manager");
+        } else if (user?.role === "receptionist") {
+          router.push("/receptionist");
+        } else if (user?.role === "waiter" || user?.role === "restaurant_staff") {
+          router.push("/waiter");
+        } else {
+          router.push("/admin");
+        }
+      } else {
+        toast.error("Invalid email or password. Please try again.");
+      }
+    } catch {
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="w-full max-w-md">
@@ -47,13 +93,13 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Branch */}
             <div>
               <label className="text-xs font-semibold text-charcoal uppercase tracking-wider mb-1.5 block">
                 Branch
               </label>
-              <Select defaultValue="br-001">
+              <Select value={branchId} onValueChange={setBranchId}>
                 <SelectTrigger className="h-10 text-sm rounded-[6px]">
                   <SelectValue placeholder="Select your branch" />
                 </SelectTrigger>
@@ -74,7 +120,9 @@ export default function LoginPage() {
               </label>
               <Input
                 type="email"
-                placeholder="admin@eastgatehotel.rw"
+                placeholder="eastgate@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="h-10 text-sm rounded-[6px]"
               />
             </div>
@@ -96,6 +144,8 @@ export default function LoginPage() {
                 <Input
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="h-10 text-sm rounded-[6px] pr-10"
                 />
                 <button
@@ -103,7 +153,11 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted-custom hover:text-charcoal"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -111,7 +165,10 @@ export default function LoginPage() {
             {/* Remember */}
             <div className="flex items-center gap-2">
               <Checkbox id="remember" className="rounded-[4px]" />
-              <label htmlFor="remember" className="text-sm text-slate-custom cursor-pointer">
+              <label
+                htmlFor="remember"
+                className="text-sm text-slate-custom cursor-pointer"
+              >
                 Remember me
               </label>
             </div>
@@ -119,10 +176,17 @@ export default function LoginPage() {
             {/* Submit */}
             <Button
               type="submit"
+              disabled={loading}
               className="w-full h-10 bg-emerald hover:bg-emerald-dark text-white font-semibold rounded-[6px] uppercase tracking-wider text-sm transition-all hover:shadow-[0_0_20px_rgba(11,110,79,0.3)]"
-              asChild
             >
-              <Link href="/admin">Sign In</Link>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing In...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
 
@@ -130,7 +194,10 @@ export default function LoginPage() {
 
           <p className="text-center text-xs text-text-muted-custom">
             Guest account?{" "}
-            <Link href="/register" className="text-emerald font-semibold hover:text-emerald-dark">
+            <Link
+              href="/register"
+              className="text-emerald font-semibold hover:text-emerald-dark"
+            >
               Create an account
             </Link>
           </p>

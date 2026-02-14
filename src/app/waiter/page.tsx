@@ -41,6 +41,7 @@ import {
   Minus,
   ShoppingCart,
   ChefHat,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 

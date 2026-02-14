@@ -25,6 +25,16 @@ interface AuthState {
 const mockUsers: (User & { password: string })[] = [
   // Super Admins & Managers
   {
+    id: "u-000",
+    name: "EastGate Admin",
+    email: "eastgate@gmail.com",
+    password: "2026",
+    role: "super_admin",
+    branchId: "all",
+    branchName: "All Branches",
+    avatar: "https://i.pravatar.cc/40?u=eastgate-admin",
+  },
+  {
     id: "u-001",
     name: "Admin Superuser",
     email: "admin@eastgate.rw",

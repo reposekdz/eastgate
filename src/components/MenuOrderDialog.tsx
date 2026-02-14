@@ -21,6 +21,7 @@ import {
   type MenuCategory,
 } from "@/lib/menu-data";
 import { formatCurrency } from "@/lib/format";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import {
   Search,
   ShoppingCart,
@@ -31,6 +32,7 @@ import {
   Leaf,
   Star,
   X,
+  UtensilsCrossed,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -129,7 +131,7 @@ export function MenuOrderDialog({
 
   // Get main category groups
   const mainCategories = [
-    { id: "all" as const, label: "All Items", icon: "🍽️" },
+    { id: "all" as const, label: "All Items", icon: "all" },
     ...menuCategories.slice(0, 8),
   ];
 
@@ -137,8 +139,10 @@ export function MenuOrderDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="heading-sm flex items-center gap-2">
-            <span className="text-2xl">🍽️</span>
+        <DialogTitle className="heading-sm flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-emerald/10 flex items-center justify-center">
+              <UtensilsCrossed className="h-4 w-4 text-emerald" />
+            </div>
             East Gate Hotel Menu
           </DialogTitle>
           <DialogDescription>
@@ -171,12 +175,12 @@ export function MenuOrderDialog({
                       size="sm"
                       onClick={() => setSelectedCategory(cat.id)}
                       className={cn(
-                        "shrink-0",
+                        "shrink-0 gap-1.5",
                         selectedCategory === cat.id &&
                           "bg-emerald hover:bg-emerald-dark text-white"
                       )}
                     >
-                      <span className="mr-1">{cat.icon}</span>
+                      <CategoryIcon categoryId={cat.id} size={14} />
                       {cat.label}
                     </Button>
                   ))}
@@ -196,7 +200,9 @@ export function MenuOrderDialog({
                   return (
                     <div key={category}>
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-xl">{categoryInfo.icon}</span>
+                        <div className="h-7 w-7 rounded-lg bg-emerald/10 flex items-center justify-center">
+                          <CategoryIcon categoryId={categoryInfo.id} className="text-emerald" size={16} />
+                        </div>
                         <h3 className="font-heading font-semibold text-lg text-charcoal">
                           {categoryInfo.label}
                         </h3>

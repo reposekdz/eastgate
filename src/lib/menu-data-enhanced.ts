@@ -18,21 +18,21 @@ export interface MenuItem {
 }
 
 export const menuCategories = [
-  { id: "bitangura", label: "Bitangura", labelEn: "Starters", icon: "🍲" },
-  { id: "inyama-yinka", label: "Inyama y'Inka", labelEn: "Beef", icon: "🥩" },
-  { id: "inkoko", label: "Inkoko", labelEn: "Chicken", icon: "🍗" },
-  { id: "ifi", label: "Ifi", labelEn: "Fish", icon: "🐟" },
-  { id: "ibidasanzwe", label: "Ibidasanzwe", labelEn: "Specials", icon: "⭐" },
-  { id: "pasta", label: "Pasta", labelEn: "Pasta", icon: "🍝" },
-  { id: "sandwich", label: "Sandwich", labelEn: "Sandwiches", icon: "🥪" },
-  { id: "bbq", label: "Barbeque", labelEn: "BBQ", icon: "🔥" },
-  { id: "ibigize", label: "Ibigize Ifunguro", labelEn: "Sides", icon: "🍚" },
-  { id: "ibinywabura", label: "Ibinywabura", labelEn: "Desserts", icon: "🍰" },
-  { id: "ifunguro-gitondo", label: "Ifunguro ryo mu Gitondo", labelEn: "Breakfast", icon: "🍳" },
-  { id: "bifeti", label: "Bifeti", labelEn: "Buffet", icon: "🍽️" },
-  { id: "ibinyobwa-byoroshye", label: "Ibinyobwa Byoroshye", labelEn: "Soft Drinks", icon: "🥤" },
-  { id: "ibinyobwa-byoshye", label: "Ibinyobwa Byoshye", labelEn: "Hot Beverages", icon: "☕" },
-  { id: "wines", label: "Wines", labelEn: "Wines", icon: "🍷" },
+  { id: "bitangura", label: "Bitangura", labelEn: "Starters", icon: "bitangura" },
+  { id: "inyama-yinka", label: "Inyama y'Inka", labelEn: "Beef", icon: "inyama-yinka" },
+  { id: "inkoko", label: "Inkoko", labelEn: "Chicken", icon: "inkoko" },
+  { id: "ifi", label: "Ifi", labelEn: "Fish", icon: "ifi" },
+  { id: "ibidasanzwe", label: "Ibidasanzwe", labelEn: "Specials", icon: "ibidasanzwe" },
+  { id: "pasta", label: "Pasta", labelEn: "Pasta", icon: "pasta" },
+  { id: "sandwich", label: "Sandwich", labelEn: "Sandwiches", icon: "sandwich" },
+  { id: "bbq", label: "Barbeque", labelEn: "BBQ", icon: "bbq" },
+  { id: "ibigize", label: "Ibigize Ifunguro", labelEn: "Sides", icon: "ibigize" },
+  { id: "ibinywabura", label: "Ibinywabura", labelEn: "Desserts", icon: "ibinywabura" },
+  { id: "ifunguro-gitondo", label: "Ifunguro ryo mu Gitondo", labelEn: "Breakfast", icon: "ifunguro-gitondo" },
+  { id: "bifeti", label: "Bifeti", labelEn: "Buffet", icon: "bifeti" },
+  { id: "ibinyobwa-byoroshye", label: "Ibinyobwa Byoroshye", labelEn: "Soft Drinks", icon: "ibinyobwa-byoroshye" },
+  { id: "ibinyobwa-byoshye", label: "Ibinyobwa Byoshye", labelEn: "Hot Beverages", icon: "ibinyobwa-byoshye" },
+  { id: "wines", label: "Wines", labelEn: "Wines", icon: "wines" },
 ];
 
 export const enhancedMenu: MenuItem[] = [

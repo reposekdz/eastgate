@@ -1,6 +1,7 @@
 // Cart Store - Global State Management with Zustand
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useEffect, useState } from 'react';
 
 export interface MenuItem {
   id: string;
@@ -129,6 +130,17 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: 'eastgate-cart-storage',
+      skipHydration: true,
     }
   )
 );
+
+// Hook to safely hydrate the cart store on the client
+export function useCartHydration() {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    useCartStore.persist.rehydrate();
+    setHydrated(true);
+  }, []);
+  return hydrated;
+}
