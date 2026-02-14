@@ -13,6 +13,7 @@ import {
   Building2,
   Settings,
   Bell,
+  UserCheck,
 } from "lucide-react";
 
 const navGroups: NavGroup[] = [
@@ -25,6 +26,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Operations",
     items: [
+      { title: "Guest Management", href: "/manager/guests", icon: UserCheck },
       { title: "Staff Management", href: "/manager/staff", icon: Users },
       { title: "Orders", href: "/manager/orders", icon: UtensilsCrossed, badge: "3" },
       { title: "Bookings", href: "/manager/bookings", icon: CalendarCheck },

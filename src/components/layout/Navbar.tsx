@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { navLinksKw } from "@/lib/kw-data";
+import { useI18n } from "@/lib/i18n/context";
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -13,6 +14,18 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const isHome = pathname === "/";
+  const { t } = useI18n();
+
+  const navLinks = [
+    { label: t("nav", "about"), href: "/about" },
+    { label: t("nav", "rooms"), href: "/rooms" },
+    { label: t("nav", "dining"), href: "/dining" },
+    { label: t("nav", "viewMenu"), href: "/menu" },
+    { label: t("nav", "spa"), href: "/spa" },
+    { label: t("nav", "events"), href: "/events" },
+    { label: t("nav", "gallery"), href: "/gallery" },
+    { label: t("nav", "contact"), href: "/contact" },
+  ];
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -20,7 +33,6 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
@@ -45,10 +57,10 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden items-center gap-6 xl:gap-8 lg:flex">
-          {navLinksKw.filter(l => l.href !== "/").map((link) => (
+        <div className="hidden items-center gap-5 xl:gap-7 lg:flex">
+          {navLinks.map((link) => (
             <Link
-              key={link.label}
+              key={link.href}
               href={link.href}
               className={`body-sm transition-colors duration-300 font-medium tracking-wide uppercase ${
                 pathname === link.href
@@ -61,17 +73,18 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* CTA Desktop */}
-        <div className="hidden lg:block">
+        {/* CTA Desktop + Language */}
+        <div className="hidden lg:flex items-center gap-3">
+          <LanguageSwitcher variant="pill" />
           <Button
             asChild
             className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-6 py-2 rounded-[2px] tracking-wide uppercase text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(200,169,81,0.3)]"
           >
-            <Link href="/rooms">Gufata Icyumba</Link>
+            <Link href="/book">{t("nav", "bookRoom")}</Link>
           </Button>
         </div>
 
-        {/* Mobile toggle - hidden on mobile (bottom nav replaces it), shown on tablet */}
+        {/* Mobile toggle */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="text-white lg:hidden hidden md:block"
@@ -92,9 +105,9 @@ export default function Navbar() {
             className="bg-charcoal/98 backdrop-blur-md px-6 pb-6 lg:hidden overflow-hidden"
           >
             <div className="flex flex-col gap-3 pt-2">
-              {navLinksKw.map((link) => (
+              {navLinks.map((link) => (
                 <Link
-                  key={link.label}
+                  key={link.href}
                   href={link.href}
                   className={`body-md py-2.5 border-b border-white/10 uppercase tracking-wide transition-colors ${
                     pathname === link.href
@@ -105,11 +118,14 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <div className="flex items-center gap-3 pt-2">
+                <LanguageSwitcher variant="pill" />
+              </div>
               <Button
                 asChild
                 className="bg-gold hover:bg-gold-dark text-charcoal font-semibold mt-2 rounded-[2px] uppercase tracking-wide"
               >
-                <Link href="/rooms">Gufata Icyumba</Link>
+                <Link href="/book">{t("nav", "bookRoom")}</Link>
               </Button>
             </div>
           </motion.div>

@@ -143,7 +143,7 @@ export default function SpaPage() {
                   asChild
                   className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 py-5 rounded-[2px] uppercase tracking-wider text-sm"
                 >
-                  <Link href="/contact" className="flex items-center gap-2">
+                  <Link href="/book" className="flex items-center gap-2">
                     {spaContent.ctaText}
                     <ArrowRight size={16} />
                   </Link>

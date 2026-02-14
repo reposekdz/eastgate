@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { I18nProvider } from "@/lib/i18n/context";
 
 export const metadata: Metadata = {
   title: "EastGate Hotel Rwanda | Ihoteli y'Ubwiza mu Mutima wa Afurika",
@@ -20,8 +21,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="rw">
-      <body className="antialiased">{children}</body>
+    <html lang="rw" suppressHydrationWarning>
+      <body className="antialiased">
+        <I18nProvider>{children}</I18nProvider>
+      </body>
     </html>
   );
 }

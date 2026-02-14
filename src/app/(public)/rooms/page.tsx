@@ -117,7 +117,7 @@ export default function RoomsPage() {
                       asChild
                       className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 py-5 rounded-[2px] uppercase tracking-wider text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(200,169,81,0.3)]"
                     >
-                      <Link href="/contact" className="flex items-center gap-2">
+                      <Link href="/book" className="flex items-center gap-2">
                         {roomsContent.bookText}
                         <ArrowRight size={16} />
                       </Link>
@@ -145,7 +145,7 @@ export default function RoomsPage() {
               variant="outline"
               className="border-gold text-gold hover:bg-gold hover:text-charcoal rounded-[2px] uppercase tracking-wider text-sm px-8 py-5"
             >
-              <Link href="/contact">Twandikire</Link>
+              <Link href="/book">Twandikire</Link>
             </Button>
           </div>
         </FadeInUp>

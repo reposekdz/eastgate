@@ -175,7 +175,7 @@ export default function EventsPage() {
                 asChild
                 className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-10 py-6 rounded-[2px] uppercase tracking-wider text-sm"
               >
-                <Link href="/contact" className="flex items-center gap-2">
+                <Link href="/book" className="flex items-center gap-2">
                   {eventsContent.ctaText}
                   <ArrowRight size={16} />
                 </Link>

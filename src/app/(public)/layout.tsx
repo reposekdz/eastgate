@@ -16,7 +16,7 @@ export default function PublicLayout({
       <Footer />
       <BottomNav />
       <LiveChatWidget />
-      <Toaster position="top-right" richColors />
+      <Toaster position="top-right" richColors closeButton />
     </>
   );
 }

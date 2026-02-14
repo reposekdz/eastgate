@@ -267,7 +267,7 @@ export default function AboutPage() {
                 asChild
                 className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-10 py-6 rounded-[2px] uppercase tracking-wider text-sm"
               >
-                <Link href="/contact">Twandikire</Link>
+                <Link href="/book">Twandikire</Link>
               </Button>
             </div>
           </FadeInUp>

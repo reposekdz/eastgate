@@ -85,7 +85,7 @@ export function MenuOrderDialog({
 
   // Group items by category for display
   const groupedMenu = useMemo(() => {
-    const groups: Record<MenuCategory, MenuItemDetail[]> = {} as any;
+    const groups: Record<MenuCategory, MenuItemDetail[]> = {} as Record<MenuCategory, MenuItemDetail[]>;
     filteredMenu.forEach((item) => {
       if (!groups[item.category]) {
         groups[item.category] = [];
