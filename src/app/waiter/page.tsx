@@ -25,7 +25,6 @@ import {
   Timer,
   Flame,
   Bell,
-  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -148,7 +147,7 @@ export default function WaiterDashboard() {
       </Card>
 
       {/* Quick Shortcuts */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <Link href="/waiter/new-order" className="group">
           <Card className="hover:border-amber-300 hover:shadow-md transition-all">
             <CardContent className="p-3 text-center">
@@ -162,14 +161,6 @@ export default function WaiterDashboard() {
             <CardContent className="p-3 text-center">
               <Grid3X3 className="h-5 w-5 text-blue-600 mx-auto mb-1 group-hover:scale-110 transition-transform" />
               <p className="text-[11px] font-semibold text-charcoal">{isRw ? "Imeza" : "Tables"}</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/waiter/messages" className="group">
-          <Card className="hover:border-purple-300 hover:shadow-md transition-all">
-            <CardContent className="p-3 text-center">
-              <MessageSquare className="h-5 w-5 text-purple-600 mx-auto mb-1 group-hover:scale-110 transition-transform" />
-              <p className="text-[11px] font-semibold text-charcoal">{isRw ? "Ubutumwa" : "Messages"}</p>
             </CardContent>
           </Card>
         </Link>

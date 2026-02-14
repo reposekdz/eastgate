@@ -59,7 +59,6 @@ import {
   AlertCircle,
   Search,
   Filter,
-  Megaphone,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -95,15 +94,6 @@ interface ManagedFeature {
   type: "service" | "amenity" | "package";
   price: number;
   description: string;
-  active: boolean;
-}
-
-interface BroadcastNotification {
-  id: string;
-  title: string;
-  message: string;
-  type: string;
-  expiresIn: string;
   active: boolean;
 }
 
@@ -157,11 +147,6 @@ const mockFeatures: ManagedFeature[] = [
   { id: "f-004", name: "Pool Access", type: "amenity", price: 5000, description: "Daily pool access pass", active: true },
 ];
 
-const mockBroadcasts: BroadcastNotification[] = [
-  { id: "b-001", title: "Welcome Special 🌟", message: "20% off spa treatments this week!", type: "promotion", expiresIn: "7 days", active: true },
-  { id: "b-002", title: "Valentine's Dinner 🕯️", message: "Book our exclusive candlelight dinner", type: "event", expiresIn: "3 days", active: true },
-];
-
 export default function ManagerContentPage() {
   const { user } = useAuthStore();
   const { isRw } = useI18n();
@@ -179,10 +164,6 @@ export default function ManagerContentPage() {
 
   // Features management
   const [features, setFeatures] = useState(mockFeatures);
-
-  // Broadcasts management
-  const [broadcasts, setBroadcasts] = useState(mockBroadcasts);
-  const [showAddBroadcast, setShowAddBroadcast] = useState(false);
 
   // New room form state
   const [newRoom, setNewRoom] = useState({
@@ -202,14 +183,6 @@ export default function ManagerContentPage() {
     description: "",
     vegetarian: false,
     spicy: false,
-  });
-
-  // New broadcast form state
-  const [newBroadcast, setNewBroadcast] = useState({
-    title: "",
-    message: "",
-    type: "promotion",
-    expiresIn: "7",
   });
 
   const handleAddRoom = () => {
@@ -245,23 +218,6 @@ export default function ManagerContentPage() {
     setShowAddMenu(false);
     setNewMenuItem({ name: "", category: "beef", price: 0, description: "", vegetarian: false, spicy: false });
     toast.success("Menu item added successfully!");
-  };
-
-  const handleAddBroadcast = () => {
-    if (!newBroadcast.title || !newBroadcast.message) {
-      toast.error("Please fill in title and message");
-      return;
-    }
-    const broadcast: BroadcastNotification = {
-      id: `b-${Date.now()}`,
-      ...newBroadcast,
-      expiresIn: `${newBroadcast.expiresIn} days`,
-      active: true,
-    };
-    setBroadcasts([...broadcasts, broadcast]);
-    setShowAddBroadcast(false);
-    setNewBroadcast({ title: "", message: "", type: "promotion", expiresIn: "7" });
-    toast.success("Notification broadcast created!");
   };
 
   const handleToggleRoom = (id: string) => {
@@ -332,7 +288,7 @@ export default function ManagerContentPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 max-w-xl">
+        <TabsList className="grid w-full grid-cols-3 max-w-xl">
           <TabsTrigger value="rooms" className="gap-1.5 text-xs">
             <Bed className="h-3.5 w-3.5" />
             Rooms
@@ -344,10 +300,6 @@ export default function ManagerContentPage() {
           <TabsTrigger value="features" className="gap-1.5 text-xs">
             <Star className="h-3.5 w-3.5" />
             Services
-          </TabsTrigger>
-          <TabsTrigger value="broadcasts" className="gap-1.5 text-xs">
-            <Megaphone className="h-3.5 w-3.5" />
-            Broadcasts
           </TabsTrigger>
         </TabsList>
 
@@ -701,110 +653,6 @@ export default function ManagerContentPage() {
           </div>
         </TabsContent>
 
-        {/* ─── BROADCASTS TAB ─── */}
-        <TabsContent value="broadcasts" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Send notification messages to app visitors
-            </p>
-            <Dialog open={showAddBroadcast} onOpenChange={setShowAddBroadcast}>
-              <DialogTrigger asChild>
-                <Button className="bg-emerald hover:bg-emerald-dark text-white gap-1.5" size="sm">
-                  <Plus className="h-4 w-4" /> New Broadcast
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create Broadcast Notification</DialogTitle>
-                  <DialogDescription>This message will appear on the app homepage for visitors</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Title</Label>
-                    <Input
-                      placeholder="e.g., Welcome Special 🌟"
-                      value={newBroadcast.title}
-                      onChange={(e) => setNewBroadcast({ ...newBroadcast, title: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Message</Label>
-                    <Textarea
-                      placeholder="Write your notification message..."
-                      value={newBroadcast.message}
-                      onChange={(e) => setNewBroadcast({ ...newBroadcast, message: e.target.value })}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Type</Label>
-                      <Select value={newBroadcast.type} onValueChange={(v) => setNewBroadcast({ ...newBroadcast, type: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="welcome">🎉 Welcome</SelectItem>
-                          <SelectItem value="promotion">🔥 Promotion</SelectItem>
-                          <SelectItem value="event">🎪 Event</SelectItem>
-                          <SelectItem value="announcement">📢 Announcement</SelectItem>
-                          <SelectItem value="wish">💝 Wish</SelectItem>
-                          <SelectItem value="advertisement">✨ Advertisement</SelectItem>
-                          <SelectItem value="seasonal">🌿 Seasonal</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Expires In (days)</Label>
-                      <Input
-                        type="number"
-                        value={newBroadcast.expiresIn}
-                        onChange={(e) => setNewBroadcast({ ...newBroadcast, expiresIn: e.target.value })}
-                        min={1}
-                        max={30}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowAddBroadcast(false)}>Cancel</Button>
-                  <Button className="bg-emerald hover:bg-emerald-dark" onClick={handleAddBroadcast}>
-                    <Megaphone className="h-4 w-4 mr-1.5" /> Broadcast
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid gap-4">
-            {broadcasts.map((b) => (
-              <Card key={b.id}>
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-xl bg-emerald/10 flex items-center justify-center text-xl">
-                    {b.type === "promotion" ? "🔥" : b.type === "event" ? "🎪" : b.type === "wish" ? "💝" : "📢"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm">{b.title}</h3>
-                    <p className="text-xs text-muted-foreground line-clamp-1">{b.message}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-[10px]">{b.type}</Badge>
-                      <span className="text-[10px] text-muted-foreground">Expires: {b.expiresIn}</span>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={b.active}
-                    onCheckedChange={() => {
-                      setBroadcasts(broadcasts.map((br) =>
-                        br.id === b.id ? { ...br, active: !br.active } : br
-                      ));
-                    }}
-                  />
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-600">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
       </Tabs>
     </div>
   );

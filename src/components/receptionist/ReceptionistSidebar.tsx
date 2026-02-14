@@ -9,7 +9,6 @@ import {
   BedDouble,
   Users,
   Bell,
-  MessageSquare,
   ClipboardList,
   Building2,
 } from "lucide-react";
@@ -40,7 +39,6 @@ const navGroups: NavGroup[] = [
     label: "Communication",
     items: [
       { title: "Notifications", href: "/receptionist/notifications", icon: Bell, badge: "4" },
-      { title: "Messages", href: "/receptionist/messages", icon: MessageSquare },
     ],
   },
 ];

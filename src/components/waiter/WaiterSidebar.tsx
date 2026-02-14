@@ -7,7 +7,6 @@ import {
   UtensilsCrossed,
   CalendarCheck,
   ClipboardList,
-  MessageSquare,
   Grid3X3,
   Bell,
   CoffeeIcon,
@@ -39,7 +38,6 @@ const navGroups: NavGroup[] = [
     label: "Communication",
     items: [
       { title: "Notifications", href: "/waiter/notifications", icon: Bell, badge: "4" },
-      { title: "Messages", href: "/waiter/messages", icon: MessageSquare },
     ],
   },
 ];

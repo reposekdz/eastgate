@@ -9,7 +9,6 @@ import {
   UtensilsCrossed,
   BarChart3,
   ClipboardList,
-  MessageSquare,
   Building2,
   Settings,
   Bell,
@@ -48,7 +47,6 @@ const navGroups: NavGroup[] = [
     label: "Communication",
     items: [
       { title: "Notifications", href: "/manager/notifications", icon: Bell, badge: "4" },
-      { title: "Messages", href: "/manager/messages", icon: MessageSquare },
       { title: "Settings", href: "/manager/settings", icon: Settings },
     ],
   },
