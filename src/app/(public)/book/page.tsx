@@ -71,6 +71,9 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { MenuOrderDialog, type CartItem } from "@/components/MenuOrderDialog";
+import CountrySelect from "@/components/shared/CountrySelect";
+import { useCurrency } from "@/components/shared/CurrencySelector";
+import { formatWithCurrency } from "@/lib/currencies";
 
 // ─── Room Data with Images ───────────────────────────────
 const roomTypeDetails = [
@@ -140,15 +143,11 @@ const addOnServicesMeta = [
   { id: "gym_access", price: 15000, icon: Dumbbell },
 ];
 
-const nationalities = [
-  "Rwanda", "Burundi", "DR Congo", "Uganda", "Kenya", "Tanzania",
-  "United States", "United Kingdom", "France", "Germany", "China",
-  "India", "Japan", "South Africa", "Nigeria", "Ghana", "Ethiopia",
-  "Canada", "Australia", "Brazil", "Other",
-];
+// Using full world countries from CountrySelect component
 
 export default function BookingPage() {
   const { t, locale } = useI18n();
+  const { currency } = useCurrency();
   const [step, setStep] = useState(1);
 
   // Step 1
@@ -707,10 +706,11 @@ export default function BookingPage() {
                       <Label className="text-sm font-semibold text-charcoal mb-2 flex items-center gap-2">
                         <Globe className="h-4 w-4 text-emerald" /> {t("booking", "nationality")}
                       </Label>
-                      <Select value={guestNationality} onValueChange={setGuestNationality}>
-                        <SelectTrigger className="h-12"><SelectValue placeholder={t("booking", "selectNationality")} /></SelectTrigger>
-                        <SelectContent>{nationalities.map((n) => (<SelectItem key={n} value={n}>{n}</SelectItem>))}</SelectContent>
-                      </Select>
+                      <CountrySelect
+                        value={guestNationality}
+                        onValueChange={setGuestNationality}
+                        placeholder={t("booking", "selectNationality")}
+                      />
                     </div>
                   </div>
 
@@ -836,7 +836,14 @@ export default function BookingPage() {
                       <Separator />
                       <div className="flex justify-between items-center pt-2">
                         <span className="font-heading text-lg font-bold text-charcoal">{t("common", "total")}</span>
-                        <span className="font-heading text-2xl font-bold text-emerald">{formatCurrency(totalAmount)}</span>
+                        <div className="text-right">
+                          <span className="font-heading text-2xl font-bold text-emerald block">{formatCurrency(totalAmount)}</span>
+                          {currency.code !== "RWF" && (
+                            <span className="text-xs text-text-muted-custom">
+                              ≈ {formatWithCurrency(totalAmount, currency.code)} ({currency.code})
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

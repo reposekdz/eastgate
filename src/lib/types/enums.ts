@@ -7,7 +7,8 @@ export type UserRole =
   | "housekeeping"
   | "restaurant_staff"
   | "accountant"
-  | "event_manager";
+  | "event_manager"
+  | "guest";
 
 export type RoomStatus =
   | "available"

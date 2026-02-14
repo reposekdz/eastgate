@@ -276,6 +276,25 @@
   }
 }
 
+/* Global Search Dialog — 3x wider */
+[data-slot="command"] {
+  max-height: 70vh;
+}
+
+@media (min-width: 640px) {
+  [cmdk-dialog] [data-slot="dialog-content"],
+  [data-state="open"][role="dialog"]:has([data-slot="command"]) {
+    max-width: 680px;
+  }
+}
+
+@media (min-width: 1024px) {
+  [cmdk-dialog] [data-slot="dialog-content"],
+  [data-state="open"][role="dialog"]:has([data-slot="command"]) {
+    max-width: 780px;
+  }
+}
+
 html {
   scroll-behavior: smooth;
 }

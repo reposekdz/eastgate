@@ -122,6 +122,7 @@ export function getRoleLabel(role: UserRole): string {
     restaurant_staff: "Restaurant Staff",
     accountant: "Accountant",
     event_manager: "Event Manager",
+    guest: "Guest",
   };
   return labels[role];
 }

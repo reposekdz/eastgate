@@ -33,6 +33,7 @@ import {
 import Link from "next/link";
 import StarRating from "@/components/StarRating";
 import FAQSection from "@/components/FAQSection";
+import NotificationBanner from "@/components/shared/NotificationBanner";
 
 // ─── Animated Counter Component ──────────────────────────
 function AnimatedCounter({ target, suffix = "" }: { target: string; suffix?: string }) {
@@ -167,6 +168,9 @@ export default function HomePage() {
 
   return (
     <>
+      {/* ─── Manager Notification Banner ─── */}
+      <NotificationBanner />
+
       {/* ─── Hero Section ─── */}
       <section className="relative h-screen w-full overflow-hidden">
         <div

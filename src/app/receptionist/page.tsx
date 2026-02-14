@@ -48,6 +48,9 @@ import {
   type IdType,
 } from "@/stores/guest-store";
 import { useI18n } from "@/lib/i18n/context";
+import { countries, searchCountries } from "@/lib/countries";
+import CountrySelect from "@/components/shared/CountrySelect";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import ReceiptDialog, { type ReceiptData } from "@/components/receptionist/ReceiptDialog";
 import PayPalPayment from "@/components/receptionist/PayPalPayment";
 import {
@@ -88,12 +91,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const nationalities = [
-  "Rwanda", "Burundi", "DR Congo", "Uganda", "Kenya", "Tanzania",
-  "United States", "United Kingdom", "France", "Germany", "China",
-  "India", "Japan", "South Africa", "Nigeria", "Ghana", "Ethiopia",
-  "Canada", "Australia", "Brazil", "Other",
-];
+// Use full world countries list from countries.ts
 
 // Activity log types
 type ActivityType = "check_in" | "check_out" | "booking" | "service" | "alert" | "payment";
@@ -452,12 +450,13 @@ export default function ReceptionistDashboard() {
                     </div>
                     <div>
                       <Label className="text-sm font-medium">{t("receptionist", "nationality")}</Label>
-                      <Select value={regNationality} onValueChange={setRegNationality}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder={t("receptionist", "selectCountry")} /></SelectTrigger>
-                        <SelectContent>
-                          {nationalities.map((n) => (<SelectItem key={n} value={n}>{n}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
+                      <div className="mt-1">
+                        <CountrySelect
+                          value={regNationality}
+                          onValueChange={setRegNationality}
+                          placeholder={t("receptionist", "selectCountry")}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

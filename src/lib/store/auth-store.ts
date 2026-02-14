@@ -10,20 +10,31 @@ export interface User {
   branchId: string;
   branchName: string;
   avatar: string;
+  phone?: string;
+  nationality?: string;
 }
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  registeredGuests: (User & { password: string })[];
   login: (email: string, password: string, branchId: string) => Promise<boolean>;
+  registerGuestAccount: (data: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    nationality?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   hasRole: (roles: UserRole[]) => boolean;
   hasAccess: (requiredRoles: UserRole[]) => boolean;
 }
 
-// Mock users for demonstration
-const mockUsers: (User & { password: string })[] = [
-  // Super Admins & Managers
+// Static staff credentials — given by the manager
+// Staff CANNOT register; they use these predefined credentials.
+const staffUsers: (User & { password: string })[] = [
+  // ═══ Super Admin / Manager ═══
   {
     id: "u-000",
     name: "EastGate Admin",
@@ -33,6 +44,16 @@ const mockUsers: (User & { password: string })[] = [
     branchId: "all",
     branchName: "All Branches",
     avatar: "https://i.pravatar.cc/40?u=eastgate-admin",
+  },
+  {
+    id: "u-000b",
+    name: "EastGate Manager",
+    email: "eastgate@hmail.com",
+    password: "2026",
+    role: "super_manager",
+    branchId: "all",
+    branchName: "All Branches",
+    avatar: "https://i.pravatar.cc/40?u=eastgate-manager",
   },
   {
     id: "u-001",
@@ -54,8 +75,8 @@ const mockUsers: (User & { password: string })[] = [
     branchName: "All Branches",
     avatar: "https://i.pravatar.cc/40?u=manager",
   },
-  
-  // Kigali Main Branch (br-001)
+
+  // ═══ Kigali Main Branch (br-001) ═══
   {
     id: "u-003",
     name: "Jean-Pierre Habimana",
@@ -96,8 +117,8 @@ const mockUsers: (User & { password: string })[] = [
     branchName: "Kigali Main",
     avatar: "https://i.pravatar.cc/40?u=aimee-k",
   },
-  
-  // Ngoma Branch (br-002)
+
+  // ═══ Ngoma Branch (br-002) ═══
   {
     id: "u-007",
     name: "Diane Uwimana",
@@ -128,8 +149,8 @@ const mockUsers: (User & { password: string })[] = [
     branchName: "Ngoma Branch",
     avatar: "https://i.pravatar.cc/40?u=joseph-h",
   },
-  
-  // Kirehe Branch (br-003)
+
+  // ═══ Kirehe Branch (br-003) ═══
   {
     id: "u-010",
     name: "Patrick Niyonsaba",
@@ -160,8 +181,8 @@ const mockUsers: (User & { password: string })[] = [
     branchName: "Kirehe Branch",
     avatar: "https://i.pravatar.cc/40?u=angelique-u",
   },
-  
-  // Gatsibo Branch (br-004)
+
+  // ═══ Gatsibo Branch (br-004) ═══
   {
     id: "u-013",
     name: "Emmanuel Mugisha",
@@ -199,38 +220,102 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       isAuthenticated: false,
+      registeredGuests: [],
 
       login: async (email: string, password: string, branchId: string) => {
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        const user = mockUsers.find(
+        // 1. Check staff users (static credentials)
+        const staffUser = staffUsers.find(
           (u) =>
-            u.email === email &&
+            u.email.toLowerCase() === email.toLowerCase() &&
             u.password === password &&
             (u.branchId === "all" || u.branchId === branchId)
         );
 
-        if (user) {
-          const { password: _, ...userData } = user;
+        if (staffUser) {
+          const { password: _, ...userData } = staffUser;
           set({ user: userData, isAuthenticated: true });
-
-          // Set auth cookie for middleware SSR protection
           document.cookie = `eastgate-auth=${JSON.stringify({
             isAuthenticated: true,
             role: userData.role,
             branchId: userData.branchId,
           })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+          return true;
+        }
 
+        // 2. Check registered guest accounts
+        const guestUser = get().registeredGuests.find(
+          (u) =>
+            u.email.toLowerCase() === email.toLowerCase() &&
+            u.password === password
+        );
+
+        if (guestUser) {
+          const { password: _, ...userData } = guestUser;
+          set({ user: userData, isAuthenticated: true });
+          document.cookie = `eastgate-auth=${JSON.stringify({
+            isAuthenticated: true,
+            role: "guest",
+            branchId: "all",
+          })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
           return true;
         }
 
         return false;
       },
 
+      registerGuestAccount: async (data) => {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+
+        // Check if email already exists in staff
+        const existsInStaff = staffUsers.some(
+          (u) => u.email.toLowerCase() === data.email.toLowerCase()
+        );
+        if (existsInStaff) {
+          return { success: false, error: "This email is reserved for staff accounts." };
+        }
+
+        // Check if email already exists in registered guests
+        const existsInGuests = get().registeredGuests.some(
+          (u) => u.email.toLowerCase() === data.email.toLowerCase()
+        );
+        if (existsInGuests) {
+          return { success: false, error: "An account with this email already exists." };
+        }
+
+        const newGuest: User & { password: string } = {
+          id: `guest-${Date.now().toString(36)}`,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          password: data.password,
+          role: "guest",
+          branchId: "all",
+          branchName: "Guest",
+          nationality: data.nationality || "",
+          avatar: `https://i.pravatar.cc/40?u=${data.email}`,
+        };
+
+        set((state) => ({
+          registeredGuests: [...state.registeredGuests, newGuest],
+        }));
+
+        // Auto-login after registration
+        const { password: _, ...userData } = newGuest;
+        set({ user: userData, isAuthenticated: true });
+        document.cookie = `eastgate-auth=${JSON.stringify({
+          isAuthenticated: true,
+          role: "guest",
+          branchId: "all",
+        })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+
+        return { success: true };
+      },
+
       logout: () => {
         set({ user: null, isAuthenticated: false });
-        // Clear the auth cookie
         document.cookie = "eastgate-auth=; path=/; max-age=0; SameSite=Lax";
       },
 
@@ -243,12 +328,9 @@ export const useAuthStore = create<AuthState>()(
       hasAccess: (requiredRoles: UserRole[]) => {
         const { user } = get();
         if (!user) return false;
-
-        // Super admin and super manager have access to everything
         if (user.role === "super_admin" || user.role === "super_manager") {
           return true;
         }
-
         return requiredRoles.includes(user.role);
       },
     }),
@@ -257,3 +339,13 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Export staff credentials list for display in login page hints
+export const getStaffCredentials = () =>
+  staffUsers.map(({ name, email, password, role, branchName }) => ({
+    name,
+    email,
+    password,
+    role,
+    branchName,
+  }));
