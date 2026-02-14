@@ -1,3 +1,7 @@
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import ManagerSidebar from "@/components/manager/ManagerSidebar";
+import ManagerTopbar from "@/components/manager/ManagerTopbar";
+import AuthGuard from "@/components/shared/AuthGuard";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata = {
@@ -11,9 +15,17 @@ export default function ManagerLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
-      {children}
-      <Toaster position="top-right" richColors />
-    </>
+    <AuthGuard allowedRoles={["super_admin", "super_manager", "branch_manager"]}>
+      <SidebarProvider>
+        <ManagerSidebar />
+        <SidebarInset>
+          <ManagerTopbar />
+          <main className="flex-1 overflow-auto bg-pearl/30 p-4 md:p-6">
+            {children}
+          </main>
+        </SidebarInset>
+        <Toaster position="top-right" richColors />
+      </SidebarProvider>
+    </AuthGuard>
   );
 }

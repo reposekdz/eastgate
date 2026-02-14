@@ -1,475 +1,349 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { restaurantOrders, menuItems, staff, branches } from "@/lib/mock-data";
-import { formatCurrency, formatTime, getOrderStatusLabel } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useBranchStore } from "@/lib/store/branch-store";
+import { formatCurrency, formatTime } from "@/lib/format";
 import {
   UtensilsCrossed,
-  Search,
   Clock,
   CheckCircle2,
   AlertCircle,
-  Plus,
-  Minus,
-  ShoppingCart,
   ChefHat,
   TrendingUp,
+  Grid3X3,
+  CalendarCheck,
+  ClipboardList,
+  Users,
+  Activity,
+  Zap,
 } from "lucide-react";
-import { toast } from "sonner";
+import Link from "next/link";
 
 export default function WaiterDashboard() {
   const { user } = useAuthStore();
-  const userBranchId = user?.branchId || "br-001";
-  const userBranchName = user?.branchName || "Kigali Main";
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [cart, setCart] = useState<{ [key: string]: number }>({});
-  const [tableNumber, setTableNumber] = useState("1");
-  const [guestName, setGuestName] = useState("");
+  const {
+    getOrders,
+    getTables,
+    getBookings,
+    getServiceRequests,
+  } = useBranchStore();
 
-  // Filter orders by branch (in real app, this would be from API)
-  const branchOrders = restaurantOrders;
-  const activeOrders = branchOrders.filter((o) => o.status !== "served");
-  
-  // Branch stats
-  const branchInfo = branches.find((b) => b.id === userBranchId);
-  
-  const filteredOrders = activeOrders.filter((o) => {
-    const matchesSearch =
-      o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (o.guestName && o.guestName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      o.tableNumber.toString().includes(searchTerm);
-    const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const userRole = user?.role || "waiter";
+  const branchId = user?.branchId || "br-001";
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-orange-100 text-orange-700";
-      case "preparing":
-        return "bg-blue-100 text-blue-700";
-      case "ready":
-        return "bg-emerald-100 text-emerald-700";
-      case "served":
-        return "bg-gray-100 text-gray-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
+  const orders = getOrders(branchId, userRole);
+  const tables = getTables(branchId, userRole);
+  const bookings = getBookings(branchId, userRole);
+  const serviceRequests = getServiceRequests(branchId, userRole);
 
-  const handleUpdateStatus = (orderId: string, newStatus: string) => {
-    toast.success(`Order ${orderId} updated to ${newStatus}`);
-  };
+  // Stats
+  const pendingOrders = orders.filter((o) => o.status === "pending").length;
+  const preparingOrders = orders.filter((o) => o.status === "preparing").length;
+  const readyOrders = orders.filter((o) => o.status === "ready").length;
+  const activeOrders = orders.filter((o) => o.status !== "served").length;
+  const todayRevenue = orders.reduce((sum, o) => sum + o.total, 0);
 
-  const addToCart = (itemId: string) => {
-    setCart((prev) => ({ ...prev, [itemId]: (prev[itemId] || 0) + 1 }));
-  };
+  const occupiedTables = tables.filter((t) => t.status === "occupied").length;
+  const availableTables = tables.filter((t) => t.status === "available").length;
+  const reservedTables = tables.filter((t) => t.status === "reserved").length;
 
-  const removeFromCart = (itemId: string) => {
-    setCart((prev) => {
-      const newCart = { ...prev };
-      if (newCart[itemId] > 1) {
-        newCart[itemId]--;
-      } else {
-        delete newCart[itemId];
-      }
-      return newCart;
-    });
-  };
+  const pendingServices = serviceRequests.filter(
+    (sr) => sr.status === "pending"
+  ).length;
+  const todayBookings = bookings.filter(
+    (b) => b.status === "checked_in"
+  ).length;
 
-  const cartTotal = Object.entries(cart).reduce((sum, [itemId, qty]) => {
-    const item = menuItems.find((m) => m.id === itemId);
-    return sum + (item?.price || 0) * qty;
-  }, 0);
-
-  const handlePlaceOrder = () => {
-    if (Object.keys(cart).length === 0) {
-      toast.error("Cart is empty");
-      return;
-    }
-    if (!tableNumber) {
-      toast.error("Please select a table number");
-      return;
-    }
-    toast.success(`Order placed for Table ${tableNumber}!`);
-    setCart({});
-    setTableNumber("1");
-    setGuestName("");
-  };
-
-  const todayRevenue = branchOrders.reduce((sum, order) => sum + order.total, 0);
-  const averageOrderValue = branchOrders.length > 0 ? todayRevenue / branchOrders.length : 0;
+  const liveOrders = orders.filter((o) => o.status !== "served").slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-pearl/30 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 bg-orange-600 rounded-lg flex items-center justify-center">
-                <UtensilsCrossed className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="heading-sm text-charcoal">{userBranchName}</h1>
-                <p className="text-xs text-text-muted-custom">Restaurant Service</p>
-              </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-10 w-10 bg-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+              <UtensilsCrossed className="h-5 w-5 text-white" />
             </div>
-            <p className="body-sm text-text-muted-custom">
-              Manage orders and serve guests • {branchInfo?.location}
+            <div>
+              <h1 className="heading-md text-charcoal">
+                Welcome, {user?.name?.split(" ")[0] || "Waiter"}
+              </h1>
+              <p className="text-xs text-text-muted-custom">
+                {user?.branchName} &bull; Waiter Dashboard
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/waiter/tables">
+            <Button variant="outline" size="sm">
+              <Grid3X3 className="mr-2 h-4 w-4" /> Table Map
+            </Button>
+          </Link>
+          <Link href="/waiter/new-order">
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              size="sm"
+            >
+              <Zap className="mr-2 h-4 w-4" /> New Order
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* KPI Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200">
+          <CardContent className="p-4 text-center">
+            <AlertCircle className="h-5 w-5 text-orange-600 mx-auto mb-1" />
+            <p className="text-2xl font-bold text-orange-700">{pendingOrders}</p>
+            <p className="text-[11px] text-orange-900 font-medium">Pending</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
+          <CardContent className="p-4 text-center">
+            <ChefHat className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+            <p className="text-2xl font-bold text-blue-700">
+              {preparingOrders}
             </p>
-          </div>
-          <div className="flex gap-3">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-emerald hover:bg-emerald-dark text-white relative">
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  New Order
-                  {Object.keys(cart).length > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 flex items-center justify-center bg-gold">
-                      {Object.keys(cart).length}
-                    </Badge>
-                  )}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create New Order</DialogTitle>
-                </DialogHeader>
-                <Tabs defaultValue="food" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="food">Main Course</TabsTrigger>
-                    <TabsTrigger value="breakfast">Breakfast</TabsTrigger>
-                    <TabsTrigger value="drinks">Beverages</TabsTrigger>
-                    <TabsTrigger value="desserts">Desserts</TabsTrigger>
-                  </TabsList>
+            <p className="text-[11px] text-blue-900 font-medium">Preparing</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
+          <CardContent className="p-4 text-center">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
+            <p className="text-2xl font-bold text-emerald-700">{readyOrders}</p>
+            <p className="text-[11px] text-emerald-900 font-medium">
+              Ready to Serve
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200">
+          <CardContent className="p-4 text-center">
+            <Grid3X3 className="h-5 w-5 text-purple-600 mx-auto mb-1" />
+            <p className="text-2xl font-bold text-purple-700">
+              {occupiedTables}/{tables.length}
+            </p>
+            <p className="text-[11px] text-purple-900 font-medium">
+              Tables Busy
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100/50 border-cyan-200">
+          <CardContent className="p-4 text-center">
+            <CalendarCheck className="h-5 w-5 text-cyan-600 mx-auto mb-1" />
+            <p className="text-2xl font-bold text-cyan-700">{todayBookings}</p>
+            <p className="text-[11px] text-cyan-900 font-medium">Checked In</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200">
+          <CardContent className="p-4 text-center">
+            <TrendingUp className="h-5 w-5 text-amber-600 mx-auto mb-1" />
+            <p className="text-lg font-bold text-amber-700">
+              {formatCurrency(todayRevenue)}
+            </p>
+            <p className="text-[11px] text-amber-900 font-medium">Revenue</p>
+          </CardContent>
+        </Card>
+      </div>
 
-                  {["Main Course", "Breakfast", "Beverages", "Desserts"].map((category, idx) => (
-                    <TabsContent key={idx} value={category.toLowerCase().replace(" ", "")} className="space-y-3">
-                      {menuItems
-                        .filter((item) => item.category === category)
-                        .map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-center justify-between p-4 border rounded-lg hover:border-emerald/50 transition-colors"
-                          >
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-charcoal">{item.name}</h4>
-                              <p className="text-sm text-text-muted-custom">{item.description}</p>
-                              <p className="font-bold text-emerald mt-1">
-                                {formatCurrency(item.price)}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {cart[item.id] ? (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => removeFromCart(item.id)}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <Minus className="h-4 w-4" />
-                                  </Button>
-                                  <span className="w-8 text-center font-semibold">
-                                    {cart[item.id]}
-                                  </span>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => addToCart(item.id)}
-                                    className="h-8 w-8 p-0 bg-emerald hover:bg-emerald-dark"
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  onClick={() => addToCart(item.id)}
-                                  className="bg-emerald hover:bg-emerald-dark"
-                                >
-                                  <Plus className="mr-1 h-4 w-4" />
-                                  Add
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                    </TabsContent>
-                  ))}
-                </Tabs>
-
-                {Object.keys(cart).length > 0 && (
-                  <div className="border-t pt-4 mt-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-semibold text-charcoal mb-1 block">
-                          Table Number
-                        </label>
-                        <Select value={tableNumber} onValueChange={setTableNumber}>
-                          <SelectTrigger className="h-10">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
-                              <SelectItem key={n} value={n.toString()}>
-                                Table {n}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-charcoal mb-1 block">
-                          Guest Name (Optional)
-                        </label>
-                        <Input
-                          placeholder="Guest name"
-                          value={guestName}
-                          onChange={(e) => setGuestName(e.target.value)}
-                          className="h-10"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-heading text-lg font-semibold">Total:</span>
-                      <span className="font-heading text-2xl font-bold text-emerald">
-                        {formatCurrency(cartTotal)}
-                      </span>
-                    </div>
-                    <Button
-                      onClick={handlePlaceOrder}
-                      className="w-full bg-emerald hover:bg-emerald-dark text-white h-12"
-                    >
-                      <CheckCircle2 className="mr-2 h-5 w-5" />
-                      Place Order for Table {tableNumber}
-                    </Button>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-orange-900">Pending</p>
-                  <p className="text-2xl font-bold text-orange-700 mt-1">
-                    {branchOrders.filter((o) => o.status === "pending").length}
-                  </p>
-                  <p className="text-xs text-orange-600 mt-1">Needs attention</p>
-                </div>
-                <div className="h-12 w-12 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <AlertCircle className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-900">Preparing</p>
-                  <p className="text-2xl font-bold text-blue-700 mt-1">
-                    {branchOrders.filter((o) => o.status === "preparing").length}
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">In kitchen</p>
-                </div>
-                <div className="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <ChefHat className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-emerald-900">Ready</p>
-                  <p className="text-2xl font-bold text-emerald-700 mt-1">
-                    {branchOrders.filter((o) => o.status === "ready").length}
-                  </p>
-                  <p className="text-xs text-emerald-600 mt-1">Serve now</p>
-                </div>
-                <div className="h-12 w-12 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <CheckCircle2 className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-900">Total Orders</p>
-                  <p className="text-2xl font-bold text-purple-700 mt-1">
-                    {branchOrders.length}
-                  </p>
-                  <p className="text-xs text-purple-600 mt-1">Today</p>
-                </div>
-                <div className="h-12 w-12 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <UtensilsCrossed className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-gold/20 to-gold/10 border-gold/30">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-charcoal">Today Revenue</p>
-                  <p className="text-xl font-bold text-gold-dark mt-1">
-                    {formatCurrency(todayRevenue)}
-                  </p>
-                  <p className="text-xs text-text-muted-custom mt-1">Avg: {formatCurrency(averageOrderValue)}</p>
-                </div>
-                <div className="h-12 w-12 bg-gold rounded-xl flex items-center justify-center shadow-lg">
-                  <TrendingUp className="h-6 w-6 text-charcoal" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Orders Table */}
-        <Card>
-          <CardHeader>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Live Orders Feed */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle>Active Orders</CardTitle>
-              <div className="flex gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted-custom" />
-                  <Input
-                    placeholder="Search orders..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 w-64"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="preparing">Preparing</SelectItem>
-                    <SelectItem value="ready">Ready</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Activity className="h-4 w-4 text-amber-600" /> Live Order Feed
+              </CardTitle>
+              <Link href="/waiter/orders">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-amber-600 text-xs h-7"
+                >
+                  View All ({activeOrders})
+                </Button>
+              </Link>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead>Table</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Guest</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.id}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">Table {order.tableNumber}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {order.items.map((item, idx) => (
-                            <div key={idx}>
-                              {item.quantity}x {item.name}
-                            </div>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">{order.guestName}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm">
-                          <Clock className="h-3 w-3" />
-                          {formatTime(new Date(order.createdAt).toTimeString().slice(0, 5))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(order.status)}>
-                          {getOrderStatusLabel(order.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        {formatCurrency(order.total)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Select
-                          value={order.status}
-                          onValueChange={(value) => handleUpdateStatus(order.id, value)}
-                        >
-                          <SelectTrigger className="w-32 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="preparing">Preparing</SelectItem>
-                            <SelectItem value="ready">Ready</SelectItem>
-                            <SelectItem value="served">Served</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredOrders.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-text-muted-custom">
-                        No active orders
-                      </TableCell>
-                    </TableRow>
+          <CardContent className="space-y-3">
+            {liveOrders.map((order) => (
+              <div
+                key={order.id}
+                className="flex items-center justify-between p-3 rounded-xl border hover:border-amber-300 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold text-sm ${
+                      order.status === "pending"
+                        ? "bg-orange-500"
+                        : order.status === "preparing"
+                        ? "bg-blue-500"
+                        : "bg-emerald-500"
+                    }`}
+                  >
+                    T{order.tableNumber}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-charcoal">
+                        {order.id}
+                      </p>
+                      <Badge
+                        className={`text-[10px] ${
+                          order.status === "pending"
+                            ? "bg-orange-100 text-orange-700"
+                            : order.status === "preparing"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {order.status}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-text-muted-custom mt-0.5">
+                      {order.items
+                        .map((i) => `${i.quantity}x ${i.name}`)
+                        .join(", ")}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-charcoal">
+                    {formatCurrency(order.total)}
+                  </p>
+                  <div className="flex items-center gap-1 text-xs text-text-muted-custom mt-0.5">
+                    <Clock className="h-3 w-3" />
+                    {formatTime(
+                      new Date(order.createdAt).toTimeString().slice(0, 5)
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {liveOrders.length === 0 && (
+              <div className="text-center py-8 text-text-muted-custom">
+                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald" />
+                <p className="text-sm font-medium">All caught up!</p>
+                <p className="text-xs">No active orders right now</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Quick Table Status */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Grid3X3 className="h-4 w-4 text-amber-600" /> Table Status
+              </CardTitle>
+              <Link href="/waiter/tables">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-amber-600 text-xs h-7"
+                >
+                  Full Map
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-center">
+                <p className="text-2xl font-bold text-emerald-700">
+                  {availableTables}
+                </p>
+                <p className="text-[11px] text-emerald-900 font-medium">
+                  Available
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-center">
+                <p className="text-2xl font-bold text-blue-700">
+                  {occupiedTables}
+                </p>
+                <p className="text-[11px] text-blue-900 font-medium">
+                  Occupied
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-purple-50 border border-purple-200 text-center">
+                <p className="text-2xl font-bold text-purple-700">
+                  {reservedTables}
+                </p>
+                <p className="text-[11px] text-purple-900 font-medium">
+                  Reserved
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-center">
+                <p className="text-2xl font-bold text-yellow-700">
+                  {tables.filter((t) => t.status === "cleaning").length}
+                </p>
+                <p className="text-[11px] text-yellow-900 font-medium">
+                  Cleaning
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-text-muted-custom">Capacity Usage</span>
+                <span className="font-medium text-charcoal">
+                  {tables.length > 0
+                    ? Math.round((occupiedTables / tables.length) * 100)
+                    : 0}
+                  %
+                </span>
+              </div>
+              <Progress
+                value={
+                  tables.length > 0
+                    ? (occupiedTables / tables.length) * 100
+                    : 0
+                }
+                className="h-2"
+              />
+            </div>
+
+            {/* Quick Actions */}
+            <div className="space-y-2 pt-2">
+              <p className="text-xs font-semibold text-text-muted-custom uppercase tracking-wide">
+                Quick Actions
+              </p>
+              <Link href="/waiter/services" className="block">
+                <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-pearl/50 transition-colors border">
+                  <ClipboardList className="h-4 w-4 text-purple-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-charcoal">
+                      Service Requests
+                    </p>
+                  </div>
+                  {pendingServices > 0 && (
+                    <Badge className="bg-purple-600 text-white text-[10px]">
+                      {pendingServices}
+                    </Badge>
                   )}
-                </TableBody>
-              </Table>
+                </div>
+              </Link>
+              <Link href="/waiter/bookings" className="block">
+                <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-pearl/50 transition-colors border">
+                  <CalendarCheck className="h-4 w-4 text-cyan-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-charcoal">
+                      Today&apos;s Bookings
+                    </p>
+                  </div>
+                  <Badge className="bg-cyan-600 text-white text-[10px]">
+                    {todayBookings}
+                  </Badge>
+                </div>
+              </Link>
             </div>
           </CardContent>
         </Card>

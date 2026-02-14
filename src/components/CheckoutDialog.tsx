@@ -24,6 +24,7 @@ import { useCartStore } from "@/stores/cart-store";
 import { useOrderStore, type OrderType, type PaymentMethodType } from "@/stores/order-store";
 import { formatCurrency } from "@/lib/format";
 import { toast } from "sonner";
+import { branches } from "@/lib/mock-data";
 import {
   CreditCard,
   Phone,
@@ -126,6 +127,7 @@ export function CheckoutDialog({
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [tableNumber, setTableNumber] = useState("");
   const [roomNumber, setRoomNumber] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState("br-001");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
@@ -149,6 +151,7 @@ export function CheckoutDialog({
       return;
     }
 
+    const branchInfo = branches.find((b) => b.id === selectedBranch);
     const id = placeOrder({
       items: items.map((ci) => ({
         itemId: ci.item.id,
@@ -159,6 +162,8 @@ export function CheckoutDialog({
       orderType,
       tableNumber: orderType === "dine_in" ? tableNumber : undefined,
       roomNumber: orderType === "room_service" ? roomNumber : undefined,
+      branchId: selectedBranch,
+      branchName: branchInfo?.name || "Kigali Main",
       customerName,
       customerPhone,
       paymentMethod,
@@ -179,6 +184,7 @@ export function CheckoutDialog({
     setOrderType("dine_in");
     setTableNumber("");
     setRoomNumber("");
+    setSelectedBranch("br-001");
     setCustomerName("");
     setCustomerPhone("");
     setSpecialInstructions("");
@@ -233,6 +239,29 @@ export function CheckoutDialog({
                   Order Details
                 </DialogTitle>
               </DialogHeader>
+
+              {/* Branch Selection */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-charcoal">
+                  <Building2 className="h-3.5 w-3.5 inline mr-1" />
+                  Select Branch
+                </Label>
+                <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{b.name}</span>
+                          <span className="text-xs text-text-muted-custom">{b.location}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Order Type */}
               <div className="space-y-2">

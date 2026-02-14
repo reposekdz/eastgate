@@ -2,21 +2,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { staff, bookings, restaurantOrders, rooms, branches } from "@/lib/mock-data";
-import { formatCurrency, getRoleLabel, formatDate } from "@/lib/format";
+import { useBranchStore } from "@/lib/store/branch-store";
+import { formatCurrency } from "@/lib/format";
 import {
   Building2,
   Users,
@@ -25,26 +16,30 @@ import {
   BedDouble,
   UtensilsCrossed,
   UserCheck,
-  Target,
-  Award,
-  BarChart3,
-  PieChart,
   Activity,
   CalendarCheck,
+  ClipboardList,
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock,
+  Star,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function ManagerDashboard() {
   const { user } = useAuthStore();
-  const userBranchId = user?.branchId || "br-001";
-  const userBranchName = user?.branchName || "Kigali Main";
-  const isSuperManager = user?.role === "super_manager" || user?.role === "super_admin";
+  const { getStaff, getBookings, getRooms, getOrders, getServiceRequests, getTables } = useBranchStore();
+  
+  const userRole = user?.role || "branch_manager";
+  const branchId = user?.branchId || "br-001";
+  const isSuperRole = userRole === "super_manager" || userRole === "super_admin";
 
-  // Branch-specific data
-  const branchInfo = branches.find((b) => b.id === userBranchId);
-  const branchStaff = staff.filter((s) => s.branchId === userBranchId);
-  const branchBookings = bookings.filter((b) => b.branchId === userBranchId);
-  const branchRooms = rooms.filter((r) => r.branchId === userBranchId);
-  const branchOrders = restaurantOrders; // In real app, filter by branch
+  const branchStaff = getStaff(branchId, userRole);
+  const branchBookings = getBookings(branchId, userRole);
+  const branchRooms = getRooms(branchId, userRole);
+  const branchOrders = getOrders(branchId, userRole);
+  const serviceRequests = getServiceRequests(branchId, userRole);
+  const tables = getTables(branchId, userRole);
 
   // Statistics
   const totalRevenue = branchBookings.reduce((sum, b) => sum + b.totalAmount, 0);
@@ -52,444 +47,331 @@ export default function ManagerDashboard() {
   const occupiedRooms = branchRooms.filter((r) => r.status === "occupied").length;
   const occupancyRate = branchRooms.length > 0 ? (occupiedRooms / branchRooms.length) * 100 : 0;
   const restaurantRevenue = branchOrders.reduce((sum, o) => sum + o.total, 0);
-
-  // Staff by department
-  const staffByDepartment = branchStaff.reduce((acc, s) => {
-    acc[s.department] = (acc[s.department] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Recent bookings
-  const recentBookings = branchBookings.slice(0, 5);
-
-  // Performance metrics
-  const checkInsToday = branchBookings.filter(
-    (b) => b.status === "checked_in" && b.checkIn === new Date().toISOString().split("T")[0]
-  ).length;
+  const pendingRequests = serviceRequests.filter((sr) => sr.status === "pending").length;
   const activeOrders = branchOrders.filter((o) => o.status !== "served").length;
+  const occupiedTables = tables.filter((t) => t.status === "occupied").length;
+
+  const waiters = branchStaff.filter((s) => s.role === "waiter");
+  const recentBookings = branchBookings.slice(0, 4);
 
   return (
-    <div className="min-h-screen bg-pearl/30 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-12 w-12 bg-emerald rounded-xl flex items-center justify-center shadow-lg">
-                <Building2 className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="heading-md text-charcoal">
-                  {isSuperManager ? "All Branches Overview" : userBranchName}
-                </h1>
-                <p className="text-xs text-text-muted-custom">
-                  {isSuperManager ? "Super Manager Dashboard" : "Branch Manager Dashboard"}
-                </p>
-              </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-10 w-10 bg-emerald rounded-xl flex items-center justify-center shadow-lg">
+              <Building2 className="h-5 w-5 text-white" />
             </div>
-            <p className="body-sm text-text-muted-custom">
-              {isSuperManager
-                ? "Monitor and manage all EastGate Hotel branches"
-                : `Manage operations • ${branchInfo?.location}`}
-            </p>
+            <div>
+              <h1 className="heading-md text-charcoal">
+                {isSuperRole ? "All Branches" : user?.branchName}
+              </h1>
+              <p className="text-xs text-text-muted-custom">
+                {isSuperRole ? "Super Manager Dashboard" : "Branch Manager Dashboard"}
+              </p>
+            </div>
           </div>
-          <Button className="bg-emerald hover:bg-emerald-dark text-white">
-            <BarChart3 className="mr-2 h-4 w-4" />
-            View Full Report
-          </Button>
         </div>
-
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-12 w-12 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <DollarSign className="h-6 w-6 text-white" />
-                </div>
-                <Badge className="bg-emerald-600 text-white">+12.5%</Badge>
-              </div>
-              <p className="text-sm font-medium text-emerald-900 mb-1">Total Revenue</p>
-              <p className="text-2xl font-bold text-emerald-700">{formatCurrency(totalRevenue)}</p>
-              <p className="text-xs text-emerald-600 mt-2">This month</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <BedDouble className="h-6 w-6 text-white" />
-                </div>
-                <Badge className="bg-blue-600 text-white">{occupancyRate.toFixed(0)}%</Badge>
-              </div>
-              <p className="text-sm font-medium text-blue-900 mb-1">Occupancy Rate</p>
-              <p className="text-2xl font-bold text-blue-700">
-                {occupiedRooms}/{branchRooms.length}
-              </p>
-              <div className="mt-3">
-                <Progress value={occupancyRate} className="h-2" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-12 w-12 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
-                <Badge className="bg-purple-600 text-white">Active</Badge>
-              </div>
-              <p className="text-sm font-medium text-purple-900 mb-1">Team Members</p>
-              <p className="text-2xl font-bold text-purple-700">
-                {activeStaff}/{branchStaff.length}
-              </p>
-              <p className="text-xs text-purple-600 mt-2">Across all departments</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-12 w-12 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <UtensilsCrossed className="h-6 w-6 text-white" />
-                </div>
-                <Badge className="bg-orange-600 text-white">{activeOrders} active</Badge>
-              </div>
-              <p className="text-sm font-medium text-orange-900 mb-1">Restaurant</p>
-              <p className="text-2xl font-bold text-orange-700">
-                {formatCurrency(restaurantRevenue)}
-              </p>
-              <p className="text-xs text-orange-600 mt-2">Today&apos;s revenue</p>
-            </CardContent>
-          </Card>
+        <div className="flex gap-2">
+          <Link href="/manager/staff">
+            <Button variant="outline" size="sm">
+              <Users className="mr-2 h-4 w-4" /> Manage Staff
+            </Button>
+          </Link>
+          <Link href="/manager/performance">
+            <Button className="bg-emerald hover:bg-emerald-dark text-white" size="sm">
+              <TrendingUp className="mr-2 h-4 w-4" /> View Analytics
+            </Button>
+          </Link>
         </div>
+      </div>
 
-        {/* Tabs for different sections */}
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="staff">Staff Management</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Today's Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-emerald" />
-                    Today&apos;s Activity
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <UserCheck className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-charcoal">Check-ins</p>
-                        <p className="text-xs text-text-muted-custom">Completed today</p>
-                      </div>
-                    </div>
-                    <span className="text-2xl font-bold text-blue-700">{checkInsToday}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-orange-600 rounded-lg flex items-center justify-center">
-                        <UtensilsCrossed className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-charcoal">Active Orders</p>
-                        <p className="text-xs text-text-muted-custom">In restaurant</p>
-                      </div>
-                    </div>
-                    <span className="text-2xl font-bold text-orange-700">{activeOrders}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-emerald-600 rounded-lg flex items-center justify-center">
-                        <CalendarCheck className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-charcoal">Upcoming Bookings</p>
-                        <p className="text-xs text-text-muted-custom">Next 7 days</p>
-                      </div>
-                    </div>
-                    <span className="text-2xl font-bold text-emerald-700">
-                      {branchBookings.filter((b) => b.status === "confirmed").length}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Department Distribution */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <PieChart className="h-5 w-5 text-emerald" />
-                    Staff by Department
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {Object.entries(staffByDepartment).map(([dept, count]) => (
-                    <div key={dept} className="flex items-center justify-between">
-                      <span className="text-sm capitalize text-text-muted-custom">
-                        {dept.replace("_", " ")}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-32 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-emerald h-2 rounded-full"
-                            style={{
-                              width: `${(count / branchStaff.length) * 100}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="text-sm font-semibold text-charcoal w-8">{count}</span>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-11 w-11 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <DollarSign className="h-5 w-5 text-white" />
+              </div>
+              <Badge className="bg-emerald-600 text-white gap-1">
+                <ArrowUpRight className="h-3 w-3" /> 12.5%
+              </Badge>
             </div>
+            <p className="text-sm font-medium text-emerald-900 mb-1">Total Revenue</p>
+            <p className="text-2xl font-bold text-emerald-700">{formatCurrency(totalRevenue)}</p>
+          </CardContent>
+        </Card>
 
-            {/* Recent Bookings */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Bookings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Guest</TableHead>
-                        <TableHead>Room</TableHead>
-                        <TableHead>Check-in</TableHead>
-                        <TableHead>Check-out</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recentBookings.map((booking) => (
-                        <TableRow key={booking.id}>
-                          <TableCell className="font-medium">{booking.guestName}</TableCell>
-                          <TableCell>{booking.roomNumber}</TableCell>
-                          <TableCell>{formatDate(booking.checkIn)}</TableCell>
-                          <TableCell>{formatDate(booking.checkOut)}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                booking.status === "checked_in" ? "default" : "secondary"
-                              }
-                            >
-                              {booking.status.replace("_", " ")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            {formatCurrency(booking.totalAmount)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-11 w-11 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <BedDouble className="h-5 w-5 text-white" />
+              </div>
+              <Badge className="bg-blue-600 text-white">{occupancyRate.toFixed(0)}%</Badge>
+            </div>
+            <p className="text-sm font-medium text-blue-900 mb-1">Occupancy</p>
+            <p className="text-2xl font-bold text-blue-700">{occupiedRooms}/{branchRooms.length}</p>
+            <Progress value={occupancyRate} className="h-1.5 mt-2" />
+          </CardContent>
+        </Card>
 
-          {/* Staff Management Tab */}
-          <TabsContent value="staff" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Team Members ({branchStaff.length})</CardTitle>
-                  <Button className="bg-emerald hover:bg-emerald-dark text-white">
-                    <Users className="mr-2 h-4 w-4" />
-                    Add Staff Member
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Department</TableHead>
-                        <TableHead>Shift</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Contact</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {branchStaff.map((member) => (
-                        <TableRow key={member.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={member.avatar} alt={member.name} />
-                                <AvatarFallback>
-                                  {member.name
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">{member.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{getRoleLabel(member.role)}</TableCell>
-                          <TableCell className="capitalize">
-                            {member.department.replace("_", " ")}
-                          </TableCell>
-                          <TableCell>{member.shift}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={member.status === "active" ? "default" : "secondary"}
-                            >
-                              {member.status.replace("_", " ")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm">{member.phone}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-11 w-11 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <Badge className="bg-purple-600 text-white">{activeStaff} active</Badge>
+            </div>
+            <p className="text-sm font-medium text-purple-900 mb-1">Team Members</p>
+            <p className="text-2xl font-bold text-purple-700">{branchStaff.length}</p>
+          </CardContent>
+        </Card>
 
-          {/* Bookings Tab */}
-          <TabsContent value="bookings" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>All Bookings ({branchBookings.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Booking ID</TableHead>
-                        <TableHead>Guest</TableHead>
-                        <TableHead>Room</TableHead>
-                        <TableHead>Dates</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {branchBookings.map((booking) => (
-                        <TableRow key={booking.id}>
-                          <TableCell className="font-mono text-xs">{booking.id}</TableCell>
-                          <TableCell className="font-medium">{booking.guestName}</TableCell>
-                          <TableCell>{booking.roomNumber}</TableCell>
-                          <TableCell className="text-sm">
-                            {formatDate(booking.checkIn)} - {formatDate(booking.checkOut)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                booking.status === "checked_in" ? "default" : "secondary"
-                              }
-                            >
-                              {booking.status.replace("_", " ")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            {formatCurrency(booking.totalAmount)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-11 w-11 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                <UtensilsCrossed className="h-5 w-5 text-white" />
+              </div>
+              <Badge className="bg-orange-600 text-white">{activeOrders} live</Badge>
+            </div>
+            <p className="text-sm font-medium text-orange-900 mb-1">Restaurant</p>
+            <p className="text-2xl font-bold text-orange-700">{formatCurrency(restaurantRevenue)}</p>
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Performance Tab */}
-          <TabsContent value="performance" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-emerald-200 bg-emerald-50/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-12 w-12 bg-emerald-600 rounded-xl flex items-center justify-center">
-                      <Target className="h-6 w-6 text-white" />
+      {/* Quick Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <UserCheck className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-charcoal">
+                {branchBookings.filter((b) => b.status === "checked_in").length}
+              </p>
+              <p className="text-xs text-text-muted-custom">Checked In</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <ClipboardList className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-charcoal">{pendingRequests}</p>
+              <p className="text-xs text-text-muted-custom">Service Requests</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <Activity className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-charcoal">{occupiedTables}/{tables.length}</p>
+              <p className="text-xs text-text-muted-custom">Tables Active</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-10 w-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <Star className="h-5 w-5 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-charcoal">4.8</p>
+              <p className="text-xs text-text-muted-custom">Guest Rating</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Waiters Overview */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4 text-emerald" /> Waiters On Duty
+              </CardTitle>
+              <Link href="/manager/staff">
+                <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {waiters.map((waiter) => (
+              <div key={waiter.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-pearl/50 transition-colors">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={waiter.avatar} alt={waiter.name} />
+                  <AvatarFallback className="bg-emerald text-white text-xs">
+                    {waiter.name.split(" ").map((n) => n[0]).join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-charcoal truncate">{waiter.name}</p>
+                  <p className="text-xs text-text-muted-custom">{waiter.shift} Shift</p>
+                </div>
+                <Badge variant={waiter.status === "active" ? "default" : "secondary"} className="text-[10px]">
+                  {waiter.status === "active" ? "On Duty" : "Off"}
+                </Badge>
+              </div>
+            ))}
+            {waiters.length === 0 && (
+              <p className="text-sm text-center text-text-muted-custom py-4">No waiters assigned</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Bookings */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CalendarCheck className="h-4 w-4 text-emerald" /> Recent Bookings
+              </CardTitle>
+              <Link href="/manager/bookings">
+                <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentBookings.map((booking) => (
+                <div key={booking.id} className="flex items-center gap-4 p-3 rounded-lg border hover:border-emerald/30 transition-colors">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={booking.guestAvatar} alt={booking.guestName} />
+                    <AvatarFallback>{booking.guestName.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-charcoal">{booking.guestName}</p>
+                      <Badge variant="outline" className="text-[10px]">Room {booking.roomNumber}</Badge>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-emerald-900">Revenue Target</p>
-                      <p className="text-xs text-emerald-600">This month</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <Clock className="h-3 w-3 text-text-muted-custom" />
+                      <p className="text-xs text-text-muted-custom">
+                        {booking.checkIn} → {booking.checkOut}
+                      </p>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-text-muted-custom">Progress</span>
-                      <span className="font-semibold text-emerald-700">78%</span>
-                    </div>
-                    <Progress value={78} className="h-3" />
-                    <p className="text-xs text-emerald-600">
-                      {formatCurrency(totalRevenue)} / {formatCurrency(totalRevenue * 1.28)}
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-charcoal">{formatCurrency(booking.totalAmount)}</p>
+                    <Badge
+                      className="text-[10px] mt-1"
+                      variant={booking.status === "checked_in" ? "default" : "secondary"}
+                    >
+                      {booking.status.replace("_", " ")}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Live Orders + Service Requests */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <UtensilsCrossed className="h-4 w-4 text-orange-600" /> Live Orders
+              </CardTitle>
+              <Link href="/manager/orders">
+                <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {branchOrders.filter((o) => o.status !== "served").slice(0, 4).map((order) => (
+              <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-pearl/50">
+                <div className="flex items-center gap-3">
+                  <div className={`h-2 w-2 rounded-full ${
+                    order.status === "pending" ? "bg-orange-500" :
+                    order.status === "preparing" ? "bg-blue-500" : "bg-emerald-500"
+                  }`} />
+                  <div>
+                    <p className="text-sm font-medium text-charcoal">Table {order.tableNumber}</p>
+                    <p className="text-xs text-text-muted-custom">
+                      {order.items.map((i) => `${i.quantity}x ${i.name}`).join(", ")}
                     </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="text-right">
+                  <Badge
+                    className={`text-[10px] ${
+                      order.status === "pending" ? "bg-orange-100 text-orange-700" :
+                      order.status === "preparing" ? "bg-blue-100 text-blue-700" :
+                      "bg-emerald-100 text-emerald-700"
+                    }`}
+                  >
+                    {order.status}
+                  </Badge>
+                  <p className="text-xs font-semibold text-charcoal mt-1">{formatCurrency(order.total)}</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
-              <Card className="border-blue-200 bg-blue-50/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center">
-                      <Award className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-blue-900">Guest Satisfaction</p>
-                      <p className="text-xs text-blue-600">Average rating</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold text-blue-700">4.8</span>
-                      <span className="text-sm text-blue-600">/ 5.0</span>
-                    </div>
-                    <p className="text-xs text-blue-600">Based on 127 reviews</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-purple-200 bg-purple-50/50">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-12 w-12 bg-purple-600 rounded-xl flex items-center justify-center">
-                      <TrendingUp className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-purple-900">Growth Rate</p>
-                      <p className="text-xs text-purple-600">vs last month</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold text-purple-700">+12.5%</span>
-                    </div>
-                    <p className="text-xs text-purple-600">Revenue increased</p>
-                  </div>
-                </CardContent>
-              </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-purple-600" /> Service Requests
+              </CardTitle>
+              <Link href="/manager/services">
+                <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">
+                  View All
+                </Button>
+              </Link>
             </div>
-          </TabsContent>
-        </Tabs>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {serviceRequests.filter((sr) => sr.status !== "completed").slice(0, 4).map((sr) => (
+              <div key={sr.id} className="flex items-center justify-between p-3 rounded-lg bg-pearl/50">
+                <div className="flex items-center gap-3">
+                  <div className={`h-2 w-2 rounded-full ${
+                    sr.priority === "urgent" ? "bg-red-500" :
+                    sr.priority === "high" ? "bg-orange-500" :
+                    sr.priority === "medium" ? "bg-yellow-500" : "bg-green-500"
+                  }`} />
+                  <div>
+                    <p className="text-sm font-medium text-charcoal">{sr.guestName} - Room {sr.roomNumber}</p>
+                    <p className="text-xs text-text-muted-custom">{sr.description}</p>
+                  </div>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] ${
+                    sr.priority === "urgent" ? "border-red-300 text-red-700" :
+                    sr.priority === "high" ? "border-orange-300 text-orange-700" :
+                    "border-gray-300"
+                  }`}
+                >
+                  {sr.priority}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

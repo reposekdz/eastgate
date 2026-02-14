@@ -29,6 +29,8 @@ export interface PlacedOrder {
   orderType: OrderType;
   tableNumber?: string;
   roomNumber?: string;
+  branchId: string;
+  branchName: string;
   customerName: string;
   customerPhone: string;
   paymentMethod: PaymentMethodType;
@@ -62,6 +64,8 @@ export const useOrderStore = create<OrderStore>()(
           ],
           orderType: "dine_in",
           tableNumber: "T-05",
+          branchId: "br-001",
+          branchName: "Kigali Main",
           customerName: "Jean Baptiste",
           customerPhone: "+250788000001",
           paymentMethod: "mtn_mobile",
@@ -81,6 +85,8 @@ export const useOrderStore = create<OrderStore>()(
           ],
           orderType: "room_service",
           roomNumber: "201",
+          branchId: "br-001",
+          branchName: "Kigali Main",
           customerName: "Sarah Mitchell",
           customerPhone: "+250788000002",
           paymentMethod: "cash",
@@ -100,6 +106,8 @@ export const useOrderStore = create<OrderStore>()(
           ],
           orderType: "dine_in",
           tableNumber: "T-12",
+          branchId: "br-002",
+          branchName: "Ngoma Branch",
           customerName: "Patrick Niyonsaba",
           customerPhone: "+250788000003",
           paymentMethod: "airtel_money",
@@ -118,6 +126,8 @@ export const useOrderStore = create<OrderStore>()(
           ],
           orderType: "dine_in",
           tableNumber: "T-03",
+          branchId: "br-001",
+          branchName: "Kigali Main",
           customerName: "Diane Uwimana",
           customerPhone: "+250788000004",
           paymentMethod: "bank_transfer",
