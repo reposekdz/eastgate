@@ -13,7 +13,7 @@ export const rooms = [
     name: "Deluxe Room",
     description:
       "Spacious comfort with panoramic views of Kigali's rolling hills. Features premium bedding, marble bathroom, and a private balcony.",
-    price: "From $250/night",
+    price: "Kuva RWF 250,000/ijoro",
     image:
       "https://images.pexels.com/photos/34672504/pexels-photo-34672504.jpeg",
     alt: "Elegant hotel room featuring a spacious bed, stylish decor, and warm lighting — Photo by Moussa Idrissi on Pexels",
@@ -23,7 +23,7 @@ export const rooms = [
     name: "Executive Suite",
     description:
       "An elevated experience with separate living area, luxury amenities, and personalized butler service for the discerning traveler.",
-    price: "From $450/night",
+    price: "Kuva RWF 450,000/ijoro",
     image:
       "https://images.pexels.com/photos/5883728/pexels-photo-5883728.jpeg",
     alt: "Cozy luxurious bedroom with modern design, warm lighting, and elegant decor — Photo by thiha soe on Pexels",
@@ -33,7 +33,7 @@ export const rooms = [
     name: "Presidential Suite",
     description:
       "The pinnacle of luxury — expansive spaces, private dining, exclusive lounge access, and bespoke concierge services.",
-    price: "From $850/night",
+    price: "Kuva RWF 850,000/ijoro",
     image:
       "https://images.pexels.com/photos/18285947/pexels-photo-18285947.jpeg",
     alt: "Luxurious hotel bedroom featuring elegant decor, large mirror, chandelier, and gold accents — Photo by edithub pro on Pexels",

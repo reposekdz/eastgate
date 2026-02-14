@@ -22,6 +22,7 @@ import {
 } from "@/lib/menu-data";
 import { formatCurrency } from "@/lib/format";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import { useI18n } from "@/lib/i18n/context";
 import {
   Search,
   ShoppingCart,
@@ -54,6 +55,7 @@ export function MenuOrderDialog({
   cart,
   onUpdateCart,
 }: MenuOrderDialogProps) {
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory | "all">(
     "all"
@@ -143,10 +145,10 @@ export function MenuOrderDialog({
             <div className="h-8 w-8 rounded-lg bg-emerald/10 flex items-center justify-center">
               <UtensilsCrossed className="h-4 w-4 text-emerald" />
             </div>
-            East Gate Hotel Menu
+            {t("menuOrder", "title")}
           </DialogTitle>
           <DialogDescription>
-            Browse our full menu and add items to your order
+            {t("menuOrder", "subtitle")}
           </DialogDescription>
         </DialogHeader>
 
@@ -158,7 +160,7 @@ export function MenuOrderDialog({
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted-custom" />
                 <Input
-                  placeholder="Search menu items..."
+                  placeholder={t("menuOrder", "searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -327,9 +329,9 @@ export function MenuOrderDialog({
           <div className="lg:w-80 border-t lg:border-t-0 lg:border-l flex flex-col bg-pearl/30">
             <div className="px-4 py-3 border-b bg-white">
               <div className="flex items-center justify-between">
-                <h3 className="font-heading font-semibold text-charcoal flex items-center gap-2">
+              <h3 className="font-heading font-semibold text-charcoal flex items-center gap-2">
                   <ShoppingCart className="h-4 w-4" />
-                  Your Order
+                  {t("menuOrder", "yourOrder")}
                 </h3>
                 {totalItems > 0 && (
                   <Badge className="bg-emerald">{totalItems} items</Badge>
@@ -341,8 +343,8 @@ export function MenuOrderDialog({
               {cart.length === 0 ? (
                 <div className="text-center py-12 text-text-muted-custom">
                   <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">Your cart is empty</p>
-                  <p className="text-xs mt-1">Add items from the menu</p>
+                  <p className="text-sm">{t("menuOrder", "cartEmpty")}</p>
+                  <p className="text-xs mt-1">{t("menuOrder", "cartEmptyDesc")}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -384,7 +386,7 @@ export function MenuOrderDialog({
               <div className="border-t bg-white p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-heading font-semibold text-charcoal">
-                    Total Amount
+                    {t("menuOrder", "totalAmount")}
                   </span>
                   <span className="font-heading text-xl font-bold text-emerald">
                     {formatCurrency(totalAmount)}
@@ -394,7 +396,7 @@ export function MenuOrderDialog({
                   className="w-full bg-emerald hover:bg-emerald-dark"
                   onClick={() => onOpenChange(false)}
                 >
-                  Add to Booking
+                  {t("menuOrder", "placeOrder")}
                 </Button>
               </div>
             )}

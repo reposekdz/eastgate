@@ -1,18 +1,24 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useI18n } from "@/lib/i18n/context";
 import {
   MessageCircle,
   X,
   Send,
   Minimize2,
   Sparkles,
+  CheckCheck,
+  Mic,
+  Paperclip,
+  Phone,
+  Video,
 } from "lucide-react";
 
 interface ChatMsg {
@@ -22,12 +28,14 @@ interface ChatMsg {
   avatar: string;
   message: string;
   time: string;
+  status?: "sent" | "delivered" | "seen";
 }
 
-const AUTO_REPLIES: Record<string, string> = {
+const AUTO_REPLIES_EN: Record<string, string> = {
   room: "We have several room types available: Standard (RWF 234,000/night), Deluxe (RWF 325,000/night), Executive Suite (RWF 585,000/night), and Presidential Suite (RWF 1,105,000/night). Would you like to make a reservation?",
   book: "You can book directly through our website at /book or call us at +250 788 123 456. We'd be happy to assist!",
   restaurant: "Our restaurant features authentic Rwandan cuisine and international dishes. The restaurant is open from 6:30 AM to 10:30 PM. You can also view our menu at /menu.",
+  menu: "Check out our full menu at /menu! We have Hot Starters, Beef, Chicken, Fish, Pasta, BBQ, Desserts, and a wide selection of beverages.",
   spa: "Our spa offers traditional Rwandan treatments, massages, facials, and wellness packages. Open from 8 AM to 8 PM. Book at /spa.",
   event: "We host weddings, corporate events, conferences, and private dining. Our event halls can accommodate up to 500 guests. Contact us at events@eastgate.rw.",
   price: "Our room rates start from RWF 234,000/night for Standard rooms. We also offer special packages and seasonal discounts. Would you like details?",
@@ -35,37 +43,67 @@ const AUTO_REPLIES: Record<string, string> = {
   pool: "Yes! We have an outdoor infinity pool with stunning views, open from 7 AM to 9 PM daily.",
   checkout: "Standard checkout time is 11:00 AM. Late checkout until 2:00 PM can be arranged at the front desk subject to availability.",
   parking: "Complimentary valet parking is available for all hotel guests. We also have a secure underground parking garage.",
+  hello: "Hello! 😊 How can I assist you today? Feel free to ask about rooms, dining, spa services, or anything else!",
+  hi: "Hi there! 😊 Welcome to EastGate Hotel. How may I help you?",
+  thank: "You're welcome! If you need anything else, don't hesitate to ask. We're here to make your stay perfect! 🌟",
+  order: "You can place food orders directly from our menu! Go to /menu or click the 'Order Food' button in the navigation bar to browse and order.",
+  breakfast: "Our breakfast buffet is served daily from 6:30 AM to 10:00 AM in the main restaurant. It includes both Rwandan and international options.",
+  dinner: "Dinner service runs from 6:30 PM to 10:30 PM. We recommend reservations for the best experience.",
 };
 
-const GREETING: ChatMsg = {
-  id: "greeting",
-  sender: "bot",
-  name: "EastGate Concierge",
-  avatar: "https://i.pravatar.cc/40?u=eastgate-bot",
-  message: "Muraho! 👋 Welcome to EastGate Hotel Rwanda. How can I help you today? Ask about rooms, dining, spa, events, or anything else!",
-  time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+const AUTO_REPLIES_RW: Record<string, string> = {
+  icyumba: "Dufite ubwoko bwinshi bw'ibyumba: Icyumba Gisanzwe (RWF 234,000/ijoro), Icyumba Cyiza (RWF 325,000/ijoro), Suite y'Umuyobozi (RWF 585,000/ijoro), na Suite ya Perezida (RWF 1,105,000/ijoro). Mushaka gufata icyumba?",
+  gufata: "Mushobora gufata ku rubuga rwacu /book cyangwa muhamagare kuri +250 788 123 456. Tuzabafasha dushimishijwe!",
+  ibiryo: "Iresitora yacu itanga ibiryo by'u Rwanda n'iby'isi yose. Ifunguka kuva saa 12:30 kugeza saa 4:30. Mushobora kureba menu kuri /menu.",
+  menu: "Reba menu yacu yose kuri /menu! Dufite ibitangura byoshye, inyama, inkoko, ifi, pasta, BBQ, ibinywabura, n'ibinyobwa bitandukanye.",
+  spa: "Spa yacu itanga imiti y'u Rwanda, gukanda, gutera mu maso, n'ibicuruzwa by'ubuzima. Ifunguka kuva saa 2 kugeza saa 2 z'ijoro.",
+  ibirori: "Dutegura ubukwe, inama z'ibucuruzi, amahuriro, n'ifunguro ry'umwihariye. Ahantu hacu hashobora kwakira abantu 500.",
+  igiciro: "Ibiciro by'ibyumba byacu bitangira kuri RWF 234,000/ijoro ku cyumba gisanzwe. Dutanga n'ibiciro bidasanzwe.",
+  muraho: "Muraho! 😊 Nagufasha nte uyu munsi? Baza ku byumba, ibiryo, spa, cyangwa ikindi icyo ari cyo cyose!",
+  murakoze: "Murakaza neza! Mukeneye ikindi, ntimutinye kubaza. Turiho kugira ngo dukore igihe cyanyu kibe cyiza! 🌟",
+  ifunguro: "Ifunguro rya bifeti ritangirwa buri gitondo kuva saa 12:30 kugeza saa 4:00. Rigizwe n'ibiryo by'u Rwanda n'iby'amahanga.",
 };
-
-function getAutoReply(message: string): string {
-  const lower = message.toLowerCase();
-  for (const [keyword, reply] of Object.entries(AUTO_REPLIES)) {
-    if (lower.includes(keyword)) return reply;
-  }
-  return "Thank you for your message! Our team will get back to you shortly. For immediate assistance, please call +250 788 123 456. In the meantime, feel free to ask about our rooms, restaurant, spa, or events!";
-}
 
 export default function LiveChatWidget() {
+  const { t, locale, isRw } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState<ChatMsg[]>([GREETING]);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [onlineUsers] = useState(3);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Initialize greeting message based on locale
+  useEffect(() => {
+    setMessages([{
+      id: "greeting",
+      sender: "bot",
+      name: "EastGate Concierge",
+      avatar: "https://i.pravatar.cc/40?u=eastgate-bot",
+      message: isRw
+        ? "Muraho! 👋 Murakaze kuri EastGate Hotel Rwanda. Nagufasha nte uyu munsi? Baza ku byumba, ibiryo, spa, ibirori, cyangwa ikindi icyo ari cyo cyose!"
+        : "Hello! 👋 Welcome to EastGate Hotel Rwanda. How can I help you today? Ask about rooms, dining, spa, events, or anything else!",
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      status: "seen",
+    }]);
+  }, [isRw]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, isTyping]);
+
+  const getAutoReply = useCallback((message: string): string => {
+    const lower = message.toLowerCase();
+    const replies = isRw ? AUTO_REPLIES_RW : AUTO_REPLIES_EN;
+    for (const [keyword, reply] of Object.entries(replies)) {
+      if (lower.includes(keyword)) return reply;
+    }
+    return isRw
+      ? "Murakoze kubaza! Itsinda ryacu rizagusubiza vuba. Ku bufasha bwihutirwa, muhamagare +250 788 123 456. Hagati aho, mubaze ku byumba, iresitora, spa, cyangwa ibirori!"
+      : "Thank you for your message! Our team will get back to you shortly. For immediate assistance, please call +250 788 123 456. In the meantime, feel free to ask about our rooms, restaurant, spa, or events!";
+  }, [isRw]);
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -73,15 +111,32 @@ export default function LiveChatWidget() {
     const userMsg: ChatMsg = {
       id: `user-${Date.now()}`,
       sender: "guest",
-      name: "You",
+      name: isRw ? "Wowe" : "You",
       avatar: "",
       message: input.trim(),
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      status: "sent",
     };
 
     setMessages((prev) => [...prev, userMsg]);
     const userText = input.trim();
     setInput("");
+
+    // Mark as delivered after 300ms
+    setTimeout(() => {
+      setMessages((prev) =>
+        prev.map((m) => m.id === userMsg.id ? { ...m, status: "delivered" } : m)
+      );
+    }, 300);
+
+    // Mark as seen after 600ms
+    setTimeout(() => {
+      setMessages((prev) =>
+        prev.map((m) => m.id === userMsg.id ? { ...m, status: "seen" } : m)
+      );
+    }, 600);
+
+    // Show typing
     setIsTyping(true);
 
     // Simulate bot response
@@ -93,6 +148,7 @@ export default function LiveChatWidget() {
         avatar: "https://i.pravatar.cc/40?u=eastgate-bot",
         message: getAutoReply(userText),
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "seen",
       };
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
@@ -120,22 +176,27 @@ export default function LiveChatWidget() {
     setIsMinimized(false);
   };
 
+  const quickActions = isRw
+    ? [t("chat", "roomAvailability"), t("chat", "restaurantHours"), t("chat", "bookSpa"), t("chat", "pricesInfo")]
+    : [t("chat", "roomAvailability"), t("chat", "restaurantHours"), t("chat", "bookSpa"), t("chat", "pricesInfo")];
+
   return (
     <>
-      {/* Floating Chat Button */}
+      {/* Floating Chat Button with "Twandikire" text */}
       <AnimatePresence>
         {!isOpen && (
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-6 right-6 z-50"
+            className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-50"
           >
             <Button
               onClick={handleOpen}
-              className="h-14 w-14 rounded-full bg-emerald hover:bg-emerald-dark text-white shadow-xl hover:shadow-2xl transition-all duration-300 p-0 relative"
+              className="h-auto rounded-full bg-emerald hover:bg-emerald-dark text-white shadow-xl hover:shadow-2xl transition-all duration-300 px-5 py-3 gap-2 relative"
             >
-              <MessageCircle className="h-6 w-6" />
+              <MessageCircle className="h-5 w-5" />
+              <span className="font-semibold text-sm">{t("chat", "writeUs")}</span>
               {unread > 0 && (
                 <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gold text-charcoal text-[10px] font-bold flex items-center justify-center">
                   {unread}
@@ -161,8 +222,8 @@ export default function LiveChatWidget() {
             }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-3rem)] rounded-2xl shadow-2xl overflow-hidden border border-emerald/20 bg-white flex flex-col"
-            style={{ maxHeight: isMinimized ? "auto" : "min(600px, calc(100vh - 100px))" }}
+            className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl overflow-hidden border border-emerald/20 bg-white flex flex-col"
+            style={{ maxHeight: isMinimized ? "auto" : "min(600px, calc(100vh - 140px))" }}
           >
             {/* Chat Header */}
             <div className="bg-gradient-to-r from-emerald to-emerald-dark px-4 py-3 text-white shrink-0">
@@ -173,10 +234,12 @@ export default function LiveChatWidget() {
                     <AvatarFallback className="bg-gold text-charcoal text-xs">EG</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-sm font-semibold">EastGate Concierge</p>
+                    <p className="text-sm font-semibold">{t("chat", "title")}</p>
                     <div className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                      <span className="text-[10px] text-white/80">Online • Typically replies instantly</span>
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-[10px] text-white/80">
+                        {t("chat", "online")} • {onlineUsers} {isRw ? "bahari" : "active"} • {t("chat", "repliesInstantly")}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -206,6 +269,15 @@ export default function LiveChatWidget() {
               <>
                 <ScrollArea className="flex-1 px-4">
                   <div className="py-4 space-y-4">
+                    {/* Date separator */}
+                    <div className="flex items-center gap-3 justify-center">
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="text-[10px] text-text-muted-custom font-medium px-2">
+                        {t("common", "today")}
+                      </span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+
                     {messages.map((msg) => (
                       <div
                         key={msg.id}
@@ -227,7 +299,12 @@ export default function LiveChatWidget() {
                           >
                             {msg.message}
                           </div>
-                          <span className="text-[10px] text-text-muted-custom mt-1 inline-block">{msg.time}</span>
+                          <div className={`flex items-center gap-1 mt-1 ${msg.sender === "guest" ? "justify-end" : ""}`}>
+                            <span className="text-[10px] text-text-muted-custom">{msg.time}</span>
+                            {msg.sender === "guest" && msg.status && (
+                              <CheckCheck className={`h-3 w-3 ${msg.status === "seen" ? "text-emerald" : "text-text-muted-custom/50"}`} />
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -239,12 +316,17 @@ export default function LiveChatWidget() {
                           <AvatarImage src="https://i.pravatar.cc/40?u=eastgate-bot" alt="Concierge" />
                           <AvatarFallback className="text-[9px] bg-emerald text-white">EG</AvatarFallback>
                         </Avatar>
-                        <div className="bg-pearl/80 rounded-2xl rounded-bl-sm px-4 py-3">
-                          <div className="flex gap-1">
-                            <span className="h-2 w-2 rounded-full bg-text-muted-custom/50 animate-bounce" style={{ animationDelay: "0ms" }} />
-                            <span className="h-2 w-2 rounded-full bg-text-muted-custom/50 animate-bounce" style={{ animationDelay: "150ms" }} />
-                            <span className="h-2 w-2 rounded-full bg-text-muted-custom/50 animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <div>
+                          <div className="bg-pearl/80 rounded-2xl rounded-bl-sm px-4 py-3">
+                            <div className="flex gap-1">
+                              <span className="h-2 w-2 rounded-full bg-text-muted-custom/50 animate-bounce" style={{ animationDelay: "0ms" }} />
+                              <span className="h-2 w-2 rounded-full bg-text-muted-custom/50 animate-bounce" style={{ animationDelay: "150ms" }} />
+                              <span className="h-2 w-2 rounded-full bg-text-muted-custom/50 animate-bounce" style={{ animationDelay: "300ms" }} />
+                            </div>
                           </div>
+                          <span className="text-[10px] text-text-muted-custom mt-0.5 block">
+                            {t("chat", "typing")}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -256,13 +338,11 @@ export default function LiveChatWidget() {
                 {/* Quick Actions */}
                 <div className="px-4 pb-2 shrink-0">
                   <div className="flex gap-1.5 flex-wrap">
-                    {["Room availability?", "Restaurant hours?", "Book a spa"].map((q) => (
+                    {quickActions.map((q) => (
                       <button
                         key={q}
                         className="text-[11px] px-2.5 py-1 rounded-full border border-emerald/20 text-emerald hover:bg-emerald/5 transition-colors"
-                        onClick={() => {
-                          setInput(q);
-                        }}
+                        onClick={() => setInput(q)}
                       >
                         {q}
                       </button>
@@ -274,7 +354,7 @@ export default function LiveChatWidget() {
                 <div className="border-t px-4 py-3 shrink-0">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Type your message..."
+                      placeholder={t("chat", "typeMessage")}
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
@@ -290,7 +370,7 @@ export default function LiveChatWidget() {
                   </div>
                   <p className="text-[10px] text-text-muted-custom text-center mt-2">
                     <Sparkles className="h-3 w-3 inline mr-0.5" />
-                    Powered by EastGate AI Concierge
+                    {t("chat", "poweredBy")}
                   </p>
                 </div>
               </>

@@ -214,6 +214,14 @@ export const useAuthStore = create<AuthState>()(
         if (user) {
           const { password: _, ...userData } = user;
           set({ user: userData, isAuthenticated: true });
+
+          // Set auth cookie for middleware SSR protection
+          document.cookie = `eastgate-auth=${JSON.stringify({
+            isAuthenticated: true,
+            role: userData.role,
+            branchId: userData.branchId,
+          })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+
           return true;
         }
 
@@ -222,6 +230,8 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         set({ user: null, isAuthenticated: false });
+        // Clear the auth cookie
+        document.cookie = "eastgate-auth=; path=/; max-age=0; SameSite=Lax";
       },
 
       hasRole: (roles: UserRole[]) => {

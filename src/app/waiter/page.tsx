@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatTime } from "@/lib/format";
+import { useI18n } from "@/lib/i18n/context";
 import {
   UtensilsCrossed,
   Clock,
@@ -21,11 +22,16 @@ import {
   Users,
   Activity,
   Zap,
+  Timer,
+  Flame,
+  Bell,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 
 export default function WaiterDashboard() {
   const { user } = useAuthStore();
+  const { isRw } = useI18n();
   const {
     getOrders,
     getTables,
@@ -95,6 +101,86 @@ export default function WaiterDashboard() {
             </Button>
           </Link>
         </div>
+      </div>
+
+      {/* Performance Efficiency Bar */}
+      <Card className="bg-gradient-to-r from-amber-600 via-amber-500 to-orange-500 border-0 shadow-xl">
+        <CardContent className="p-4 sm:p-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-white">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs">
+                <Timer className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">4.2 min</p>
+                <p className="text-[11px] text-white/80">{isRw ? "Igihe Cyiza cyo Gutanga" : "Avg Serve Time"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs">
+                <Flame className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{orders.filter((o) => o.status === "served").length}</p>
+                <p className="text-[11px] text-white/80">{isRw ? "Byarangiye Uyu munsi" : "Completed Today"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">98%</p>
+                <p className="text-[11px] text-white/80">{isRw ? "Ubuziranenge" : "Service Quality"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-xs">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-lg font-bold">{orders.reduce((sum, o) => sum + o.items.length, 0)}</p>
+                <p className="text-[11px] text-white/80">{isRw ? "Ibyo Ubatanzwe" : "Items Served"}</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Shortcuts */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+        <Link href="/waiter/new-order" className="group">
+          <Card className="hover:border-amber-300 hover:shadow-md transition-all">
+            <CardContent className="p-3 text-center">
+              <Zap className="h-5 w-5 text-amber-600 mx-auto mb-1 group-hover:scale-110 transition-transform" />
+              <p className="text-[11px] font-semibold text-charcoal">{isRw ? "Ibitumizwa Bishya" : "New Order"}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/waiter/tables" className="group">
+          <Card className="hover:border-blue-300 hover:shadow-md transition-all">
+            <CardContent className="p-3 text-center">
+              <Grid3X3 className="h-5 w-5 text-blue-600 mx-auto mb-1 group-hover:scale-110 transition-transform" />
+              <p className="text-[11px] font-semibold text-charcoal">{isRw ? "Imeza" : "Tables"}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/waiter/messages" className="group">
+          <Card className="hover:border-purple-300 hover:shadow-md transition-all">
+            <CardContent className="p-3 text-center">
+              <MessageSquare className="h-5 w-5 text-purple-600 mx-auto mb-1 group-hover:scale-110 transition-transform" />
+              <p className="text-[11px] font-semibold text-charcoal">{isRw ? "Ubutumwa" : "Messages"}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/waiter/notifications" className="group">
+          <Card className="hover:border-red-300 hover:shadow-md transition-all">
+            <CardContent className="p-3 text-center">
+              <Bell className="h-5 w-5 text-red-500 mx-auto mb-1 group-hover:scale-110 transition-transform" />
+              <p className="text-[11px] font-semibold text-charcoal">{isRw ? "Amakuru" : "Alerts"}</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* KPI Strip */}

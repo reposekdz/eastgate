@@ -145,7 +145,7 @@ export default function RoomsPage() {
               variant="outline"
               className="border-gold text-gold hover:bg-gold hover:text-charcoal rounded-[2px] uppercase tracking-wider text-sm px-8 py-5"
             >
-              <Link href="/book">Twandikire</Link>
+              <Link href="/contact">Twandikire</Link>
             </Button>
           </div>
         </FadeInUp>

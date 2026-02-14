@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -8,11 +9,68 @@ import {
   StaggerContainer,
   StaggerItem,
 } from "@/components/animations/MotionWrapper";
-import { heroContent, roomsContent, testimonialsKw, ctaContent } from "@/lib/kw-data";
+import { roomsContent, testimonialsKw } from "@/lib/kw-data";
 import { images } from "@/lib/data";
-import { ChevronDown, ArrowRight, Star, Quote, Bed, UtensilsCrossed, Sparkles, CalendarDays, ImageIcon } from "lucide-react";
+import { useI18n } from "@/lib/i18n/context";
+import {
+  ChevronDown,
+  ArrowRight,
+  Star,
+  Quote,
+  Bed,
+  UtensilsCrossed,
+  Sparkles,
+  CalendarDays,
+  ImageIcon,
+  Clock,
+  Wifi,
+  Car,
+  Coffee,
+  Waves,
+  Phone,
+  Dumbbell,
+} from "lucide-react";
 import Link from "next/link";
+import StarRating from "@/components/StarRating";
+import FAQSection from "@/components/FAQSection";
 
+// ─── Animated Counter Component ──────────────────────────
+function AnimatedCounter({ target, suffix = "" }: { target: string; suffix?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true });
+  const [count, setCount] = useState(0);
+  const numericTarget = parseFloat(target.replace(/[^0-9.]/g, ""));
+
+  useEffect(() => {
+    if (!isInView) return;
+    const duration = 2000;
+    const steps = 60;
+    const increment = numericTarget / steps;
+    let current = 0;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= numericTarget) {
+        setCount(numericTarget);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(current * 10) / 10);
+      }
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, [isInView, numericTarget]);
+
+  const displayValue = Number.isInteger(numericTarget)
+    ? Math.floor(count).toLocaleString()
+    : count.toFixed(1);
+
+  return (
+    <span ref={ref} className="font-heading text-4xl sm:text-5xl font-bold text-gold">
+      {isInView ? displayValue : "0"}{suffix}
+    </span>
+  );
+}
+
+// ─── Feature Card Component ──────────────────────────────
 function FeatureCard({
   icon: Icon,
   title,
@@ -39,7 +97,74 @@ function FeatureCard({
   );
 }
 
+// ─── Service Highlight Card ──────────────────────────────
+function ServiceCard({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="group flex items-start gap-4 p-4 rounded-xl hover:bg-emerald/5 transition-all duration-300">
+      <div className="h-12 w-12 rounded-xl bg-emerald/10 flex items-center justify-center shrink-0 group-hover:bg-emerald/20 transition-colors">
+        <Icon size={22} className="text-emerald" />
+      </div>
+      <div>
+        <h4 className="font-heading font-semibold text-charcoal mb-1">{title}</h4>
+        <p className="body-sm text-text-muted-custom">{description}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
+  const { t, isRw } = useI18n();
+
+  // Services data with translations
+  const services = [
+    {
+      icon: Wifi,
+      title: isRw ? "Wi-Fi y'Igiciro Cyiza" : "High-Speed WiFi",
+      description: isRw ? "Interineti yihuta kubuntu mu ihoteli yose" : "Complimentary fast internet throughout the hotel",
+    },
+    {
+      icon: Car,
+      title: isRw ? "Gupakira Imodoka" : "Valet Parking",
+      description: isRw ? "Serivisi yo gupakira imodoka kubuntu" : "Free valet parking service for all guests",
+    },
+    {
+      icon: Coffee,
+      title: isRw ? "Ifunguro rya Bifeti" : "Breakfast Buffet",
+      description: isRw ? "Ibiryo by'u Rwanda n'iby'amahanga buri gitondo" : "Rwandan & international breakfast daily",
+    },
+    {
+      icon: Waves,
+      title: isRw ? "Pisine y'Infinity" : "Infinity Pool",
+      description: isRw ? "Pisine ifite isura nziza y'imisozi" : "Pool with stunning mountain views",
+    },
+    {
+      icon: Dumbbell,
+      title: isRw ? "Ikigo cy'Imikino" : "Fitness Center",
+      description: isRw ? "Ibikoresho by'imikino by'umwimerere" : "State-of-the-art fitness equipment",
+    },
+    {
+      icon: Clock,
+      title: isRw ? "Serivisi 24/7" : "24/7 Service",
+      description: isRw ? "Serivisi y'icyumba igihe cyose" : "Round-the-clock room service",
+    },
+  ];
+
+  // Stats data with translations
+  const stats = [
+    { value: "15", suffix: "+", label: t("homepage", "yearsExperience") },
+    { value: "120", suffix: "+", label: t("homepage", "roomsSuites") },
+    { value: "50000", suffix: "+", label: t("homepage", "happyGuests") },
+    { value: "4.9", suffix: "", label: t("homepage", "guestRating") },
+  ];
+
   return (
     <>
       {/* ─── Hero Section ─── */}
@@ -64,7 +189,7 @@ export default function HomePage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="body-sm sm:body-md mb-4 uppercase tracking-[0.2em] sm:tracking-[0.3em] text-gold-light"
           >
-            {heroContent.subtitle}
+            {t("homepage", "heroSubtitle")}
           </motion.p>
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
@@ -72,8 +197,8 @@ export default function HomePage() {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="text-3xl sm:text-4xl md:heading-xl max-w-4xl text-white mb-6 font-heading font-bold"
           >
-            {heroContent.title}{" "}
-            <span className="italic text-gold">{heroContent.titleAccent}</span>
+            {t("homepage", "heroTitle")}{" "}
+            <span className="italic text-gold">{t("homepage", "heroTitleAccent")}</span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -81,7 +206,7 @@ export default function HomePage() {
             transition={{ duration: 0.6, delay: 0.9 }}
             className="body-md sm:body-lg max-w-2xl text-white/80 mb-10 px-4"
           >
-            {heroContent.description}
+            {t("homepage", "heroDescription")}
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -94,7 +219,7 @@ export default function HomePage() {
               size="lg"
               className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 sm:px-10 py-6 rounded-[2px] uppercase tracking-wider text-sm transition-all duration-300 hover:shadow-[0_0_30px_rgba(200,169,81,0.4)]"
             >
-              <Link href="/rooms">{heroContent.ctaPrimary}</Link>
+              <Link href="/book">{t("homepage", "bookARoom")}</Link>
             </Button>
             <Button
               asChild
@@ -102,7 +227,7 @@ export default function HomePage() {
               size="lg"
               className="border-white/60 text-white bg-white/10 hover:bg-white/20 hover:border-white px-8 sm:px-10 py-6 rounded-[2px] uppercase tracking-wider text-sm backdrop-blur-sm"
             >
-              <Link href="/about">{heroContent.ctaSecondary}</Link>
+              <Link href="/contact">{t("homepage", "writeToUs")}</Link>
             </Button>
           </motion.div>
 
@@ -131,44 +256,71 @@ export default function HomePage() {
             <StaggerItem>
               <FeatureCard
                 icon={Bed}
-                title="Ibyumba"
-                description="Ibyumba n'amasuite y'ubwiza"
+                title={t("homepage", "rooms")}
+                description={t("homepage", "roomsDesc")}
                 href="/rooms"
               />
             </StaggerItem>
             <StaggerItem>
               <FeatureCard
                 icon={UtensilsCrossed}
-                title="Ibiryo"
-                description="Ibiryo byiza by'u Rwanda n'iy'isi"
+                title={t("homepage", "dining")}
+                description={t("homepage", "diningDesc")}
                 href="/dining"
               />
             </StaggerItem>
             <StaggerItem>
               <FeatureCard
                 icon={Sparkles}
-                title="Spa"
-                description="Imiti n'ubuzima"
+                title={t("homepage", "spa")}
+                description={t("homepage", "spaDesc")}
                 href="/spa"
               />
             </StaggerItem>
             <StaggerItem>
               <FeatureCard
                 icon={CalendarDays}
-                title="Ibirori"
-                description="Ahantu h'ibirori n'inama"
+                title={t("homepage", "events")}
+                description={t("homepage", "eventsDesc")}
                 href="/events"
               />
             </StaggerItem>
             <StaggerItem>
               <FeatureCard
                 icon={ImageIcon}
-                title="Amafoto"
-                description="Reba amafoto y'ihoteli"
+                title={t("homepage", "gallery")}
+                description={t("homepage", "galleryDesc")}
                 href="/gallery"
               />
             </StaggerItem>
           </StaggerContainer>
+        </div>
+      </section>
+
+      {/* ─── Live Stats Counter ─── */}
+      <section className="bg-charcoal/95 py-16 sm:py-20 px-4 sm:px-6 border-t border-white/5">
+        <div className="mx-auto max-w-6xl">
+          <FadeInUp>
+            <div className="text-center mb-12">
+              <p className="body-sm uppercase tracking-[0.25em] text-gold-light mb-3 font-medium">
+                {t("homepage", "liveStats")}
+              </p>
+              <div className="mx-auto h-[2px] w-16 bg-gold" />
+            </div>
+          </FadeInUp>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12">
+            {stats.map((stat, i) => (
+              <FadeInUp key={i} delay={i * 0.1}>
+                <div className="text-center">
+                  <AnimatedCounter target={stat.value} suffix={stat.suffix} />
+                  <p className="body-sm text-white/60 mt-2 uppercase tracking-wide font-medium">
+                    {stat.label}
+                  </p>
+                </div>
+              </FadeInUp>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -178,7 +330,7 @@ export default function HomePage() {
           <FadeInUp>
             <div className="text-center mb-12 sm:mb-16">
               <p className="body-sm uppercase tracking-[0.25em] text-gold-dark mb-3 font-medium">
-                {roomsContent.sectionLabel}
+                {t("homepage", "accommodations")}
               </p>
               <h2 className="text-2xl sm:heading-lg text-charcoal mb-4 font-heading font-bold">
                 {roomsContent.title}
@@ -198,6 +350,16 @@ export default function HomePage() {
                       className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-charcoal/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    {/* Quick book overlay */}
+                    <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+                      <Button
+                        asChild
+                        size="sm"
+                        className="bg-gold hover:bg-gold-dark text-charcoal font-semibold rounded-[2px] uppercase tracking-wider text-xs w-full"
+                      >
+                        <Link href="/book">{t("homepage", "bookARoom")}</Link>
+                      </Button>
+                    </div>
                   </div>
                   <div className="p-5 sm:p-7">
                     <h3 className="heading-sm text-charcoal mb-2">{room.name}</h3>
@@ -230,10 +392,41 @@ export default function HomePage() {
                 variant="outline"
                 className="border-emerald text-emerald hover:bg-emerald hover:text-white rounded-[2px] uppercase tracking-wider text-sm px-8 py-5"
               >
-                <Link href="/rooms">Reba Ibyumba Byose</Link>
+                <Link href="/rooms">{t("homepage", "viewAllRooms")}</Link>
               </Button>
             </div>
           </FadeInUp>
+        </div>
+      </section>
+
+      {/* ─── Services & Amenities ─── */}
+      <section className="section-padding bg-white">
+        <div className="mx-auto max-w-7xl">
+          <FadeInUp>
+            <div className="text-center mb-12 sm:mb-16">
+              <p className="body-sm uppercase tracking-[0.25em] text-gold-dark mb-3 font-medium">
+                {t("common", "services")}
+              </p>
+              <h2 className="text-2xl sm:heading-lg text-charcoal mb-4 font-heading font-bold">
+                {isRw ? "Serivisi" : "Services"}{" "}
+                <span className="italic text-emerald">{isRw ? "n'Ibikoresho" : "& Amenities"}</span>
+              </h2>
+              <div className="mx-auto mb-6 h-[2px] w-16 bg-gold" />
+              <p className="body-md text-text-muted-custom max-w-2xl mx-auto">
+                {isRw
+                  ? "Buri kintu gitegurwa kugira ngo uburambe bwawe bube bwiza cyane. Kuva mu kwakira kugeza ku gusohoka, turihugiye."
+                  : "Everything is crafted for your ultimate comfort. From check-in to check-out, we've got you covered."}
+              </p>
+            </div>
+          </FadeInUp>
+
+          <StaggerContainer className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {services.map((service, i) => (
+              <StaggerItem key={i}>
+                <ServiceCard {...service} />
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
         </div>
       </section>
 
@@ -243,45 +436,116 @@ export default function HomePage() {
           <FadeInUp>
             <div className="text-center mb-12 sm:mb-16">
               <p className="body-sm uppercase tracking-[0.25em] text-gold-dark mb-3 font-medium">
-                Ibyo Abashyitsi Bavuga
+                {t("homepage", "guestTestimonials")}
               </p>
               <h2 className="text-2xl sm:heading-lg text-charcoal mb-4 font-heading font-bold">
-                Amagambo y&apos;Abashyitsi
+                {t("homepage", "guestWords")}
               </h2>
               <div className="mx-auto h-[2px] w-16 bg-gold" />
             </div>
           </FadeInUp>
 
           <StaggerContainer className="grid gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {testimonialsKw.map((t) => (
-              <StaggerItem key={t.id}>
+            {testimonialsKw.map((testimonial) => (
+              <StaggerItem key={testimonial.id}>
                 <div className="bg-white rounded-[4px] p-6 sm:p-8 shadow-sm hover:shadow-lg transition-all duration-500 relative h-full">
                   <Quote size={32} className="text-gold/20 absolute top-6 right-6" fill="currentColor" />
                   <div className="flex gap-1 mb-5">
-                    {Array.from({ length: t.rating }).map((_, i) => (
+                    {Array.from({ length: testimonial.rating }).map((_, i) => (
                       <Star key={i} size={16} className="text-gold fill-gold" />
                     ))}
                   </div>
                   <p className="body-sm sm:body-md text-slate-custom mb-6 italic leading-relaxed">
-                    &ldquo;{t.quote}&rdquo;
+                    &ldquo;{testimonial.quote}&rdquo;
                   </p>
                   <div className="flex items-center gap-4">
                     <img
-                      src={t.avatar}
-                      alt={t.name}
+                      src={testimonial.avatar}
+                      alt={testimonial.name}
                       className="h-12 w-12 rounded-full object-cover"
                       width={48}
                       height={48}
                     />
                     <div>
-                      <p className="body-md font-semibold text-charcoal">{t.name}</p>
-                      <p className="body-sm text-text-muted-custom">{t.title}</p>
+                      <p className="body-md font-semibold text-charcoal">{testimonial.name}</p>
+                      <p className="body-sm text-text-muted-custom">{testimonial.title}</p>
                     </div>
                   </div>
                 </div>
               </StaggerItem>
             ))}
           </StaggerContainer>
+        </div>
+      </section>
+
+      {/* ─── Guest Rating Section ─── */}
+      <section className="section-padding bg-white">
+        <div className="mx-auto max-w-7xl">
+          <FadeInUp>
+            <div className="text-center mb-10 sm:mb-14">
+              <p className="body-sm uppercase tracking-[0.25em] text-gold-dark mb-3 font-medium">
+                {isRw ? "Amanota y'Abashyitsi" : "Guest Ratings"}
+              </p>
+              <h2 className="text-2xl sm:heading-lg text-charcoal mb-4 font-heading font-bold">
+                {isRw ? "Twereke Ibyo" : "Share Your"}{" "}
+                <span className="italic text-emerald">{isRw ? "Uhita" : "Experience"}</span>
+              </h2>
+              <div className="mx-auto mb-6 h-[2px] w-16 bg-gold" />
+              <p className="body-md text-text-muted-custom max-w-2xl mx-auto">
+                {isRw
+                  ? "Ibitekerezo byawe bidufasha kunoza serivisi zacu. Duhe amanota kuri inyenyeri 5."
+                  : "Your feedback helps us improve. Rate us on a scale of 5 interactive stars."}
+              </p>
+            </div>
+          </FadeInUp>
+          <StarRating />
+        </div>
+      </section>
+
+      {/* ─── FAQ Section ─── */}
+      <FAQSection />
+
+      {/* ─── Quick Actions Bar ─── */}
+      <section className="bg-emerald py-12 sm:py-16 px-4 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <div className="grid sm:grid-cols-3 gap-6 sm:gap-8 text-center">
+            <Link href="/book" className="group">
+              <div className="flex flex-col items-center gap-3 p-6 rounded-xl bg-white/10 hover:bg-white/20 transition-all duration-300">
+                <Bed size={28} className="text-gold" />
+                <h3 className="font-heading font-semibold text-white text-lg">
+                  {t("homepage", "getRoom")}
+                </h3>
+                <p className="body-sm text-white/70">
+                  {isRw ? "Fata icyumba nonaha" : "Reserve your room now"}
+                </p>
+                <ArrowRight size={16} className="text-gold group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+            <Link href="/menu" className="group">
+              <div className="flex flex-col items-center gap-3 p-6 rounded-xl bg-white/10 hover:bg-white/20 transition-all duration-300">
+                <UtensilsCrossed size={28} className="text-gold" />
+                <h3 className="font-heading font-semibold text-white text-lg">
+                  {isRw ? "Reba Menu" : "View Menu"}
+                </h3>
+                <p className="body-sm text-white/70">
+                  {isRw ? "Shakisha ibiryo n'ibinyobwa byacu" : "Browse our food & drinks"}
+                </p>
+                <ArrowRight size={16} className="text-gold group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+            <Link href="/contact" className="group">
+              <div className="flex flex-col items-center gap-3 p-6 rounded-xl bg-white/10 hover:bg-white/20 transition-all duration-300">
+                <Phone size={28} className="text-gold" />
+                <h3 className="font-heading font-semibold text-white text-lg">
+                  {t("homepage", "writeToUs")}
+                </h3>
+                <p className="body-sm text-white/70">
+                  {isRw ? "Tubaze ibibazo byawe byose" : "Ask us any questions"}
+                </p>
+                <ArrowRight size={16} className="text-gold group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -298,19 +562,29 @@ export default function HomePage() {
             <FadeInUp>
               <div className="mx-auto mb-6 h-[1px] w-16 bg-gold" />
               <h2 className="text-2xl sm:heading-lg text-white mb-6 font-heading font-bold">
-                {ctaContent.title}{" "}
-                <span className="italic text-gold-light">{ctaContent.titleAccent}</span>
+                {t("homepage", "startYourJourney")}{" "}
+                <span className="italic text-gold-light">{t("homepage", "journeyAccent")}</span>
               </h2>
               <p className="body-md sm:body-lg text-white/75 mb-10 px-4">
-                {ctaContent.description}
+                {t("homepage", "journeyDesc")}
               </p>
-              <Button
-                asChild
-                size="lg"
-                className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 sm:px-12 py-6 rounded-[2px] uppercase tracking-wider text-sm transition-all duration-300 hover:shadow-[0_0_30px_rgba(200,169,81,0.4)]"
-              >
-                <Link href="/rooms">{ctaContent.ctaText}</Link>
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 sm:px-12 py-6 rounded-[2px] uppercase tracking-wider text-sm transition-all duration-300 hover:shadow-[0_0_30px_rgba(200,169,81,0.4)]"
+                >
+                  <Link href="/book">{t("homepage", "journeyCta")}</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="border-white/50 text-white bg-white/10 hover:bg-white/20 hover:border-white px-8 py-6 rounded-[2px] uppercase tracking-wider text-sm backdrop-blur-sm"
+                >
+                  <Link href="/contact">{t("homepage", "writeToUs")}</Link>
+                </Button>
+              </div>
             </FadeInUp>
           </div>
         </div>

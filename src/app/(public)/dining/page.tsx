@@ -171,7 +171,7 @@ export default function DiningPage() {
                   asChild
                   className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 py-5 rounded-[2px] uppercase tracking-wider text-sm"
                 >
-                  <Link href="/book">{diningContent.ctaText}</Link>
+                  <Link href="/contact">{diningContent.ctaText}</Link>
                 </Button>
               </div>
             </FadeInUp>

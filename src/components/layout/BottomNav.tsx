@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useI18n } from "@/lib/i18n/context";
 import {
   Home,
   Bed,
@@ -16,7 +17,6 @@ import {
   CalendarDays,
   MessageCircle,
 } from "lucide-react";
-import { bottomNavLinks, moreMenuLinks } from "@/lib/kw-data";
 
 const iconMap = {
   Home,
@@ -33,6 +33,22 @@ const iconMap = {
 export default function BottomNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { t, isRw } = useI18n();
+
+  const bottomNavLinks = [
+    { label: t("nav", "home"), href: "/", icon: "Home" as const },
+    { label: t("nav", "rooms"), href: "/rooms", icon: "Bed" as const },
+    { label: t("nav", "gallery"), href: "/gallery", icon: "Images" as const },
+    { label: t("nav", "about"), href: "/about", icon: "Users" as const },
+    { label: isRw ? "Byose" : "More", href: "#more", icon: "Menu" as const },
+  ];
+
+  const moreMenuLinks = [
+    { label: t("nav", "dining"), href: "/dining", icon: "UtensilsCrossed" as const },
+    { label: isRw ? "Spa n'Ubuzima" : "Spa & Wellness", href: "/spa", icon: "Sparkles" as const },
+    { label: t("nav", "events"), href: "/events", icon: "CalendarDays" as const },
+    { label: t("nav", "contact"), href: "/contact", icon: "MessageCircle" as const },
+  ];
 
   return (
     <>
@@ -55,7 +71,9 @@ export default function BottomNav() {
               className="fixed bottom-20 left-4 right-4 z-[999] bg-charcoal rounded-2xl p-4 shadow-2xl md:hidden"
             >
               <div className="flex items-center justify-between mb-4 px-1">
-                <h3 className="text-white font-heading font-semibold text-lg">Byose</h3>
+                <h3 className="text-white font-heading font-semibold text-lg">
+                  {isRw ? "Byose" : "More"}
+                </h3>
                 <button
                   onClick={() => setMoreOpen(false)}
                   className="text-white/60 hover:text-white"

@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
+import { useI18n } from "@/lib/i18n/context";
 import { formatCurrency } from "@/lib/format";
 import {
   Building2,
@@ -23,13 +24,17 @@ import {
   ArrowDownRight,
   Clock,
   Star,
+  Shield,
+  Lock,
+  DollarSign as DollarSignIcon,
 } from "lucide-react";
 import Link from "next/link";
 
 export default function ManagerDashboard() {
   const { user } = useAuthStore();
+  const { t, isRw } = useI18n();
   const { getStaff, getBookings, getRooms, getOrders, getServiceRequests, getTables } = useBranchStore();
-  
+
   const userRole = user?.role || "branch_manager";
   const branchId = user?.branchId || "br-001";
   const isSuperRole = userRole === "super_manager" || userRole === "super_admin";
@@ -65,27 +70,56 @@ export default function ManagerDashboard() {
             </div>
             <div>
               <h1 className="heading-md text-charcoal">
-                {isSuperRole ? "All Branches" : user?.branchName}
+                {isSuperRole ? t("management", "allBranches") : user?.branchName}
               </h1>
               <p className="text-xs text-text-muted-custom">
-                {isSuperRole ? "Super Manager Dashboard" : "Branch Manager Dashboard"}
+                {isSuperRole ? t("management", "superManagerDashboard") : t("dashboard", "managerDashboard")}
               </p>
             </div>
           </div>
         </div>
         <div className="flex gap-2">
+          {/* Credentials Notice */}
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+            <Lock className="h-3.5 w-3.5" />
+            {t("management", "credentialsManaged")}
+          </div>
           <Link href="/manager/staff">
             <Button variant="outline" size="sm">
-              <Users className="mr-2 h-4 w-4" /> Manage Staff
+              <Users className="mr-2 h-4 w-4" /> {t("management", "manageStaff")}
+            </Button>
+          </Link>
+          <Link href="/manager/prices">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <DollarSignIcon className="h-4 w-4" /> {isRw ? "Ibiciro" : "Prices"}
             </Button>
           </Link>
           <Link href="/manager/performance">
             <Button className="bg-emerald hover:bg-emerald-dark text-white" size="sm">
-              <TrendingUp className="mr-2 h-4 w-4" /> View Analytics
+              <TrendingUp className="mr-2 h-4 w-4" /> {t("management", "viewAnalytics")}
             </Button>
           </Link>
         </div>
       </div>
+
+      {/* Branch Info Banner for Super Managers */}
+      {isSuperRole && (
+        <Card className="bg-gradient-to-r from-emerald/5 to-gold/5 border-emerald/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-emerald" />
+              <div>
+                <p className="text-sm font-semibold text-charcoal">
+                  {isRw ? "Ikibaho cy'Umucunga Mukuru — Gucunga Amashami Yose" : "Super Manager Dashboard — Managing All Branches"}
+                </p>
+                <p className="text-xs text-text-muted-custom">
+                  {t("management", "accountsNote")}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -99,7 +133,7 @@ export default function ManagerDashboard() {
                 <ArrowUpRight className="h-3 w-3" /> 12.5%
               </Badge>
             </div>
-            <p className="text-sm font-medium text-emerald-900 mb-1">Total Revenue</p>
+            <p className="text-sm font-medium text-emerald-900 mb-1">{t("management", "totalRevenue")}</p>
             <p className="text-2xl font-bold text-emerald-700">{formatCurrency(totalRevenue)}</p>
           </CardContent>
         </Card>
@@ -112,7 +146,7 @@ export default function ManagerDashboard() {
               </div>
               <Badge className="bg-blue-600 text-white">{occupancyRate.toFixed(0)}%</Badge>
             </div>
-            <p className="text-sm font-medium text-blue-900 mb-1">Occupancy</p>
+            <p className="text-sm font-medium text-blue-900 mb-1">{t("management", "occupancy")}</p>
             <p className="text-2xl font-bold text-blue-700">{occupiedRooms}/{branchRooms.length}</p>
             <Progress value={occupancyRate} className="h-1.5 mt-2" />
           </CardContent>
@@ -124,9 +158,9 @@ export default function ManagerDashboard() {
               <div className="h-11 w-11 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg">
                 <Users className="h-5 w-5 text-white" />
               </div>
-              <Badge className="bg-purple-600 text-white">{activeStaff} active</Badge>
+              <Badge className="bg-purple-600 text-white">{activeStaff} {isRw ? "bahari" : "active"}</Badge>
             </div>
-            <p className="text-sm font-medium text-purple-900 mb-1">Team Members</p>
+            <p className="text-sm font-medium text-purple-900 mb-1">{t("management", "teamMembers")}</p>
             <p className="text-2xl font-bold text-purple-700">{branchStaff.length}</p>
           </CardContent>
         </Card>
@@ -137,9 +171,9 @@ export default function ManagerDashboard() {
               <div className="h-11 w-11 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg">
                 <UtensilsCrossed className="h-5 w-5 text-white" />
               </div>
-              <Badge className="bg-orange-600 text-white">{activeOrders} live</Badge>
+              <Badge className="bg-orange-600 text-white">{activeOrders} {isRw ? "byirinze" : "live"}</Badge>
             </div>
-            <p className="text-sm font-medium text-orange-900 mb-1">Restaurant</p>
+            <p className="text-sm font-medium text-orange-900 mb-1">{t("management", "restaurant")}</p>
             <p className="text-2xl font-bold text-orange-700">{formatCurrency(restaurantRevenue)}</p>
           </CardContent>
         </Card>
@@ -156,7 +190,7 @@ export default function ManagerDashboard() {
               <p className="text-2xl font-bold text-charcoal">
                 {branchBookings.filter((b) => b.status === "checked_in").length}
               </p>
-              <p className="text-xs text-text-muted-custom">Checked In</p>
+              <p className="text-xs text-text-muted-custom">{t("management", "checkedIn")}</p>
             </div>
           </CardContent>
         </Card>
@@ -167,7 +201,7 @@ export default function ManagerDashboard() {
             </div>
             <div>
               <p className="text-2xl font-bold text-charcoal">{pendingRequests}</p>
-              <p className="text-xs text-text-muted-custom">Service Requests</p>
+              <p className="text-xs text-text-muted-custom">{t("management", "serviceRequests")}</p>
             </div>
           </CardContent>
         </Card>
@@ -178,7 +212,7 @@ export default function ManagerDashboard() {
             </div>
             <div>
               <p className="text-2xl font-bold text-charcoal">{occupiedTables}/{tables.length}</p>
-              <p className="text-xs text-text-muted-custom">Tables Active</p>
+              <p className="text-xs text-text-muted-custom">{t("management", "tablesActive")}</p>
             </div>
           </CardContent>
         </Card>
@@ -189,7 +223,7 @@ export default function ManagerDashboard() {
             </div>
             <div>
               <p className="text-2xl font-bold text-charcoal">4.8</p>
-              <p className="text-xs text-text-muted-custom">Guest Rating</p>
+              <p className="text-xs text-text-muted-custom">{t("management", "guestRating")}</p>
             </div>
           </CardContent>
         </Card>
@@ -201,11 +235,11 @@ export default function ManagerDashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4 text-emerald" /> Waiters On Duty
+                <Users className="h-4 w-4 text-emerald" /> {t("management", "waitersOnDuty")}
               </CardTitle>
               <Link href="/manager/staff">
                 <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">
-                  View All
+                  {t("management", "viewAll")}
                 </Button>
               </Link>
             </div>
@@ -221,15 +255,17 @@ export default function ManagerDashboard() {
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-charcoal truncate">{waiter.name}</p>
-                  <p className="text-xs text-text-muted-custom">{waiter.shift} Shift</p>
+                  <p className="text-xs text-text-muted-custom">{waiter.shift} {isRw ? "Icyiciro" : "Shift"}</p>
                 </div>
                 <Badge variant={waiter.status === "active" ? "default" : "secondary"} className="text-[10px]">
-                  {waiter.status === "active" ? "On Duty" : "Off"}
+                  {waiter.status === "active" ? t("management", "onDuty") : t("management", "offDuty")}
                 </Badge>
               </div>
             ))}
             {waiters.length === 0 && (
-              <p className="text-sm text-center text-text-muted-custom py-4">No waiters assigned</p>
+              <p className="text-sm text-center text-text-muted-custom py-4">
+                {isRw ? "Nta bakozi b'iresitora bashyizweho" : "No waiters assigned"}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -239,11 +275,11 @@ export default function ManagerDashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
-                <CalendarCheck className="h-4 w-4 text-emerald" /> Recent Bookings
+                <CalendarCheck className="h-4 w-4 text-emerald" /> {t("management", "recentBookings")}
               </CardTitle>
               <Link href="/manager/bookings">
                 <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">
-                  View All
+                  {t("management", "viewAll")}
                 </Button>
               </Link>
             </div>
@@ -259,21 +295,16 @@ export default function ManagerDashboard() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-charcoal">{booking.guestName}</p>
-                      <Badge variant="outline" className="text-[10px]">Room {booking.roomNumber}</Badge>
+                      <Badge variant="outline" className="text-[10px]">{isRw ? "Icyumba" : "Room"} {booking.roomNumber}</Badge>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <Clock className="h-3 w-3 text-text-muted-custom" />
-                      <p className="text-xs text-text-muted-custom">
-                        {booking.checkIn} → {booking.checkOut}
-                      </p>
+                      <p className="text-xs text-text-muted-custom">{booking.checkIn} → {booking.checkOut}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-charcoal">{formatCurrency(booking.totalAmount)}</p>
-                    <Badge
-                      className="text-[10px] mt-1"
-                      variant={booking.status === "checked_in" ? "default" : "secondary"}
-                    >
+                    <Badge className="text-[10px] mt-1" variant={booking.status === "checked_in" ? "default" : "secondary"}>
                       {booking.status.replace("_", " ")}
                     </Badge>
                   </div>
@@ -290,11 +321,11 @@ export default function ManagerDashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
-                <UtensilsCrossed className="h-4 w-4 text-orange-600" /> Live Orders
+                <UtensilsCrossed className="h-4 w-4 text-orange-600" /> {t("management", "liveOrders")}
               </CardTitle>
               <Link href="/manager/orders">
                 <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">
-                  View All
+                  {t("management", "viewAll")}
                 </Button>
               </Link>
             </div>
@@ -308,20 +339,18 @@ export default function ManagerDashboard() {
                     order.status === "preparing" ? "bg-blue-500" : "bg-emerald-500"
                   }`} />
                   <div>
-                    <p className="text-sm font-medium text-charcoal">Table {order.tableNumber}</p>
+                    <p className="text-sm font-medium text-charcoal">{isRw ? "Imeza" : "Table"} {order.tableNumber}</p>
                     <p className="text-xs text-text-muted-custom">
                       {order.items.map((i) => `${i.quantity}x ${i.name}`).join(", ")}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <Badge
-                    className={`text-[10px] ${
-                      order.status === "pending" ? "bg-orange-100 text-orange-700" :
-                      order.status === "preparing" ? "bg-blue-100 text-blue-700" :
-                      "bg-emerald-100 text-emerald-700"
-                    }`}
-                  >
+                  <Badge className={`text-[10px] ${
+                    order.status === "pending" ? "bg-orange-100 text-orange-700" :
+                    order.status === "preparing" ? "bg-blue-100 text-blue-700" :
+                    "bg-emerald-100 text-emerald-700"
+                  }`}>
                     {order.status}
                   </Badge>
                   <p className="text-xs font-semibold text-charcoal mt-1">{formatCurrency(order.total)}</p>
@@ -335,11 +364,11 @@ export default function ManagerDashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-purple-600" /> Service Requests
+                <ClipboardList className="h-4 w-4 text-purple-600" /> {t("management", "serviceRequests")}
               </CardTitle>
               <Link href="/manager/services">
                 <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">
-                  View All
+                  {t("management", "viewAll")}
                 </Button>
               </Link>
             </div>
@@ -354,7 +383,7 @@ export default function ManagerDashboard() {
                     sr.priority === "medium" ? "bg-yellow-500" : "bg-green-500"
                   }`} />
                   <div>
-                    <p className="text-sm font-medium text-charcoal">{sr.guestName} - Room {sr.roomNumber}</p>
+                    <p className="text-sm font-medium text-charcoal">{sr.guestName} - {isRw ? "Icyumba" : "Room"} {sr.roomNumber}</p>
                     <p className="text-xs text-text-muted-custom">{sr.description}</p>
                   </div>
                 </div>
@@ -366,7 +395,7 @@ export default function ManagerDashboard() {
                     "border-gray-300"
                   }`}
                 >
-                  {sr.priority}
+                  {isRw ? (sr.priority === "low" ? "Hasi" : sr.priority === "medium" ? "Hagati" : sr.priority === "high" ? "Hejuru" : "Byihutirwa") : sr.priority}
                 </Badge>
               </div>
             ))}
