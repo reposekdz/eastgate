@@ -58,19 +58,7 @@ export default function Navbar() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${navBg}`}
       >
-        {/* Top utility bar - visible on larger screens */}
-        <div className="hidden lg:block border-b border-white/5">
-          <div className="mx-auto max-w-7xl flex items-center justify-between px-4 lg:px-8 py-1.5">
-            <LiveClock />
-            <div className="flex items-center gap-1">
-              <GlobalSearch />
-              <LanguageSelector />
-              <CurrencySelector />
-            </div>
-          </div>
-        </div>
-
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
+        <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           {/* Menu Icon (always visible on mobile/tablet) + Logo */}
           <div className="flex items-center gap-3">
             {/* Mobile/Tablet hamburger - always visible below lg */}
@@ -109,7 +97,6 @@ export default function Navbar() {
 
           {/* CTA Desktop */}
           <div className="hidden lg:flex items-center gap-2">
-            {/* Order Food - Always in English */}
             <Button
               onClick={() => setShowMenuOrder(true)}
               className="bg-emerald hover:bg-emerald-dark text-white font-semibold px-4 py-2 rounded-[2px] tracking-wide uppercase text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(11,110,79,0.3)] gap-2 relative"
@@ -130,10 +117,8 @@ export default function Navbar() {
             </Button>
           </div>
 
-          {/* Mobile: search + cart + order */}
+          {/* Mobile: order button */}
           <div className="flex items-center gap-2 lg:hidden">
-            <GlobalSearch />
-            {/* Mobile Order Button */}
             <Button
               onClick={() => setShowMenuOrder(true)}
               size="sm"
@@ -161,15 +146,6 @@ export default function Navbar() {
               className="bg-charcoal/98 backdrop-blur-md px-6 pb-6 lg:hidden overflow-hidden"
             >
               <div className="flex flex-col gap-2 pt-2">
-                {/* Mobile utility bar */}
-                <div className="flex items-center justify-between py-2 border-b border-white/10 mb-2">
-                  <LiveClock />
-                  <div className="flex items-center gap-1">
-                    <LanguageSelector />
-                    <CurrencySelector />
-                  </div>
-                </div>
-
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}
@@ -183,8 +159,6 @@ export default function Navbar() {
                     {link.label}
                   </Link>
                 ))}
-
-                {/* Mobile Order Button - Always English */}
                 <Button
                   onClick={() => {
                     setShowMenuOrder(true);

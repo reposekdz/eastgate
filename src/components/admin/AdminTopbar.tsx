@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Search, Moon, Sun } from "lucide-react";
+import { Search, Moon, Sun } from "lucide-react";
 import { branches } from "@/lib/mock-data";
 import { useState } from "react";
 
@@ -59,15 +59,6 @@ export default function AdminTopbar() {
           onClick={() => setDarkMode(!darkMode)}
         >
           {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="relative text-slate-custom hover:text-charcoal"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
         </Button>
 
         <Separator orientation="vertical" className="h-5 mx-1" />

@@ -10,7 +10,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -20,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, LogOut, User, Settings } from "lucide-react";
+import { LogOut, User, Settings } from "lucide-react";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
 import { useRouter } from "next/navigation";
@@ -35,12 +34,9 @@ export default function DashboardTopbar({
   showBranchSelector = false,
 }: DashboardTopbarProps) {
   const { user, logout } = useAuthStore();
-  const { selectedBranchId, setSelectedBranch, getNotifications, markNotificationRead } = useBranchStore();
+  const { selectedBranchId, setSelectedBranch } = useBranchStore();
   const router = useRouter();
   const isSuperRole = user?.role === "super_admin" || user?.role === "super_manager";
-  const branchId = isSuperRole ? selectedBranchId : (user?.branchId || "br-001");
-  const notifications = getNotifications(branchId, user?.role || "waiter");
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleLogout = () => {
     logout();
@@ -73,63 +69,6 @@ export default function DashboardTopbar({
       )}
 
       <div className="flex-1" />
-
-      {/* Notifications */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="relative text-slate-custom hover:text-charcoal h-8 w-8 p-0"
-          >
-            <Bell className="h-4 w-4" />
-            {unreadCount > 0 && (
-              <span
-                className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
-                style={{ backgroundColor: accentColor }}
-              >
-                {unreadCount}
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80">
-          <DropdownMenuLabel className="flex items-center justify-between">
-            Notifications
-            {unreadCount > 0 && (
-              <Badge variant="secondary" className="text-[10px]">
-                {unreadCount} new
-              </Badge>
-            )}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {notifications.slice(0, 5).map((n) => (
-            <DropdownMenuItem
-              key={n.id}
-              className="flex flex-col items-start gap-1 py-3 cursor-pointer"
-              onClick={() => markNotificationRead(n.id)}
-            >
-              <div className="flex items-center gap-2 w-full">
-                {!n.read && (
-                  <span
-                    className="h-2 w-2 rounded-full shrink-0"
-                    style={{ backgroundColor: accentColor }}
-                  />
-                )}
-                <span className="text-sm font-medium">{n.title}</span>
-              </div>
-              <span className="text-xs text-muted-foreground pl-4">
-                {n.message}
-              </span>
-            </DropdownMenuItem>
-          ))}
-          {notifications.length === 0 && (
-            <div className="py-6 text-center text-sm text-muted-foreground">
-              No notifications
-            </div>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
 
       <Separator orientation="vertical" className="h-5 mx-1" />
 
