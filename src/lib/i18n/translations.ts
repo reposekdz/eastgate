@@ -407,6 +407,35 @@ export const translations = {
     // Bookings Management
     bookingsManagement: { en: "Bookings Management", rw: "Gucunga Amafatwa" },
     viewManageBookings: { en: "View and manage all guest bookings", rw: "Reba no gucunga amafatwa yose y'abashyitsi" },
+
+    // Waiter & shared dashboard
+    liveOrderFeed: { en: "Live Order Feed", rw: "Ibisabwa bya Nonaha" },
+    tableStatus: { en: "Table Status", rw: "Imimerere y'Ameza" },
+    fullMap: { en: "Full Map", rw: "Ikarita Yuzuye" },
+    tablesBusy: { en: "Tables Busy", rw: "Ameza Akoreshwa" },
+    revenueShort: { en: "Revenue", rw: "Amafaranga" },
+    capacityUsage: { en: "Capacity Usage", rw: "Gukoresha Ubushobozi" },
+    quickActions: { en: "Quick Actions", rw: "Ibikorwa byihuse" },
+    todaysBookings: { en: "Today's Bookings", rw: "Amafatwa y'Uyu munsi" },
+    allCaughtUp: { en: "All caught up!", rw: "Byose byarakozwe!" },
+    noActiveOrders: { en: "No active orders right now", rw: "Nta bisabwa biri mu bikorwa ubu" },
+    avgServeTime: { en: "Avg Serve Time", rw: "Igihe Cyiza cyo Gutanga" },
+    completedToday: { en: "Completed Today", rw: "Byarangiye Uyu munsi" },
+    serviceQuality: { en: "Service Quality", rw: "Ubuziranenge bwa Serivisi" },
+    itemsServed: { en: "Items Served", rw: "Ibyo Ubatanzwe" },
+    tableOccupied: { en: "Occupied", rw: "Bikoreshwa" },
+    tableReserved: { en: "Reserved", rw: "Bifatiwe" },
+    tableCleaning: { en: "Cleaning", rw: "Gusukura" },
+    alerts: { en: "Alerts", rw: "Amakuru" },
+    kitchenDisplay: { en: "Kitchen Display", rw: "Igaragara ry'Igikoni" },
+    branchAdminDashboard: { en: "Branch Admin Dashboard", rw: "Ikibaho cy'Umuyobozi w'Ishami" },
+    // Admin quick actions
+    newBooking: { en: "New Booking", rw: "Ifatwa Rishya" },
+    roomService: { en: "Room Service", rw: "Serivisi y'Icyumba" },
+    viewReports: { en: "View Reports", rw: "Reba Ama Raporo" },
+    manageRooms: { en: "Manage Rooms", rw: "Gucunga Ibyumba" },
+    restaurant: { en: "Restaurant", rw: "Iresitora" },
+    viewPayments: { en: "View Payments", rw: "Reba Kwishyura" },
   },
 
   // ─── Menu Categories ────────────────────────────────────────
@@ -738,6 +767,11 @@ export const translations = {
     createAccount: { en: "Create an account", rw: "Fungura konti" },
     staffNotice: { en: "Staff accounts are pre-configured. Contact your administrator.", rw: "Konti z'abakozi ziteguwe mbere. Vugana n'umuyobozi wawe." },
     secureEnterprise: { en: "Secure Enterprise Platform", rw: "Urubuga rw'Ikigo Rwizewe" },
+    verifyingAccess: { en: "Verifying access...", rw: "Birimo kugenzura uburenganzira..." },
+    accessDenied: { en: "Access Denied", rw: "Ntuburenganzira" },
+    pleaseLogInDashboard: { en: "Please log in to access the dashboard.", rw: "Nyamuneka injira kugira ngo ugere ku kibaho." },
+    insufficientPermissionsTitle: { en: "Insufficient Permissions", rw: "Ntamabanga Yuzuye" },
+    noPermissionAdmin: { en: "You don't have permission to access the admin dashboard.", rw: "Ntabwo ufite uburenganzira bwo kugera ku kibaho cy'abayobozi." },
   },
 
   // ─── Menu Order Dialog ─────────────────────────────────────

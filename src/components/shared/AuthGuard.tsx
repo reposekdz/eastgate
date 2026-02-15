@@ -12,7 +12,7 @@ interface AuthGuardProps {
 }
 
 export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, requiresCredentialsChange } = useAuthStore();
   const router = useRouter();
   const [checking, setChecking] = useState(true);
 
@@ -22,10 +22,15 @@ export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
   }, []);
 
   useEffect(() => {
-    if (!checking && !isAuthenticated) {
+    if (checking) return;
+    if (!isAuthenticated) {
       router.replace("/login");
+      return;
     }
-  }, [checking, isAuthenticated, router]);
+    if (requiresCredentialsChange) {
+      router.replace("/change-credentials");
+    }
+  }, [checking, isAuthenticated, requiresCredentialsChange, router]);
 
   if (checking) {
     return (

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +29,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getStaffCredentials } from "@/lib/store/auth-store";
+import { useAuthStore, getStaffCredentials } from "@/lib/store/auth-store";
+import { branches } from "@/lib/mock-data";
+import type { UserRole } from "@/lib/types/enums";
 import { toast } from "sonner";
 import {
   UserPlus,
@@ -44,35 +45,73 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  Lock,
+  AlertCircle,
 } from "lucide-react";
 
 const roleColors: Record<string, string> = {
   super_admin: "bg-red-600",
   super_manager: "bg-purple-600",
   branch_manager: "bg-blue-600",
+  branch_admin: "bg-indigo-600",
   receptionist: "bg-green-600",
   waiter: "bg-orange-600",
   accountant: "bg-yellow-600",
   restaurant_staff: "bg-teal-600",
+  kitchen_staff: "bg-amber-600",
+  event_manager: "bg-indigo-600",
 };
 
 const roleLabels: Record<string, string> = {
   super_admin: "Super Admin",
   super_manager: "Super Manager",
   branch_manager: "Branch Manager",
+  branch_admin: "Branch Admin",
   receptionist: "Receptionist",
   waiter: "Waiter",
   accountant: "Accountant",
   restaurant_staff: "Restaurant Staff",
+  kitchen_staff: "Kitchen Staff",
+  event_manager: "Event Manager",
 };
 
+const assignableRoles: UserRole[] = [
+  "branch_manager",
+  "branch_admin",
+  "receptionist",
+  "waiter",
+  "kitchen_staff",
+  "accountant",
+  "event_manager",
+  "restaurant_staff",
+];
+
 export default function StaffManagementPage() {
-  const staffList = getStaffCredentials();
+  const { user, addStaff, getAllStaff, hasAccess } = useAuthStore();
+  const canAddStaff = hasAccess(["super_admin", "super_manager"]);
+  const staticCreds = getStaffCredentials();
+  const allStaff = getAllStaff("all", true);
+  const staffList = allStaff.map(({ user: u, isDynamic, mustChangeCredentials }) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    password: isDynamic ? "(set by admin)" : staticCreds.find((s) => s.email === u.email)?.password ?? "—",
+    role: u.role,
+    branchName: u.branchName,
+    isDynamic,
+    mustChangeCredentials,
+  }));
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [filterBranch, setFilterBranch] = useState("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [addName, setAddName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addPassword, setAddPassword] = useState("");
+  const [addRole, setAddRole] = useState<UserRole>("waiter");
+  const [addBranchId, setAddBranchId] = useState("br-001");
+  const [addLoading, setAddLoading] = useState(false);
 
   const filteredStaff = staffList.filter((staff) => {
     const matchesSearch =
@@ -83,6 +122,39 @@ export default function StaffManagementPage() {
       filterBranch === "all" || staff.branchName.includes(filterBranch);
     return matchesSearch && matchesRole && matchesBranch;
   });
+
+  const handleAddStaff = () => {
+    if (!addName.trim() || !addEmail.trim() || !addPassword.trim()) {
+      toast.error("Name, email, and password are required.");
+      return;
+    }
+    if (addPassword.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+    setAddLoading(true);
+    const branch = branches.find((b) => b.id === addBranchId);
+    const result = addStaff({
+      name: addName.trim(),
+      email: addEmail.trim(),
+      password: addPassword,
+      role: addRole,
+      branchId: addBranchId,
+      branchName: branch?.name ?? addBranchId,
+    });
+    setAddLoading(false);
+    if (result.success) {
+      toast.success("Staff added. They must change email & password on first login.");
+      setShowAddDialog(false);
+      setAddName("");
+      setAddEmail("");
+      setAddPassword("");
+      setAddRole("waiter");
+      setAddBranchId("br-001");
+    } else {
+      toast.error(result.error);
+    }
+  };
 
   const togglePasswordVisibility = (email: string) => {
     setShowPasswords((prev) => ({
@@ -104,75 +176,69 @@ export default function StaffManagementPage() {
           </p>
         </div>
         
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button className="bg-emerald hover:bg-emerald-dark gap-2">
-              <UserPlus size={18} />
-              Add New Staff
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New Staff Member</DialogTitle>
-              <DialogDescription>
-                Create a new staff account. They will receive their credentials via email.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="John Doe" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" placeholder="john.doe@eastgate.rw" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="branch_manager">Branch Manager</SelectItem>
-                    <SelectItem value="receptionist">Receptionist</SelectItem>
-                    <SelectItem value="waiter">Waiter</SelectItem>
-                    <SelectItem value="accountant">Accountant</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="branch">Branch</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="br-001">Kigali Main</SelectItem>
-                    <SelectItem value="br-002">Ngoma Branch</SelectItem>
-                    <SelectItem value="br-003">Kirehe Branch</SelectItem>
-                    <SelectItem value="br-004">Gatsibo Branch</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                <p className="font-semibold text-blue-900 mb-1">Auto-Generated Credentials</p>
-                <p className="text-blue-700 text-xs">
-                  A secure password will be automatically generated and sent to the staff member&apos;s email.
-                </p>
-              </div>
-              <Button
-                onClick={() => {
-                  toast.success("Staff member added successfully!");
-                  setShowAddDialog(false);
-                }}
-                className="w-full bg-emerald hover:bg-emerald-dark"
-              >
-                Create Account
+        {canAddStaff && (
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button className="bg-emerald hover:bg-emerald-dark gap-2">
+                <UserPlus size={18} />
+                Add Staff & Assign Credentials
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add Staff to Branch</DialogTitle>
+                <DialogDescription>
+                  Assign credentials. Staff must change email and password on first login.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <Input placeholder="John Doe" value={addName} onChange={(e) => setAddName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email (login)</Label>
+                  <Input type="email" placeholder="john@eastgate.rw" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Initial Password (min 6 chars)</Label>
+                  <Input type="password" placeholder="••••••••" value={addPassword} onChange={(e) => setAddPassword(e.target.value)} minLength={6} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Select value={addRole} onValueChange={(v) => setAddRole(v as UserRole)}>
+                    <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                    <SelectContent>
+                      {assignableRoles.map((r) => (
+                        <SelectItem key={r} value={r}>{roleLabels[r] || r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Branch</Label>
+                  <Select value={addBranchId} onValueChange={setAddBranchId}>
+                    <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                    <SelectContent>
+                      {branches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm flex gap-2">
+                  <Lock className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                  <p className="text-amber-800 text-xs">
+                    They will be required to set a new email and password on first sign-in to their branch.
+                  </p>
+                </div>
+                <Button onClick={handleAddStaff} disabled={addLoading} className="w-full bg-emerald hover:bg-emerald-dark">
+                  {addLoading ? "Adding…" : "Create & Assign Credentials"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Stats */}
@@ -245,14 +311,16 @@ export default function StaffManagementPage() {
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
-              <SelectContent>
+                <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="super_admin">Super Admin</SelectItem>
                 <SelectItem value="super_manager">Super Manager</SelectItem>
                 <SelectItem value="branch_manager">Branch Manager</SelectItem>
                 <SelectItem value="receptionist">Receptionist</SelectItem>
                 <SelectItem value="waiter">Waiter</SelectItem>
+                <SelectItem value="kitchen_staff">Kitchen Staff</SelectItem>
                 <SelectItem value="accountant">Accountant</SelectItem>
+                <SelectItem value="event_manager">Event Manager</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterBranch} onValueChange={setFilterBranch}>
@@ -297,9 +365,19 @@ export default function StaffManagementPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredStaff.map((staff, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{staff.name}</TableCell>
+                  filteredStaff.map((staff) => (
+                    <TableRow key={staff.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {staff.name}
+                          {staff.mustChangeCredentials && (
+                            <Badge variant="outline" className="text-amber-700 border-amber-300 gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Must change login
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm">
                           <Mail className="h-3 w-3 text-text-muted-custom" />
@@ -307,26 +385,26 @@ export default function StaffManagementPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-                            {showPasswords[staff.email] ? staff.password : "••••••"}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => togglePasswordVisibility(staff.email)}
-                            className="h-6 w-6 p-0"
-                          >
-                            {showPasswords[staff.email] ? (
-                              <EyeOff size={14} />
-                            ) : (
-                              <Eye size={14} />
-                            )}
-                          </Button>
-                        </div>
+                        {staff.isDynamic ? (
+                          <span className="text-xs text-muted-foreground">(assigned by admin)</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
+                              {showPasswords[staff.email] ? staff.password : "••••••"}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => togglePasswordVisibility(staff.email)}
+                              className="h-6 w-6 p-0"
+                            >
+                              {showPasswords[staff.email] ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <Badge className={roleColors[staff.role]}>
+                        <Badge className={roleColors[staff.role] ?? "bg-gray-600"}>
                           {roleLabels[staff.role] || staff.role}
                         </Badge>
                       </TableCell>

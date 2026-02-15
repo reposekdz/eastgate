@@ -32,7 +32,7 @@ import Link from "next/link";
 
 export default function WaiterDashboard() {
   const { user } = useAuthStore();
-  const { isRw } = useI18n();
+  const { t, isRw } = useI18n();
   const {
     getOrders,
     getTables,
@@ -79,10 +79,10 @@ export default function WaiterDashboard() {
             </div>
             <div>
               <h1 className="heading-md text-charcoal">
-                Welcome, {user?.name?.split(" ")[0] || "Waiter"}
+                {t("common", "welcome")}, {user?.name?.split(" ")[0] || (isRw ? "Umukozi" : "Waiter")}
               </h1>
               <p className="text-xs text-text-muted-custom">
-                {user?.branchName} &bull; Waiter Dashboard
+                {user?.branchName} • {t("dashboard", "waiterDashboard")}
               </p>
             </div>
           </div>
@@ -90,7 +90,7 @@ export default function WaiterDashboard() {
         <div className="flex gap-2">
           <Link href="/waiter/tables">
             <Button variant="outline" size="sm">
-              <Grid3X3 className="mr-2 h-4 w-4" /> Table Map
+              <Grid3X3 className="mr-2 h-4 w-4" /> {t("dashboard", "tableMap")}
             </Button>
           </Link>
           <Link href="/waiter/new-order">
@@ -98,7 +98,12 @@ export default function WaiterDashboard() {
               className="bg-amber-600 hover:bg-amber-700 text-white"
               size="sm"
             >
-              <Zap className="mr-2 h-4 w-4" /> New Order
+              <Zap className="mr-2 h-4 w-4" /> {t("dashboard", "newOrder")}
+            </Button>
+          </Link>
+          <Link href="/waiter/kitchen-display">
+            <Button variant="outline" size="sm">
+              <ChefHat className="mr-2 h-4 w-4" /> {t("dashboard", "kitchenDisplay")}
             </Button>
           </Link>
         </div>
@@ -114,7 +119,7 @@ export default function WaiterDashboard() {
               </div>
               <div>
                 <p className="text-lg font-bold">4.2 min</p>
-                <p className="text-[11px] text-white/80">{isRw ? "Igihe Cyiza cyo Gutanga" : "Avg Serve Time"}</p>
+                <p className="text-[11px] text-white/80">{t("dashboard", "avgServeTime")}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -123,7 +128,7 @@ export default function WaiterDashboard() {
               </div>
               <div>
                 <p className="text-lg font-bold">{orders.filter((o) => o.status === "served").length}</p>
-                <p className="text-[11px] text-white/80">{isRw ? "Byarangiye Uyu munsi" : "Completed Today"}</p>
+                <p className="text-[11px] text-white/80">{t("dashboard", "completedToday")}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -132,7 +137,7 @@ export default function WaiterDashboard() {
               </div>
               <div>
                 <p className="text-lg font-bold">98%</p>
-                <p className="text-[11px] text-white/80">{isRw ? "Ubuziranenge" : "Service Quality"}</p>
+                <p className="text-[11px] text-white/80">{t("dashboard", "serviceQuality")}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -141,7 +146,7 @@ export default function WaiterDashboard() {
               </div>
               <div>
                 <p className="text-lg font-bold">{orders.reduce((sum, o) => sum + o.items.length, 0)}</p>
-                <p className="text-[11px] text-white/80">{isRw ? "Ibyo Ubatanzwe" : "Items Served"}</p>
+                <p className="text-[11px] text-white/80">{t("dashboard", "itemsServed")}</p>
               </div>
             </div>
           </div>
@@ -154,7 +159,7 @@ export default function WaiterDashboard() {
           <Card className="hover:border-amber-300 hover:shadow-md transition-all">
             <CardContent className="p-3 text-center">
               <Zap className="h-5 w-5 text-amber-600 mx-auto mb-1 group-hover:scale-110 transition-transform" />
-              <p className="text-[11px] font-semibold text-charcoal">{isRw ? "Ibitumizwa Bishya" : "New Order"}</p>
+              <p className="text-[11px] font-semibold text-charcoal">{t("dashboard", "newOrder")}</p>
             </CardContent>
           </Card>
         </Link>
@@ -162,7 +167,7 @@ export default function WaiterDashboard() {
           <Card className="hover:border-blue-300 hover:shadow-md transition-all">
             <CardContent className="p-3 text-center">
               <Grid3X3 className="h-5 w-5 text-blue-600 mx-auto mb-1 group-hover:scale-110 transition-transform" />
-              <p className="text-[11px] font-semibold text-charcoal">{isRw ? "Imeza" : "Tables"}</p>
+              <p className="text-[11px] font-semibold text-charcoal">{t("dashboard", "tableStatus")}</p>
             </CardContent>
           </Card>
         </Link>
@@ -170,7 +175,7 @@ export default function WaiterDashboard() {
           <Card className="hover:border-red-300 hover:shadow-md transition-all">
             <CardContent className="p-3 text-center">
               <Bell className="h-5 w-5 text-red-500 mx-auto mb-1 group-hover:scale-110 transition-transform" />
-              <p className="text-[11px] font-semibold text-charcoal">{isRw ? "Amakuru" : "Alerts"}</p>
+              <p className="text-[11px] font-semibold text-charcoal">{t("dashboard", "alerts")}</p>
             </CardContent>
           </Card>
         </Link>
@@ -182,7 +187,7 @@ export default function WaiterDashboard() {
           <CardContent className="p-4 text-center">
             <AlertCircle className="h-5 w-5 text-orange-600 mx-auto mb-1" />
             <p className="text-2xl font-bold text-orange-700">{pendingOrders}</p>
-            <p className="text-[11px] text-orange-900 font-medium">Pending</p>
+            <p className="text-[11px] text-orange-900 font-medium">{t("common", "pending")}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
@@ -191,7 +196,7 @@ export default function WaiterDashboard() {
             <p className="text-2xl font-bold text-blue-700">
               {preparingOrders}
             </p>
-            <p className="text-[11px] text-blue-900 font-medium">Preparing</p>
+            <p className="text-[11px] text-blue-900 font-medium">{t("dashboard", "preparingOrders")}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
@@ -199,7 +204,7 @@ export default function WaiterDashboard() {
             <CheckCircle2 className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
             <p className="text-2xl font-bold text-emerald-700">{readyOrders}</p>
             <p className="text-[11px] text-emerald-900 font-medium">
-              Ready to Serve
+              {t("dashboard", "readyOrders")}
             </p>
           </CardContent>
         </Card>
@@ -210,7 +215,7 @@ export default function WaiterDashboard() {
               {occupiedTables}/{tables.length}
             </p>
             <p className="text-[11px] text-purple-900 font-medium">
-              Tables Busy
+              {t("dashboard", "tablesBusy")}
             </p>
           </CardContent>
         </Card>
@@ -218,7 +223,7 @@ export default function WaiterDashboard() {
           <CardContent className="p-4 text-center">
             <CalendarCheck className="h-5 w-5 text-cyan-600 mx-auto mb-1" />
             <p className="text-2xl font-bold text-cyan-700">{todayBookings}</p>
-            <p className="text-[11px] text-cyan-900 font-medium">Checked In</p>
+            <p className="text-[11px] text-cyan-900 font-medium">{t("management", "checkedIn")}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200">
@@ -227,7 +232,7 @@ export default function WaiterDashboard() {
             <p className="text-lg font-bold text-amber-700">
               {formatCurrency(todayRevenue)}
             </p>
-            <p className="text-[11px] text-amber-900 font-medium">Revenue</p>
+            <p className="text-[11px] text-amber-900 font-medium">{t("dashboard", "revenueShort")}</p>
           </CardContent>
         </Card>
       </div>
@@ -238,7 +243,7 @@ export default function WaiterDashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
-                <Activity className="h-4 w-4 text-amber-600" /> Live Order Feed
+                <Activity className="h-4 w-4 text-amber-600" /> {t("dashboard", "liveOrderFeed")}
               </CardTitle>
               <Link href="/waiter/orders">
                 <Button
@@ -246,7 +251,7 @@ export default function WaiterDashboard() {
                   size="sm"
                   className="text-amber-600 text-xs h-7"
                 >
-                  View All ({activeOrders})
+                  {t("management", "viewAll")} ({activeOrders})
                 </Button>
               </Link>
             </div>
@@ -309,8 +314,8 @@ export default function WaiterDashboard() {
             {liveOrders.length === 0 && (
               <div className="text-center py-8 text-text-muted-custom">
                 <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald" />
-                <p className="text-sm font-medium">All caught up!</p>
-                <p className="text-xs">No active orders right now</p>
+                <p className="text-sm font-medium">{t("dashboard", "allCaughtUp")}</p>
+                <p className="text-xs">{t("dashboard", "noActiveOrders")}</p>
               </div>
             )}
           </CardContent>
@@ -321,7 +326,7 @@ export default function WaiterDashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
-                <Grid3X3 className="h-4 w-4 text-amber-600" /> Table Status
+                <Grid3X3 className="h-4 w-4 text-amber-600" /> {t("dashboard", "tableStatus")}
               </CardTitle>
               <Link href="/waiter/tables">
                 <Button
@@ -329,7 +334,7 @@ export default function WaiterDashboard() {
                   size="sm"
                   className="text-amber-600 text-xs h-7"
                 >
-                  Full Map
+                  {t("dashboard", "fullMap")}
                 </Button>
               </Link>
             </div>
@@ -341,7 +346,7 @@ export default function WaiterDashboard() {
                   {availableTables}
                 </p>
                 <p className="text-[11px] text-emerald-900 font-medium">
-                  Available
+                  {t("common", "available")}
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-center">
@@ -349,7 +354,7 @@ export default function WaiterDashboard() {
                   {occupiedTables}
                 </p>
                 <p className="text-[11px] text-blue-900 font-medium">
-                  Occupied
+                  {t("dashboard", "tableOccupied")}
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-purple-50 border border-purple-200 text-center">
@@ -357,7 +362,7 @@ export default function WaiterDashboard() {
                   {reservedTables}
                 </p>
                 <p className="text-[11px] text-purple-900 font-medium">
-                  Reserved
+                  {t("dashboard", "tableReserved")}
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-center">
@@ -365,14 +370,14 @@ export default function WaiterDashboard() {
                   {tables.filter((t) => t.status === "cleaning").length}
                 </p>
                 <p className="text-[11px] text-yellow-900 font-medium">
-                  Cleaning
+                  {t("dashboard", "tableCleaning")}
                 </p>
               </div>
             </div>
 
             <div>
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-text-muted-custom">Capacity Usage</span>
+                <span className="text-text-muted-custom">{t("dashboard", "capacityUsage")}</span>
                 <span className="font-medium text-charcoal">
                   {tables.length > 0
                     ? Math.round((occupiedTables / tables.length) * 100)
@@ -393,14 +398,14 @@ export default function WaiterDashboard() {
             {/* Quick Actions */}
             <div className="space-y-2 pt-2">
               <p className="text-xs font-semibold text-text-muted-custom uppercase tracking-wide">
-                Quick Actions
+                {t("dashboard", "quickActions")}
               </p>
               <Link href="/waiter/services" className="block">
                 <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-pearl/50 transition-colors border">
                   <ClipboardList className="h-4 w-4 text-purple-600" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-charcoal">
-                      Service Requests
+                      {t("management", "serviceRequests")}
                     </p>
                   </div>
                   {pendingServices > 0 && (
@@ -415,7 +420,7 @@ export default function WaiterDashboard() {
                   <CalendarCheck className="h-4 w-4 text-cyan-600" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-charcoal">
-                      Today&apos;s Bookings
+                      {t("dashboard", "todaysBookings")}
                     </p>
                   </div>
                   <Badge className="bg-cyan-600 text-white text-[10px]">

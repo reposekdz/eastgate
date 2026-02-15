@@ -72,19 +72,23 @@ function LoginPageContent() {
 
       if (success) {
         toast.success(t("auth", "loginSuccess"));
-        const { user } = useAuthStore.getState();
+        const { user, requiresCredentialsChange } = useAuthStore.getState();
 
+        if (requiresCredentialsChange) {
+          router.push("/change-credentials");
+          return;
+        }
         if (redirectPath) {
           router.push(redirectPath);
         } else if (user?.role === "guest") {
           router.push("/");
         } else if (user?.role === "super_admin" || user?.role === "super_manager" || user?.role === "accountant" || user?.role === "event_manager") {
           router.push("/admin");
-        } else if (user?.role === "branch_manager") {
-          router.push("/manager");
+        } else if (user?.role === "branch_manager" || user?.role === "branch_admin") {
+          router.push(user.role === "branch_admin" ? "/admin" : "/manager");
         } else if (user?.role === "receptionist") {
           router.push("/receptionist");
-        } else if (user?.role === "waiter" || user?.role === "restaurant_staff") {
+        } else if (user?.role === "waiter" || user?.role === "restaurant_staff" || user?.role === "kitchen_staff") {
           router.push("/waiter");
         } else {
           router.push("/admin");
@@ -116,6 +120,7 @@ function LoginPageContent() {
       super_admin: "bg-red-100 text-red-700",
       super_manager: "bg-purple-100 text-purple-700",
       branch_manager: "bg-blue-100 text-blue-700",
+      branch_admin: "bg-indigo-100 text-indigo-700",
       receptionist: "bg-emerald-100 text-emerald-700",
       waiter: "bg-orange-100 text-orange-700",
       accountant: "bg-yellow-100 text-yellow-700",

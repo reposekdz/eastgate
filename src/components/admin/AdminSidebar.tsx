@@ -29,6 +29,8 @@ import {
   LogOut,
   Sparkles,
   ShieldCheck,
+  Building2,
+  CreditCard,
 } from "lucide-react";
 
 const navGroups = [
@@ -57,7 +59,9 @@ const navGroups = [
   {
     label: "Management",
     items: [
+      { title: "Branches", href: "/admin/branches", icon: Building2 },
       { title: "Finance", href: "/admin/finance", icon: DollarSign },
+      { title: "Payments", href: "/admin/payments", icon: CreditCard },
       { title: "Staff", href: "/admin/staff", icon: UserCog },
       { title: "Staff Management", href: "/admin/staff-management", icon: ShieldCheck },
       { title: "Settings", href: "/admin/settings", icon: Settings },

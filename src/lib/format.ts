@@ -111,6 +111,7 @@ export function getRoleLabel(role: UserRole): string {
     super_admin: "Super Admin",
     super_manager: "Super Manager",
     branch_manager: "Branch Manager",
+    branch_admin: "Branch Admin",
     receptionist: "Receptionist",
     waiter: "Waiter",
     housekeeping: "Housekeeping",

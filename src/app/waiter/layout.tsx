@@ -15,7 +15,7 @@ export default function WaiterLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGuard allowedRoles={["waiter", "restaurant_staff", "branch_manager"]}>
+    <AuthGuard allowedRoles={["waiter", "restaurant_staff", "kitchen_staff", "branch_manager"]}>
       <SidebarProvider>
         <WaiterSidebar />
         <SidebarInset>

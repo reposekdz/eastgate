@@ -2,11 +2,13 @@
 
 export const dynamic = "force-dynamic";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
 import { useI18n } from "@/lib/i18n/context";
@@ -29,6 +31,7 @@ import {
   Shield,
   Lock,
   DollarSign as DollarSignIcon,
+  LayoutDashboard,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -36,6 +39,7 @@ export default function ManagerDashboard() {
   const { user } = useAuthStore();
   const { t, isRw } = useI18n();
   const { getStaff, getBookings, getRooms, getOrders, getServiceRequests, getTables } = useBranchStore();
+  const [activeTab, setActiveTab] = useState("overview");
 
   const userRole = user?.role || "branch_manager";
   const branchId = user?.branchId || "br-001";
@@ -123,6 +127,28 @@ export default function ManagerDashboard() {
         </Card>
       )}
 
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full max-w-lg grid-cols-4 h-11">
+          <TabsTrigger value="overview" className="gap-1.5 text-xs sm:text-sm">
+            <LayoutDashboard className="h-4 w-4" />
+            <span className="hidden sm:inline">{t("common", "overview")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="staff" className="gap-1.5 text-xs sm:text-sm">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">{t("management", "teamMembers")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="gap-1.5 text-xs sm:text-sm">
+            <UtensilsCrossed className="h-4 w-4" />
+            <span className="hidden sm:inline">{t("dashboard", "liveOrders")}</span>
+          </TabsTrigger>
+          <TabsTrigger value="services" className="gap-1.5 text-xs sm:text-sm">
+            <ClipboardList className="h-4 w-4" />
+            <span className="hidden sm:inline">{t("management", "serviceRequests")}</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6 mt-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
@@ -404,6 +430,106 @@ export default function ManagerDashboard() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+
+        <TabsContent value="staff" className="mt-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4 text-emerald" /> {t("management", "waitersOnDuty")}
+                </CardTitle>
+                <Link href="/manager/staff">
+                  <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">{t("management", "viewAll")}</Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {waiters.map((waiter) => (
+                <div key={waiter.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-pearl/50 transition-colors">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={waiter.avatar} alt={waiter.name} />
+                    <AvatarFallback className="bg-emerald text-white text-xs">{waiter.name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-charcoal truncate">{waiter.name}</p>
+                    <p className="text-xs text-text-muted-custom">{waiter.shift} {isRw ? "Icyiciro" : "Shift"}</p>
+                  </div>
+                  <Badge variant={waiter.status === "active" ? "default" : "secondary"} className="text-[10px]">
+                    {waiter.status === "active" ? t("management", "onDuty") : t("management", "offDuty")}
+                  </Badge>
+                </div>
+              ))}
+              {waiters.length === 0 && (
+                <p className="text-sm text-center text-text-muted-custom py-4">{isRw ? "Nta bakozi b'iresitora bashyizweho" : "No waiters assigned"}</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="orders" className="mt-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <UtensilsCrossed className="h-4 w-4 text-orange-600" /> {t("management", "liveOrders")}
+                </CardTitle>
+                <Link href="/manager/orders">
+                  <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">{t("management", "viewAll")}</Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {branchOrders.filter((o) => o.status !== "served").slice(0, 8).map((order) => (
+                <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-pearl/50">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-2 w-2 rounded-full ${order.status === "pending" ? "bg-orange-500" : order.status === "preparing" ? "bg-blue-500" : "bg-emerald-500"}`} />
+                    <div>
+                      <p className="text-sm font-medium text-charcoal">{isRw ? "Imeza" : "Table"} {order.tableNumber}</p>
+                      <p className="text-xs text-text-muted-custom">{order.items.map((i) => `${i.quantity}x ${i.name}`).join(", ")}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge className={`text-[10px] ${order.status === "pending" ? "bg-orange-100 text-orange-700" : order.status === "preparing" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>{order.status}</Badge>
+                    <p className="text-xs font-semibold text-charcoal mt-1">{formatCurrency(order.total)}</p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="services" className="mt-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-purple-600" /> {t("management", "serviceRequests")}
+                </CardTitle>
+                <Link href="/manager/services">
+                  <Button variant="ghost" size="sm" className="text-emerald text-xs h-7">{t("management", "viewAll")}</Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {serviceRequests.filter((sr) => sr.status !== "completed").slice(0, 8).map((sr) => (
+                <div key={sr.id} className="flex items-center justify-between p-3 rounded-lg bg-pearl/50">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-2 w-2 rounded-full ${sr.priority === "urgent" ? "bg-red-500" : sr.priority === "high" ? "bg-orange-500" : sr.priority === "medium" ? "bg-yellow-500" : "bg-green-500"}`} />
+                    <div>
+                      <p className="text-sm font-medium text-charcoal">{sr.guestName} — {isRw ? "Icyumba" : "Room"} {sr.roomNumber}</p>
+                      <p className="text-xs text-text-muted-custom">{sr.description}</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className={`text-[10px] ${sr.priority === "urgent" ? "border-red-300 text-red-700" : sr.priority === "high" ? "border-orange-300 text-orange-700" : "border-gray-300"}`}>
+                    {isRw ? (sr.priority === "low" ? "Hasi" : sr.priority === "medium" ? "Hagati" : sr.priority === "high" ? "Hejuru" : "Byihutirwa") : sr.priority}
+                  </Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

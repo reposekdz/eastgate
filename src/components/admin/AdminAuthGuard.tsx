@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useI18n } from "@/lib/i18n/context";
 import { Loader2, ShieldCheck } from "lucide-react";
 
 export default function AdminAuthGuard({
@@ -10,23 +11,26 @@ export default function AdminAuthGuard({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, requiresCredentialsChange } = useAuthStore();
+  const { t } = useI18n();
   const router = useRouter();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Give Zustand persist time to rehydrate
-    const timer = setTimeout(() => {
-      setChecking(false);
-    }, 200);
+    const timer = setTimeout(() => setChecking(false), 200);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (!checking && !isAuthenticated) {
+    if (checking) return;
+    if (!isAuthenticated) {
       router.replace("/login");
+      return;
     }
-  }, [checking, isAuthenticated, router]);
+    if (requiresCredentialsChange) {
+      router.replace("/change-credentials");
+    }
+  }, [checking, isAuthenticated, requiresCredentialsChange, router]);
 
   if (checking) {
     return (
@@ -37,7 +41,7 @@ export default function AdminAuthGuard({
         <div className="flex items-center gap-3">
           <Loader2 className="h-5 w-5 animate-spin text-emerald" />
           <p className="text-text-muted-custom font-medium">
-            Verifying access...
+            {t("auth", "verifyingAccess")}
           </p>
         </div>
       </div>
@@ -51,10 +55,10 @@ export default function AdminAuthGuard({
           <ShieldCheck className="h-8 w-8 text-destructive" />
         </div>
         <p className="text-charcoal font-heading font-semibold text-lg">
-          Access Denied
+          {t("auth", "accessDenied")}
         </p>
         <p className="text-text-muted-custom text-sm">
-          Please log in to access the dashboard.
+          {t("auth", "pleaseLogInDashboard")}
         </p>
       </div>
     );
@@ -65,6 +69,7 @@ export default function AdminAuthGuard({
     "super_admin",
     "super_manager",
     "branch_manager",
+    "branch_admin",
     "accountant",
     "event_manager",
   ];
@@ -75,10 +80,10 @@ export default function AdminAuthGuard({
           <ShieldCheck className="h-8 w-8 text-destructive" />
         </div>
         <p className="text-charcoal font-heading font-semibold text-lg">
-          Insufficient Permissions
+          {t("auth", "insufficientPermissionsTitle")}
         </p>
         <p className="text-text-muted-custom text-sm">
-          You don&apos;t have permission to access the admin dashboard.
+          {t("auth", "noPermissionAdmin")}
         </p>
       </div>
     );
