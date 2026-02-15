@@ -19,7 +19,12 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [notificationCount] = useState(3);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: "Booking Confirmed", message: "Your room reservation for Dec 25 is confirmed", time: "2m ago", read: false, type: "success" },
+    { id: 2, title: "Special Offer", message: "Get 20% off on spa services this weekend", time: "1h ago", read: false, type: "info" },
+    { id: 3, title: "Order Ready", message: "Your food order #1234 is ready for pickup", time: "3h ago", read: true, type: "success" },
+  ]);
   const [cartCount] = useState(2);
   const pathname = usePathname();
   const isHome = pathname === "/";
@@ -78,7 +83,7 @@ export default function Navbar() {
             <form onSubmit={handleSearch} className="relative flex-1 max-w-xs lg:max-w-md">
               <Search className="absolute left-2 lg:left-3 top-1/2 -translate-y-1/2 h-3.5 lg:h-4 w-3.5 lg:w-4 text-white/50" />
               <Input
-                placeholder={t("nav", "search") || "Search..."}
+                placeholder={t("common", "search") || "Search..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8 lg:pl-10 h-8 lg:h-9 text-xs lg:text-sm bg-white/10 border-white/20 text-white placeholder:text-white/50"
@@ -143,12 +148,13 @@ export default function Navbar() {
               {/* Notifications */}
               <motion.button
                 whileTap={{ scale: 0.9 }}
+                onClick={() => setNotificationOpen(!notificationOpen)}
                 className="relative h-9 w-9 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-all border border-white/20"
               >
                 <Bell className="w-4 h-4" />
-                {notificationCount > 0 && (
+                {notifications.filter(n => !n.read).length > 0 && (
                   <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-[10px] border-2 border-charcoal">
-                    {notificationCount}
+                    {notifications.filter(n => !n.read).length}
                   </Badge>
                 )}
               </motion.button>
@@ -258,6 +264,18 @@ export default function Navbar() {
               exit={{ opacity: 0, y: -20 }}
               className="lg:hidden bg-charcoal/98 backdrop-blur-xl border-t border-white/10 px-4 py-3"
             >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-white font-semibold text-sm">Search</h3>
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchOpen(false);
+                  }}
+                  className="text-xs text-white/60 hover:text-white px-3 py-1 bg-white/10 rounded-full transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
               <form onSubmit={handleSearch} className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
                 <Input
@@ -265,15 +283,17 @@ export default function Navbar() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   autoFocus
-                  className="pl-10 pr-10 h-11 text-sm bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-xl"
+                  className="pl-10 pr-20 h-11 text-sm bg-white/10 border-white/20 text-white placeholder:text-white/50 rounded-xl"
                 />
-                <button
-                  type="button"
-                  onClick={() => setSearchOpen(false)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white px-2 py-1 bg-white/10 rounded-md text-xs"
+                  >
+                    Clear
+                  </button>
+                )}
               </form>
               {/* Quick Search Suggestions */}
               <div className="mt-3 flex flex-wrap gap-2">
@@ -291,6 +311,110 @@ export default function Navbar() {
                 ))}
               </div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Notification Panel */}
+        <AnimatePresence>
+          {notificationOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 z-[60] lg:hidden"
+                onClick={() => setNotificationOpen(false)}
+              />
+              <motion.div
+                initial={{ x: 300, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 300, opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-charcoal/98 backdrop-blur-xl border-l border-white/10 z-[61] lg:hidden overflow-hidden flex flex-col"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-white/10">
+                  <div>
+                    <h3 className="text-white font-heading font-semibold text-lg">Notifications</h3>
+                    <p className="text-white/60 text-xs mt-0.5">{notifications.filter(n => !n.read).length} unread</p>
+                  </div>
+                  <button
+                    onClick={() => setNotificationOpen(false)}
+                    className="h-8 w-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 px-4 py-2 border-b border-white/10">
+                  <button
+                    onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
+                    className="text-xs text-emerald hover:text-emerald-light font-medium transition-colors"
+                  >
+                    Mark all read
+                  </button>
+                  <span className="text-white/30">•</span>
+                  <button
+                    onClick={() => setNotifications([])}
+                    className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors"
+                  >
+                    Clear all
+                  </button>
+                </div>
+
+                {/* Notifications List */}
+                <div className="flex-1 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                      <Bell className="h-12 w-12 text-white/20 mb-3" />
+                      <p className="text-white/60 text-sm">No notifications</p>
+                    </div>
+                  ) : (
+                    <div className="p-2 space-y-1">
+                      {notifications.map((notif, idx) => (
+                        <motion.div
+                          key={notif.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          className={`p-3 rounded-xl border transition-all cursor-pointer group ${
+                            !notif.read
+                              ? "bg-white/10 border-white/20 hover:bg-white/15"
+                              : "bg-white/5 border-white/10 hover:bg-white/10"
+                          }`}
+                          onClick={() => {
+                            setNotifications(notifications.map(n => 
+                              n.id === notif.id ? { ...n, read: true } : n
+                            ));
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${
+                              !notif.read ? "bg-emerald" : "bg-white/20"
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-white text-sm font-semibold mb-1">{notif.title}</h4>
+                              <p className="text-white/70 text-xs leading-relaxed">{notif.message}</p>
+                              <p className="text-white/40 text-[10px] mt-1.5">{notif.time}</p>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNotifications(notifications.filter(n => n.id !== notif.id));
+                              }}
+                              className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded-md bg-white/10 hover:bg-red-500/20 flex items-center justify-center text-white/60 hover:text-red-400 transition-all"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
 

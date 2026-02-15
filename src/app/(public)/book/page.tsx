@@ -562,7 +562,7 @@ export default function BookingPage() {
                                     <Badge key={a} variant="outline" className="text-[10px] px-2 py-0.5">{a}</Badge>
                                   ))}
                                   {room.amenities.length > 5 && (
-                                    <Badge variant="outline" className="text-[10px] px-2 py-0.5">+{room.amenities.length - 5} {t("common", "more")}</Badge>
+                                    <Badge variant="outline" className="text-[10px] px-2 py-0.5">+{room.amenities.length - 5}</Badge>
                                   )}
                                 </div>
                                 <div className="flex items-center justify-between">

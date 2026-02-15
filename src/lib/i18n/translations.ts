@@ -62,6 +62,14 @@ export const translations = {
     pending: { en: "Pending", rw: "Bitegereje", fr: "En attente", sw: "Inasubiri", es: "Pendiente", de: "Ausstehend", zh: "待处理", ar: "قيد الانتظار", pt: "Pendente", ja: "保留中" },
     completed: { en: "Completed", rw: "Byarangiye", fr: "Terminé", sw: "Imekamilika", es: "Completado", de: "Abgeschlossen", zh: "已完成", ar: "مكتمل", pt: "Concluído", ja: "完了" },
     active: { en: "Active", rw: "Birakora", fr: "Actif", sw: "Hai", es: "Activo", de: "Aktiv", zh: "活跃", ar: "نشط", pt: "Ativo", ja: "アクティブ" },
+    items: { en: "items", rw: "ibintu", fr: "articles", sw: "vitu", es: "artículos", de: "Artikel", zh: "项目", ar: "عناصر", pt: "itens", ja: "アイテム" },
+    more: { en: "more", rw: "ibindi", fr: "plus", sw: "zaidi", es: "más", de: "mehr", zh: "更多", ar: "المزيد", pt: "mais", ja: "もっと" },
+    branch: { en: "Branch", rw: "Ishami", fr: "Succursale", sw: "Tawi", es: "Sucursal", de: "Filiale", zh: "分店", ar: "الفرع", pt: "Filial", ja: "支店" },
+    services: { en: "Services", rw: "Serivisi", fr: "Services", sw: "Huduma", es: "Servicios", de: "Dienstleistungen", zh: "服务", ar: "الخدمات", pt: "Serviços", ja: "サービス" },
+    overview: { en: "Overview", rw: "Incamake", fr: "Aperçu", sw: "Muhtasari", es: "Resumen", de: "Übersicht", zh: "概览", ar: "نظرة عامة", pt: "Visão geral", ja: "概要" },
+    actions: { en: "Actions", rw: "Ibikorwa", fr: "Actions", sw: "Vitendo", es: "Acciones", de: "Aktionen", zh: "操作", ar: "الإجراءات", pt: "Ações", ja: "アクション" },
+    amount: { en: "Amount", rw: "Igiciro", fr: "Montant", sw: "Kiasi", es: "Cantidad", de: "Betrag", zh: "金额", ar: "المبلغ", pt: "Quantia", ja: "金額" },
+    inProgress: { en: "In Progress", rw: "Birimo Gukorwa", fr: "En cours", sw: "Inaendelea", es: "En progreso", de: "In Bearbeitung", zh: "进行中", ar: "قيد التنفيذ", pt: "Em andamento", ja: "進行中" },
   },
 
   // ─── Navigation ─────────────────────────────────────────────
@@ -78,6 +86,7 @@ export const translations = {
     viewMenu: { en: "View Menu", rw: "Reba Menu", fr: "Voir le menu", sw: "Tazama Menyu", es: "Ver menú", de: "Menü ansehen", zh: "查看菜单", ar: "عرض القائمة", pt: "Ver menu", ja: "メニューを見る" },
     preOrder: { en: "Pre-Order", rw: "Gufata Mbere", fr: "Pré-commander", sw: "Agiza Mapema", es: "Pre-ordenar", de: "Vorbestellen", zh: "预订", ar: "الطلب المسبق", pt: "Pré-encomendar", ja: "事前注文" },
     orderFood: { en: "Order Food", rw: "Tanga Ibifashwe", fr: "Commander", sw: "Agiza Chakula", es: "Pedir comida", de: "Essen bestellen", zh: "点餐", ar: "اطلب طعام", pt: "Pedir comida", ja: "料理を注文" },
+    order: { en: "Order", rw: "Tanga", fr: "Commander", sw: "Agiza", es: "Pedir", de: "Bestellen", zh: "点餐", ar: "طلب", pt: "Pedir", ja: "注文" },
   },
 
   // ─── Booking Page ───────────────────────────────────────────
