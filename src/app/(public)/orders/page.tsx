@@ -5,8 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ShoppingCart, Package, Clock } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n/context";
 
 export default function OrdersPage() {
+  const { t } = useI18n();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -18,7 +20,7 @@ export default function OrdersPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="h-8 w-8 border-4 border-emerald border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-          <p className="text-sm text-slate-600">Loading...</p>
+          <p className="text-sm text-slate-600">{t("ordersPage", "loading")}</p>
         </div>
       </div>
     );
@@ -30,10 +32,10 @@ export default function OrdersPage() {
       <section className="relative h-[30vh] overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-center">
           <h1 className="text-3xl sm:text-4xl text-white font-bold mb-2">
-            Your <span className="text-yellow-500">Orders</span>
+            {t("ordersPage", "yourOrders")} <span className="text-yellow-500">{t("ordersPage", "ordersAccent")}</span>
           </h1>
           <p className="text-sm text-gray-300">
-            Track your food orders and bookings
+            {t("ordersPage", "trackOrders")}
           </p>
         </div>
       </section>
@@ -48,22 +50,22 @@ export default function OrdersPage() {
               </div>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-3">
-              No Orders Yet
+              {t("ordersPage", "noOrdersYet")}
             </h2>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              You haven&apos;t placed any orders yet. Start by ordering delicious food from our menu or booking a room.
+              {t("ordersPage", "noOrdersDesc")}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
                 <Link href="/menu">
                   <Package className="mr-2 h-4 w-4" />
-                  Order Food
+                  {t("ordersPage", "orderFood")}
                 </Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href="/book">
                   <Clock className="mr-2 h-4 w-4" />
-                  Book a Room
+                  {t("ordersPage", "bookARoom")}
                 </Link>
               </Button>
             </div>

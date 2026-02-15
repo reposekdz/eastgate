@@ -41,6 +41,16 @@ const professionalTranslations: Record<string, Record<string, Record<Locale, str
     medium: { en: "Medium", rw: "Hagati", fr: "Moyen", sw: "Wastani", es: "Medio", de: "Mittel", zh: "中", ar: "متوسط", pt: "Médio", ja: "中" },
     low: { en: "Low", rw: "Hasi", fr: "Bas", sw: "Chini", es: "Bajo", de: "Niedrig", zh: "低", ar: "منخفض", pt: "Baixo", ja: "低" },
   },
+  ordersPage: {
+    loading: { en: "Loading...", rw: "Birimo gutunganywa...", fr: "Chargement...", sw: "Inapakia...", es: "Cargando...", de: "Laden...", zh: "加载中...", ar: "جاري التحميل...", pt: "Carregando...", ja: "読み込み中..." },
+    yourOrders: { en: "Your", rw: "Ibisabwa", fr: "Vos", sw: "Maagizo", es: "Tus", de: "Ihre", zh: "您的", ar: "طلباتك", pt: "Seus", ja: "ご" },
+    ordersAccent: { en: "Orders", rw: "Byawe", fr: "commandes", sw: "yako", es: "pedidos", de: "Bestellungen", zh: "订单", ar: "الطلب", pt: "pedidos", ja: "注文" },
+    trackOrders: { en: "Track your food orders and bookings", rw: "Kurikirana ibifashwe n'amafatwa yawe", fr: "Suivez vos commandes et réservations", sw: "Fuatilia maagizo na uhifadhi wako", es: "Seguir pedidos y reservas", de: "Bestellungen und Buchungen verfolgen", zh: "跟踪您的餐饮订单和预订", ar: "تتبع الطلبات والحجوزات", pt: "Acompanhe pedidos e reservas", ja: "注文と予約を確認" },
+    noOrdersYet: { en: "No Orders Yet", rw: "Nta Bisabwa Biri", fr: "Aucune commande", sw: "Hakuna maagizo bado", es: "Sin pedidos aún", de: "Noch keine Bestellungen", zh: "暂无订单", ar: "لا توجد طلبات بعد", pt: "Nenhum pedido ainda", ja: "注文はまだありません" },
+    noOrdersDesc: { en: "You haven't placed any orders yet. Start by ordering delicious food from our menu or booking a room.", rw: "Nta bifashwe ufite. Tangira ugura ibiryo biri mu menu cyangwa ufate icyumba.", fr: "Vous n'avez pas encore passé de commande. Commandez au restaurant ou réservez une chambre.", sw: "Hujafanya maagizo. Anza kwa kupanga chakula au kuhifadhi chumba.", es: "Aún no has realizado pedidos. Ordena en el menú o reserva una habitación.", de: "Sie haben noch keine Bestellungen aufgegeben. Bestellen Sie vom Menü oder buchen Sie ein Zimmer.", zh: "您还没有下单。从菜单点餐或预订房间开始。", ar: "لم تضع أي طلبات بعد. اطلب من القائمة أو احجز غرفة.", pt: "Você ainda não fez pedidos. Peça no menu ou reserve um quarto.", ja: "まだ注文がありません。メニューから注文するか、部屋を予約してください。" },
+    orderFood: { en: "Order Food", rw: "Tanga Ibifashwe", fr: "Commander", sw: "Agiza Chakula", es: "Pedir comida", de: "Essen bestellen", zh: "点餐", ar: "اطلب طعام", pt: "Pedir comida", ja: "料理を注文" },
+    bookARoom: { en: "Book a Room", rw: "Gufata Icyumba", fr: "Réserver une chambre", sw: "Hifadhi Chumba", es: "Reservar habitación", de: "Zimmer buchen", zh: "预订房间", ar: "احجز غرفة", pt: "Reservar quarto", ja: "部屋を予約" },
+  },
 };
 
 /**

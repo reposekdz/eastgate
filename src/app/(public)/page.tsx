@@ -124,41 +124,21 @@ function ServiceCard({
 }
 
 export default function HomePage() {
-  const { t, isRw } = useI18n();
+  const { t } = useI18n();
 
-  // Services data with translations
+  // Services data with translations (locale-aware via t())
   const services = [
-    {
-      icon: Wifi,
-      title: isRw ? "Wi-Fi y'Igiciro Cyiza" : "High-Speed WiFi",
-      description: isRw ? "Interineti yihuta kubuntu mu ihoteli yose" : "Complimentary fast internet throughout the hotel",
-    },
-    {
-      icon: Car,
-      title: isRw ? "Gupakira Imodoka" : "Valet Parking",
-      description: isRw ? "Serivisi yo gupakira imodoka kubuntu" : "Free valet parking service for all guests",
-    },
-    {
-      icon: Coffee,
-      title: isRw ? "Ifunguro rya Bifeti" : "Breakfast Buffet",
-      description: isRw ? "Ibiryo by'u Rwanda n'iby'amahanga buri gitondo" : "Rwandan & international breakfast daily",
-    },
-    {
-      icon: Waves,
-      title: isRw ? "Pisine y'Infinity" : "Infinity Pool",
-      description: isRw ? "Pisine ifite isura nziza y'imisozi" : "Pool with stunning mountain views",
-    },
-    {
-      icon: Dumbbell,
-      title: isRw ? "Ikigo cy'Imikino" : "Fitness Center",
-      description: isRw ? "Ibikoresho by'imikino by'umwimerere" : "State-of-the-art fitness equipment",
-    },
-    {
-      icon: Clock,
-      title: isRw ? "Serivisi 24/7" : "24/7 Service",
-      description: isRw ? "Serivisi y'icyumba igihe cyose" : "Round-the-clock room service",
-    },
-  ];
+    { icon: Wifi, titleKey: "service1Title" as const, descKey: "service1Desc" as const },
+    { icon: Car, titleKey: "service2Title" as const, descKey: "service2Desc" as const },
+    { icon: Coffee, titleKey: "service3Title" as const, descKey: "service3Desc" as const },
+    { icon: Waves, titleKey: "service4Title" as const, descKey: "service4Desc" as const },
+    { icon: Dumbbell, titleKey: "service5Title" as const, descKey: "service5Desc" as const },
+    { icon: Clock, titleKey: "service6Title" as const, descKey: "service6Desc" as const },
+  ].map(({ icon, titleKey, descKey }) => ({
+    icon,
+    title: t("homepageExtras", titleKey),
+    description: t("homepageExtras", descKey),
+  }));
 
   // Stats data with translations
   const stats = [
@@ -254,7 +234,7 @@ export default function HomePage() {
                   <circle cx="12" cy="10" r="4"/>
                   <circle cx="12" cy="12" r="10"/>
                 </svg>
-                Staff Login
+                {t("homepageExtras", "staffLogin")}
               </Link>
             </Button>
           </motion.div>
@@ -361,7 +341,7 @@ export default function HomePage() {
                 {t("homepage", "accommodations")}
               </p>
               <h2 className="text-2xl sm:heading-lg text-charcoal mb-4 font-heading font-bold">
-                {roomsContent.title}
+                {t("homepage", "roomsSuites")}
               </h2>
               <div className="mx-auto mb-6 h-[2px] w-16 bg-gold" />
             </div>
@@ -402,7 +382,7 @@ export default function HomePage() {
                         asChild
                       >
                         <Link href="/rooms" className="flex items-center gap-1">
-                          {roomsContent.ctaText}
+                          {t("homepageExtras", "learnMore")}
                           <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
                         </Link>
                       </Button>
@@ -436,14 +416,12 @@ export default function HomePage() {
                 {t("common", "services")}
               </p>
               <h2 className="text-2xl sm:heading-lg text-charcoal mb-4 font-heading font-bold">
-                {isRw ? "Serivisi" : "Services"}{" "}
-                <span className="italic text-emerald">{isRw ? "n'Ibikoresho" : "& Amenities"}</span>
+                {t("homepageExtras", "servicesHeading")}{" "}
+                <span className="italic text-emerald">{t("homepageExtras", "servicesHeadingAccent")}</span>
               </h2>
               <div className="mx-auto mb-6 h-[2px] w-16 bg-gold" />
               <p className="body-md text-text-muted-custom max-w-2xl mx-auto">
-                {isRw
-                  ? "Buri kintu gitegurwa kugira ngo uburambe bwawe bube bwiza cyane. Kuva mu kwakira kugeza ku gusohoka, turihugiye."
-                  : "Everything is crafted for your ultimate comfort. From check-in to check-out, we've got you covered."}
+                {t("homepageExtras", "servicesIntro")}
               </p>
             </div>
           </FadeInUp>
@@ -512,17 +490,15 @@ export default function HomePage() {
           <FadeInUp>
             <div className="text-center mb-10 sm:mb-14">
               <p className="body-sm uppercase tracking-[0.25em] text-gold-dark mb-3 font-medium">
-                {isRw ? "Amanota y'Abashyitsi" : "Guest Ratings"}
+                {t("homepageExtras", "guestRatingHeading")}
               </p>
               <h2 className="text-2xl sm:heading-lg text-charcoal mb-4 font-heading font-bold">
-                {isRw ? "Twereke Ibyo" : "Share Your"}{" "}
-                <span className="italic text-emerald">{isRw ? "Uhita" : "Experience"}</span>
+                {t("homepageExtras", "shareExperience")}{" "}
+                <span className="italic text-emerald">{t("homepageExtras", "shareExperienceAccent")}</span>
               </h2>
               <div className="mx-auto mb-6 h-[2px] w-16 bg-gold" />
               <p className="body-md text-text-muted-custom max-w-2xl mx-auto">
-                {isRw
-                  ? "Ibitekerezo byawe bidufasha kunoza serivisi zacu. Duhe amanota kuri inyenyeri 5."
-                  : "Your feedback helps us improve. Rate us on a scale of 5 interactive stars."}
+                {t("homepageExtras", "shareExperienceIntro")}
               </p>
             </div>
           </FadeInUp>
@@ -544,7 +520,7 @@ export default function HomePage() {
                   {t("homepage", "getRoom")}
                 </h3>
                 <p className="body-sm text-white/70">
-                  {isRw ? "Fata icyumba nonaha" : "Reserve your room now"}
+                  {t("homepageExtras", "reserveRoomNow")}
                 </p>
                 <ArrowRight size={16} className="text-gold group-hover:translate-x-1 transition-transform" />
               </div>
@@ -553,10 +529,10 @@ export default function HomePage() {
               <div className="flex flex-col items-center gap-3 p-6 rounded-xl bg-white/10 hover:bg-white/20 transition-all duration-300">
                 <UtensilsCrossed size={28} className="text-gold" />
                 <h3 className="font-heading font-semibold text-white text-lg">
-                  {isRw ? "Reba Menu" : "View Menu"}
+                  {t("homepageExtras", "viewMenuShort")}
                 </h3>
                 <p className="body-sm text-white/70">
-                  {isRw ? "Shakisha ibiryo n'ibinyobwa byacu" : "Browse our food & drinks"}
+                  {t("homepageExtras", "browseFood")}
                 </p>
                 <ArrowRight size={16} className="text-gold group-hover:translate-x-1 transition-transform" />
               </div>
@@ -568,7 +544,7 @@ export default function HomePage() {
                   {t("homepage", "writeToUs")}
                 </h3>
                 <p className="body-sm text-white/70">
-                  {isRw ? "Tubaze ibibazo byawe byose" : "Ask us any questions"}
+                  {t("homepageExtras", "askQuestions")}
                 </p>
                 <ArrowRight size={16} className="text-gold group-hover:translate-x-1 transition-transform" />
               </div>

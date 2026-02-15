@@ -17,7 +17,6 @@ import {
   FadeInUp,
   SlideIn,
 } from "@/components/animations/MotionWrapper";
-import { contactContent } from "@/lib/kw-data";
 import {
   MapPin,
   Phone,
@@ -29,6 +28,7 @@ import {
   Instagram,
   Twitter,
 } from "lucide-react";
+import { useI18n } from "@/lib/i18n/context";
 
 const infoIcons: Record<string, React.ElementType> = {
   address: MapPin,
@@ -37,8 +37,24 @@ const infoIcons: Record<string, React.ElementType> = {
   hours: Clock,
 };
 
+const contactInfoKeys = ["address", "phone", "email", "hours"] as const;
+const contactSubjectKeys = ["subject1", "subject2", "subject3", "subject4", "subject5", "subject6"] as const;
+
 export default function ContactPage() {
+  const { t } = useI18n();
   const [submitted, setSubmitted] = useState(false);
+  const infoTitles: Record<string, string> = {
+    address: t("contact", "addressTitle"),
+    phone: t("contact", "phoneTitle"),
+    email: t("contact", "emailTitle"),
+    hours: t("contact", "hoursTitle"),
+  };
+  const infoValues: Record<string, string> = {
+    address: "KG 7 Ave, Kigali, Rwanda",
+    phone: "+250 788 000 000",
+    email: "reservations@eastgatehotel.rw",
+    hours: "24/7",
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +81,7 @@ export default function ContactPage() {
             transition={{ delay: 0.2 }}
             className="body-sm uppercase tracking-[0.25em] text-gold-light mb-3 font-medium"
           >
-            {contactContent.sectionLabel}
+            {t("contact", "sectionLabel")}
           </motion.p>
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
@@ -73,7 +89,7 @@ export default function ContactPage() {
             transition={{ delay: 0.4 }}
             className="text-3xl sm:text-4xl md:heading-xl text-white font-heading font-bold mb-4"
           >
-            {contactContent.title}
+            {t("contact", "title")}
           </motion.h1>
           <motion.div
             initial={{ scaleX: 0 }}
@@ -94,7 +110,7 @@ export default function ContactPage() {
                 <Card className="bg-white shadow-sm">
                   <CardContent className="p-6 sm:p-8">
                     <h2 className="heading-sm text-charcoal mb-6">
-                      Ohereza Ubutumwa
+                      {t("contact", "sendMessage")}
                     </h2>
 
                     {submitted && (
@@ -105,7 +121,7 @@ export default function ContactPage() {
                       >
                         <CheckCircle size={20} />
                         <p className="body-md font-medium">
-                          {contactContent.form.successMessage}
+                          {t("contact", "successMessage")}
                         </p>
                       </motion.div>
                     )}
@@ -114,21 +130,21 @@ export default function ContactPage() {
                       <div className="grid gap-5 sm:grid-cols-2">
                         <div>
                           <label className="body-sm font-medium text-charcoal mb-1.5 block">
-                            {contactContent.form.nameLabel}
+                            {t("contact", "nameLabel")}
                           </label>
                           <Input
-                            placeholder={contactContent.form.namePlaceholder}
+                            placeholder={t("contact", "namePlaceholder")}
                             className="rounded-[2px] border-border focus:border-emerald focus:ring-emerald"
                             required
                           />
                         </div>
                         <div>
                           <label className="body-sm font-medium text-charcoal mb-1.5 block">
-                            {contactContent.form.emailLabel}
+                            {t("contact", "emailLabel")}
                           </label>
                           <Input
                             type="email"
-                            placeholder={contactContent.form.emailPlaceholder}
+                            placeholder={t("contact", "emailPlaceholder")}
                             className="rounded-[2px] border-border focus:border-emerald focus:ring-emerald"
                             required
                           />
@@ -138,28 +154,28 @@ export default function ContactPage() {
                       <div className="grid gap-5 sm:grid-cols-2">
                         <div>
                           <label className="body-sm font-medium text-charcoal mb-1.5 block">
-                            {contactContent.form.phoneLabel}
+                            {t("contact", "phoneLabel")}
                           </label>
                           <Input
                             type="tel"
-                            placeholder={contactContent.form.phonePlaceholder}
+                            placeholder={t("contact", "phonePlaceholder")}
                             className="rounded-[2px] border-border focus:border-emerald focus:ring-emerald"
                           />
                         </div>
                         <div>
                           <label className="body-sm font-medium text-charcoal mb-1.5 block">
-                            {contactContent.form.subjectLabel}
+                            {t("contact", "subjectLabel")}
                           </label>
                           <Select>
                             <SelectTrigger className="rounded-[2px] border-border focus:border-emerald focus:ring-emerald">
                               <SelectValue
-                                placeholder={contactContent.form.subjectPlaceholder}
+                                placeholder={t("contact", "subjectPlaceholder")}
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              {contactContent.form.subjectOptions.map((opt) => (
-                                <SelectItem key={opt} value={opt}>
-                                  {opt}
+                              {contactSubjectKeys.map((key) => (
+                                <SelectItem key={key} value={key}>
+                                  {t("contact", key)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -169,10 +185,10 @@ export default function ContactPage() {
 
                       <div>
                         <label className="body-sm font-medium text-charcoal mb-1.5 block">
-                          {contactContent.form.messageLabel}
+                          {t("contact", "messageLabel")}
                         </label>
                         <Textarea
-                          placeholder={contactContent.form.messagePlaceholder}
+                          placeholder={t("contact", "messagePlaceholder")}
                           rows={5}
                           className="rounded-[2px] border-border focus:border-emerald focus:ring-emerald resize-none"
                           required
@@ -184,7 +200,7 @@ export default function ContactPage() {
                         className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 py-5 rounded-[2px] uppercase tracking-wider text-sm transition-all duration-300 w-full sm:w-auto"
                       >
                         <Send size={16} className="mr-2" />
-                        {contactContent.form.submitText}
+                        {t("contact", "submitText")}
                       </Button>
                     </form>
                   </CardContent>
@@ -196,13 +212,10 @@ export default function ContactPage() {
             <div className="lg:col-span-2">
               <SlideIn direction="right">
                 <div className="space-y-6">
-                  {(
-                    Object.entries(contactContent.info) as [
-                      string,
-                      { title: string; value: string }
-                    ][]
-                  ).map(([key, info]) => {
+                  {contactInfoKeys.map((key) => {
                     const Icon = infoIcons[key];
+                    const title = infoTitles[key];
+                    const value = infoValues[key];
                     return (
                       <Card
                         key={key}
@@ -214,25 +227,25 @@ export default function ContactPage() {
                           </div>
                           <div>
                             <h4 className="font-heading font-semibold text-charcoal mb-1">
-                              {info.title}
+                              {title}
                             </h4>
                             {key === "phone" ? (
                               <a
-                                href={`tel:${info.value.replace(/\s/g, "")}`}
+                                href={`tel:${value.replace(/\s/g, "")}`}
                                 className="body-md text-text-muted-custom hover:text-emerald transition-colors"
                               >
-                                {info.value}
+                                {value}
                               </a>
                             ) : key === "email" ? (
                               <a
-                                href={`mailto:${info.value}`}
+                                href={`mailto:${value}`}
                                 className="body-md text-text-muted-custom hover:text-emerald transition-colors break-all"
                               >
-                                {info.value}
+                                {value}
                               </a>
                             ) : (
                               <p className="body-md text-text-muted-custom">
-                                {info.value}
+                                {value}
                               </p>
                             )}
                           </div>
@@ -245,7 +258,7 @@ export default function ContactPage() {
                   <Card className="bg-charcoal">
                     <CardContent className="p-5 sm:p-6">
                       <h4 className="font-heading font-semibold text-white mb-4">
-                        {contactContent.socialTitle}
+                        {t("contact", "socialTitle")}
                       </h4>
                       <div className="flex gap-3">
                         {[Facebook, Instagram, Twitter].map((Icon, i) => (
@@ -272,7 +285,7 @@ export default function ContactPage() {
         <FadeInUp>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-16 lg:px-8">
             <div className="text-center mb-8">
-              <h3 className="heading-sm text-charcoal">Aho Tuherereye</h3>
+              <h3 className="heading-sm text-charcoal">{t("contact", "locationTitle")}</h3>
             </div>
             <div className="w-full h-64 sm:h-80 lg:h-96 rounded-[4px] overflow-hidden bg-surface-dark relative">
               <iframe
@@ -283,7 +296,7 @@ export default function ContactPage() {
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="Aho EastGate Hotel Iherereye"
+                title={t("contact", "mapTitle")}
               />
             </div>
           </div>
