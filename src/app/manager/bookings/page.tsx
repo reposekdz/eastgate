@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -12,22 +13,43 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatDate, getBookingStatusLabel, getRoomTypeLabel } from "@/lib/format";
+import type { RoomType } from "@/lib/types/enums";
 import {
-  CalendarCheck, Search, UserCheck, CalendarDays, DollarSign, Clock,
+  CalendarCheck, Search, UserCheck, CalendarDays, DollarSign, Clock, Plus,
 } from "lucide-react";
+import { toast } from "sonner";
+import ImageUpload from "@/components/shared/ImageUpload";
 
 export default function ManagerBookingsPage() {
   const { user } = useAuthStore();
-  const { getBookings } = useBranchStore();
+  const { getBookings, getRooms, addBooking } = useBranchStore();
   const branchId = user?.branchId || "br-001";
   const userRole = user?.role || "branch_manager";
   const allBookings = getBookings(branchId, userRole);
+  const branchRooms = getRooms(branchId, userRole);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [newBookingOpen, setNewBookingOpen] = useState(false);
+  const [newBooking, setNewBooking] = useState({
+    guestName: "",
+    guestEmail: "",
+    guestAvatar: "",
+    roomNumber: "",
+    roomType: "deluxe" as RoomType,
+    checkIn: "",
+    checkOut: "",
+    totalAmount: 0,
+    paymentMethod: "cash" as const,
+    addOns: [] as string[],
+    status: "pending" as const,
+  });
 
   const filteredBookings = allBookings.filter((b) => {
     const matchesSearch =
@@ -55,11 +77,164 @@ export default function ManagerBookingsPage() {
     return colors[status] || "bg-gray-100 text-gray-700";
   };
 
+  const handleAddBooking = () => {
+    if (!newBooking.guestName.trim() || !newBooking.guestEmail.trim() || !newBooking.roomNumber || !newBooking.checkIn || !newBooking.checkOut) {
+      toast.error("Please fill guest name, email, room, check-in and check-out.");
+      return;
+    }
+    const room = branchRooms.find((r) => r.number === newBooking.roomNumber);
+    const amount = newBooking.totalAmount || (room?.price ?? 0);
+    addBooking({
+      branchId,
+      guestName: newBooking.guestName.trim(),
+      guestEmail: newBooking.guestEmail.trim(),
+      guestAvatar: newBooking.guestAvatar || (newBooking.guestEmail ? `https://i.pravatar.cc/40?u=${newBooking.guestEmail}` : ""),
+      roomNumber: newBooking.roomNumber,
+      roomType: newBooking.roomType,
+      checkIn: newBooking.checkIn,
+      checkOut: newBooking.checkOut,
+      status: newBooking.status,
+      totalAmount: amount,
+      paymentMethod: newBooking.paymentMethod,
+      addOns: newBooking.addOns,
+    });
+    toast.success("New booking created.");
+    setNewBookingOpen(false);
+    setNewBooking({
+      guestName: "",
+      guestEmail: "",
+      guestAvatar: "",
+      roomNumber: "",
+      roomType: "deluxe",
+      checkIn: "",
+      checkOut: "",
+      totalAmount: 0,
+      paymentMethod: "cash",
+      addOns: [],
+      status: "pending",
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="heading-md text-charcoal">Bookings Management</h1>
-        <p className="body-sm text-text-muted-custom mt-1">View and manage all guest bookings</p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="heading-md text-charcoal">Bookings Management</h1>
+          <p className="body-sm text-text-muted-custom mt-1">View and manage all guest bookings · {user?.branchName}</p>
+        </div>
+        <Dialog open={newBookingOpen} onOpenChange={setNewBookingOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-emerald hover:bg-emerald-dark gap-2">
+              <Plus className="h-4 w-4" /> New booking
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>New booking</DialogTitle>
+              <DialogDescription>Add a new room booking for your branch</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Guest name</Label>
+                <Input
+                  placeholder="Full name"
+                  value={newBooking.guestName}
+                  onChange={(e) => setNewBooking({ ...newBooking, guestName: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Guest email</Label>
+                <Input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={newBooking.guestEmail}
+                  onChange={(e) => setNewBooking({ ...newBooking, guestEmail: e.target.value })}
+                />
+              </div>
+              <ImageUpload
+                label="Guest photo (from device)"
+                placeholder="Upload from device"
+                value={newBooking.guestAvatar}
+                onChange={(v) => setNewBooking({ ...newBooking, guestAvatar: v })}
+                compact
+              />
+              <div className="grid gap-2">
+                <Label>Room</Label>
+                <Select
+                  value={newBooking.roomNumber}
+                  onValueChange={(v) => {
+                    const r = branchRooms.find((x) => x.number === v);
+                    setNewBooking({
+                      ...newBooking,
+                      roomNumber: v,
+                      roomType: (r?.type ?? "deluxe") as RoomType,
+                      totalAmount: r?.price ?? 0,
+                    });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select room" /></SelectTrigger>
+                  <SelectContent>
+                    {branchRooms.map((r) => (
+                      <SelectItem key={r.id} value={r.number}>
+                        Room {r.number} · {getRoomTypeLabel(r.type)} · {formatCurrency(r.price)}/night
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Check-in</Label>
+                  <Input
+                    type="date"
+                    value={newBooking.checkIn}
+                    onChange={(e) => setNewBooking({ ...newBooking, checkIn: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Check-out</Label>
+                  <Input
+                    type="date"
+                    value={newBooking.checkOut}
+                    onChange={(e) => setNewBooking({ ...newBooking, checkOut: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label>Total amount (RWF)</Label>
+                <Input
+                  type="number"
+                  value={newBooking.totalAmount || ""}
+                  onChange={(e) => setNewBooking({ ...newBooking, totalAmount: Number(e.target.value) || 0 })}
+                  placeholder="Auto from room"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Payment method</Label>
+                <Select
+                  value={newBooking.paymentMethod}
+                  onValueChange={(v: "cash" | "visa" | "mastercard" | "stripe" | "mtn_mobile" | "airtel_money") =>
+                    setNewBooking({ ...newBooking, paymentMethod: v })
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="visa">Visa</SelectItem>
+                    <SelectItem value="mastercard">Mastercard</SelectItem>
+                    <SelectItem value="stripe">Stripe</SelectItem>
+                    <SelectItem value="mtn_mobile">MTN Mobile</SelectItem>
+                    <SelectItem value="airtel_money">Airtel Money</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNewBookingOpen(false)}>Cancel</Button>
+              <Button className="bg-emerald hover:bg-emerald-dark" onClick={handleAddBooking}>Create booking</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">

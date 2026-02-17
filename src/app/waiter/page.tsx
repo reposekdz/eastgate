@@ -82,7 +82,7 @@ export default function WaiterDashboard() {
                 {t("common", "welcome")}, {user?.name?.split(" ")[0] || (isRw ? "Umukozi" : "Waiter")}
               </h1>
               <p className="text-xs text-text-muted-custom">
-                {user?.branchName} • {t("dashboard", "waiterDashboard")}
+                Shared waiter dashboard · {user?.branchName} · Managed by branch manager
               </p>
             </div>
           </div>

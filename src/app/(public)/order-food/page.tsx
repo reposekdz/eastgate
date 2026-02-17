@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCartStore } from "@/stores/cart-store";
-import { menuItems } from "@/lib/mock-data";
+import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency } from "@/lib/format";
 import {
   Search,
@@ -47,6 +47,8 @@ const menuImages: Record<string, string> = {
 };
 
 export default function OrderFoodPage() {
+  const getMenuItems = useBranchStore((s) => s.getMenuItems);
+  const menuItems = getMenuItems();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [cartOpen, setCartOpen] = useState(false);
@@ -61,7 +63,7 @@ export default function OrderFoodPage() {
       const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
       return matchesSearch && matchesCategory && item.available;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [menuItems, searchQuery, selectedCategory]);
 
   const handleAddToCart = (item: typeof menuItems[0]) => {
     addItem({

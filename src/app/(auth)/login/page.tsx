@@ -20,8 +20,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { branches } from "@/lib/mock-data";
-import { useAuthStore, getStaffCredentials } from "@/lib/store/auth-store";
+import { useBranchStore } from "@/lib/store/branch-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { useI18n } from "@/lib/i18n/context";
 import {
   Eye,
@@ -29,16 +29,9 @@ import {
   ShieldCheck,
   Loader2,
   Lock,
-  Info,
   Users,
-  UserCheck,
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Check,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
@@ -56,7 +49,7 @@ function LoginPageContent() {
   const redirectPath = searchParams.get("redirect");
   const authError = searchParams.get("error");
 
-  const staffCreds = getStaffCredentials();
+  const branches = useBranchStore((s) => s.getBranches("super_admin", "all"));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +81,9 @@ function LoginPageContent() {
           router.push(user.role === "branch_admin" ? "/admin" : "/manager");
         } else if (user?.role === "receptionist") {
           router.push("/receptionist");
-        } else if (user?.role === "waiter" || user?.role === "restaurant_staff" || user?.role === "kitchen_staff") {
+        } else if (user?.role === "kitchen_staff") {
+          router.push("/kitchen");
+        } else if (user?.role === "waiter" || user?.role === "restaurant_staff") {
           router.push("/waiter");
         } else {
           router.push("/admin");
@@ -103,17 +98,7 @@ function LoginPageContent() {
     }
   };
 
-  const fillCredential = (cred: { email: string; password: string }) => {
-    setEmail(cred.email);
-    setPassword(cred.password);
-    toast.success("Credentials filled — click Sign In");
-  };
 
-  const copyCredential = (text: string, idx: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIdx(idx);
-    setTimeout(() => setCopiedIdx(null), 2000);
-  };
 
   const getRoleBadge = (role: string) => {
     const colors: Record<string, string> = {
@@ -166,7 +151,7 @@ function LoginPageContent() {
           </div>
 
           {/* Login Type Tabs */}
-          <Tabs value={loginType} onValueChange={(v) => setLoginType(v as "staff" | "guest")} className="mb-5">
+          <Tabs value={loginType} onValueChange={(v: string) => setLoginType(v as "staff" | "guest")} className="mb-5">
             <TabsList className="grid w-full grid-cols-2 h-10">
               <TabsTrigger value="staff" className="gap-1.5 text-xs">
                 <ShieldCheck className="h-3.5 w-3.5" />
@@ -270,63 +255,7 @@ function LoginPageContent() {
 
           <Separator className="my-5" />
 
-          {/* Staff Credentials Reference */}
-          {loginType === "staff" && (
-            <div className="mb-4">
-              <button
-                onClick={() => setShowCredentials(!showCredentials)}
-                className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-emerald/5 to-gold/5 border border-emerald/20 rounded-lg hover:bg-emerald/10 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Info className="h-4 w-4 text-emerald" />
-                  <span className="text-xs font-semibold text-charcoal">Staff Credentials (Demo)</span>
-                </div>
-                {showCredentials ? (
-                  <ChevronUp className="h-4 w-4 text-text-muted-custom" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-text-muted-custom" />
-                )}
-              </button>
 
-              {showCredentials && (
-                <ScrollArea className="mt-2 max-h-64 border rounded-lg">
-                  <div className="space-y-0.5 p-2">
-                    {staffCreds.map((cred, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 p-2 rounded-md hover:bg-pearl/80 transition-colors cursor-pointer group"
-                        onClick={() => fillCredential(cred)}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-xs font-semibold text-charcoal truncate">{cred.name}</span>
-                            <Badge className={cn("text-[9px] px-1.5 py-0", getRoleBadge(cred.role))}>
-                              {cred.role.replace(/_/g, " ")}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2 text-[10px] text-text-muted-custom">
-                            <span className="font-mono">{cred.email}</span>
-                            <span>•</span>
-                            <span className="font-mono">{cred.password}</span>
-                            <span>•</span>
-                            <span>{cred.branchName}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); copyCredential(`${cred.email} / ${cred.password}`, idx); }}
-                            className="h-6 w-6 rounded bg-pearl flex items-center justify-center hover:bg-gray-200"
-                          >
-                            {copiedIdx === idx ? <Check className="h-3 w-3 text-emerald" /> : <Copy className="h-3 w-3 text-text-muted-custom" />}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </div>
-          )}
 
           {/* Staff Notice */}
           <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">

@@ -31,6 +31,8 @@ import {
   ShieldCheck,
   Building2,
   CreditCard,
+  Search,
+  Activity,
 } from "lucide-react";
 
 const navGroups = [
@@ -38,6 +40,8 @@ const navGroups = [
     label: "Overview",
     items: [
       { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { title: "Search", href: "/admin/search", icon: Search },
+      { title: "Operations", href: "/admin/operations", icon: Activity },
     ],
   },
   {

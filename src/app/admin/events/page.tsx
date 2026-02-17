@@ -11,7 +11,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { events } from "@/lib/mock-data";
+import { useAuthStore } from "@/lib/store/auth-store";
+import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
 import type { HotelEvent } from "@/lib/types/schema";
 import type { EventType } from "@/lib/types/enums";
@@ -48,8 +49,13 @@ const typeLabels: Record<EventType, string> = {
 };
 
 export default function EventsPage() {
+  const { user } = useAuthStore();
+  const getEvents = useBranchStore((s) => s.getEvents);
   const [selectedEvent, setSelectedEvent] = useState<HotelEvent | null>(null);
 
+  const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
+  const role = user?.role ?? "guest";
+  const events = getEvents(branchId, role);
   const upcomingCount = events.filter((e) => e.status === "upcoming").length;
   const totalRevenue = events.reduce((sum, e) => sum + e.totalAmount, 0);
 

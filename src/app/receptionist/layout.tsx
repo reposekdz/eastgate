@@ -3,6 +3,7 @@ import ReceptionistSidebar from "@/components/receptionist/ReceptionistSidebar";
 import ReceptionistTopbar from "@/components/receptionist/ReceptionistTopbar";
 import AuthGuard from "@/components/shared/AuthGuard";
 import { Toaster } from "@/components/ui/sonner";
+import { StaffToolbar } from "@/components/staff/StaffToolbar";
 
 export const metadata = {
   title: "Reception Desk | EastGate Hotel Rwanda",

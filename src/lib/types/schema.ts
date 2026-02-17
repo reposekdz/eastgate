@@ -28,6 +28,8 @@ export interface Room {
   price: number;
   currentGuest?: string;
   branchId: string;
+  /** Data URL from device upload — persisted in store */
+  imageUrl?: string;
 }
 
 export interface Booking {
@@ -72,6 +74,7 @@ export interface StaffMember {
   avatar: string;
   branchId: string;
   joinDate: string;
+  mustChangePassword?: boolean;
 }
 
 export interface RestaurantOrder {
@@ -83,6 +86,8 @@ export interface RestaurantOrder {
   guestName?: string;
   roomCharge: boolean;
   createdAt: string;
+  branchId: string;
+  performedBy?: string; // staff name who placed the order
 }
 
 export interface MenuItem {
@@ -92,6 +97,11 @@ export interface MenuItem {
   price: number;
   description: string;
   available: boolean;
+  /** Data URL from device upload — persisted in store */
+  imageUrl?: string;
+  popular?: boolean;
+  vegetarian?: boolean;
+  spicy?: boolean;
 }
 
 export interface HotelEvent {

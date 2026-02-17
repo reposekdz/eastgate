@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/context";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 export const metadata: Metadata = {
   title: "EastGate Hotel Rwanda | Ihoteli y'Ubwiza mu Mutima wa Afurika",
@@ -23,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="rw" suppressHydrationWarning>
       <body className="antialiased">
-        <I18nProvider>{children}</I18nProvider>
+        <QueryProvider>
+          <I18nProvider>{children}</I18nProvider>
+        </QueryProvider>
       </body>
     </html>
   );

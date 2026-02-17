@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { UserRole } from "../types/enums";
-import { branches } from "../mock-data";
+import { useAppDataStore } from "./app-data-store";
 
 export interface User {
   id: string;
@@ -56,6 +56,8 @@ interface AuthState {
   setCredentialsChanged: (userId: string) => void;
   /** Get all staff (static + dynamic) for a branch or all branches (for super) */
   getAllStaff: (branchId: string | "all", includeStatic: boolean) => Array<{ user: User; isDynamic: boolean; mustChangeCredentials?: boolean }>;
+  /** Remove a dynamic staff member (only dynamic; used by branch manager or super) */
+  removeStaff: (userId: string) => { success: boolean; error?: string };
 }
 
 // Static staff credentials — given by the manager
@@ -416,7 +418,7 @@ export const useAuthStore = create<AuthState>()(
           state.registeredGuests.some((u) => u.email.toLowerCase() === data.email.toLowerCase());
         if (exists) return { success: false, error: "An account with this email already exists." };
         const id = `dyn-${Date.now().toString(36)}`;
-        const branchName = branches.find((b) => b.id === data.branchId)?.name ?? data.branchName;
+        const branchName = useAppDataStore.getState().branches.find((b) => b.id === data.branchId)?.name ?? data.branchName;
         const newStaff: DynamicStaffMember = {
           id,
           name: data.name,
@@ -479,6 +481,15 @@ export const useAuthStore = create<AuthState>()(
         return result;
       },
 
+      removeStaff: (userId) => {
+        const state = get();
+        if (state.user?.id === userId) return { success: false, error: "Cannot remove your own account." };
+        const idx = state.dynamicStaff.findIndex((u) => u.id === userId);
+        if (idx === -1) return { success: false, error: "User not found or cannot be removed." };
+        set((s) => ({ dynamicStaff: s.dynamicStaff.filter((u) => u.id !== userId) }));
+        return { success: true };
+      },
+
       hasRole: (roles: UserRole[]) => {
         const { user } = get();
         if (!user) return false;
@@ -506,7 +517,7 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Export staff credentials list for display in login page hints
+// Export staff credentials list for display in login page hints (all static users)
 export const getStaffCredentials = () =>
   staffUsers.map(({ name, email, password, role, branchName }) => ({
     name,
@@ -515,3 +526,15 @@ export const getStaffCredentials = () =>
     role,
     branchName,
   }));
+
+/** Demo login: only Super Admin and Super Manager. All other roles are added by Super Manager for branches. */
+export const getDemoStaffCredentials = () =>
+  staffUsers
+    .filter((u) => u.role === "super_admin" || u.role === "super_manager")
+    .map(({ name, email, password, role, branchName }) => ({
+      name,
+      email,
+      password,
+      role,
+      branchName,
+    }));

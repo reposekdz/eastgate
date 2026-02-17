@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { restaurantOrders, menuItems } from "@/lib/mock-data";
+import { useAuthStore } from "@/lib/store/auth-store";
+import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency } from "@/lib/format";
 import type { OrderStatus } from "@/lib/types/enums";
 import {
@@ -27,10 +28,17 @@ const orderStatusConfig: Record<OrderStatus, { label: string; color: string; bg:
   cancelled: { label: "Cancelled", color: "text-destructive", bg: "bg-destructive/10 border-destructive/20", icon: Clock },
 };
 
-const menuCategories = [...new Set(menuItems.map((item) => item.category))];
-
 export default function RestaurantPage() {
+  const { user } = useAuthStore();
+  const getOrders = useBranchStore((s) => s.getOrders);
+  const getMenuItems = useBranchStore((s) => s.getMenuItems);
   const [activeTab, setActiveTab] = useState("orders");
+
+  const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
+  const role = user?.role ?? "guest";
+  const restaurantOrders = getOrders(branchId, role);
+  const menuItems = getMenuItems();
+  const menuCategories = [...new Set(menuItems.map((item) => item.category))];
   const activeOrders = restaurantOrders.filter((o) => o.status !== "served" && o.status !== "cancelled");
   const todayRevenue = restaurantOrders.reduce((sum, o) => sum + o.total, 0);
 

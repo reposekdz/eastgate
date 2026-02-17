@@ -24,7 +24,8 @@ import { useCartStore } from "@/stores/cart-store";
 import { useOrderStore, type OrderType, type PaymentMethodType } from "@/stores/order-store";
 import { formatCurrency } from "@/lib/format";
 import { toast } from "sonner";
-import { branches } from "@/lib/mock-data";
+import { useAppDataStore } from "@/lib/store/app-data-store";
+import { useBranchStore } from "@/lib/store/branch-store";
 import {
   CreditCard,
   Phone,
@@ -123,6 +124,7 @@ export function CheckoutDialog({
   serviceCharge,
   grandTotal,
 }: CheckoutDialogProps) {
+  const branches = useAppDataStore((s) => s.branches);
   const [step, setStep] = useState(1);
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [tableNumber, setTableNumber] = useState("");
@@ -136,6 +138,7 @@ export function CheckoutDialog({
 
   const { items, clearCart } = useCartStore();
   const { placeOrder } = useOrderStore();
+  const addOrder = useBranchStore((s) => s.addOrder);
 
   const handlePlaceOrder = () => {
     if (!customerName.trim() || !customerPhone.trim()) {
@@ -171,6 +174,18 @@ export function CheckoutDialog({
       subtotal,
       serviceCharge,
       grandTotal,
+    });
+
+    addOrder({
+      tableNumber: orderType === "dine_in" ? parseInt(tableNumber || "0", 10) : 0,
+      items: items.map((ci) => ({ name: ci.item.nameEn || ci.item.name, quantity: ci.quantity, price: ci.item.price })),
+      status: "pending",
+      total: grandTotal,
+      guestName: customerName,
+      roomCharge: orderType === "room_service",
+      createdAt: new Date().toISOString(),
+      branchId: selectedBranch,
+      performedBy: customerName,
     });
 
     setOrderId(id);

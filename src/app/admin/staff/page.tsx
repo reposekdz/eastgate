@@ -29,7 +29,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { staff } from "@/lib/mock-data";
+import { useAuthStore } from "@/lib/store/auth-store";
+import { useBranchStore } from "@/lib/store/branch-store";
 import { getRoleLabel, getDepartmentLabel, formatDate } from "@/lib/format";
 import type { StaffMember } from "@/lib/types/schema";
 import {
@@ -52,9 +53,15 @@ const statusStyles: Record<string, string> = {
 };
 
 export default function StaffPage() {
+  const { user } = useAuthStore();
+  const getStaff = useBranchStore((s) => s.getStaff);
   const [deptFilter, setDeptFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+
+  const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
+  const role = user?.role ?? "guest";
+  const staff = getStaff(branchId, role);
 
   const filtered = staff.filter((s) => {
     if (deptFilter !== "all" && s.department !== deptFilter) return false;
@@ -255,9 +262,36 @@ export default function StaffPage() {
 
               <Separator />
 
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 rounded-[6px] text-sm">Edit Profile</Button>
-                <Button className="flex-1 bg-emerald hover:bg-emerald-dark text-white rounded-[6px] text-sm">Assign Shift</Button>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1 rounded-[6px] text-sm">Edit Profile</Button>
+                  <Button className="flex-1 bg-emerald hover:bg-emerald-dark text-white rounded-[6px] text-sm">Assign Shift</Button>
+                </div>
+                <Button
+                  variant="destructive"
+                  className="w-full rounded-[6px] text-sm gap-2"
+                  onClick={async () => {
+                    const ok = confirm("Are you sure you want to force this user to change their password on next login?");
+                    if (!ok) return;
+
+                    try {
+                      const res = await fetch("/api/admin/staff/force-password-reset", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId: selectedStaff.id }),
+                      });
+                      if (res.ok) {
+                        toast.success("Security flag set! User will be forced to change password.");
+                      } else {
+                        toast.error("Failed to set security flag.");
+                      }
+                    } catch (e) {
+                      toast.error("An error occurred.");
+                    }
+                  }}
+                >
+                  <Lock className="h-4 w-4" /> Force Password Reset
+                </Button>
               </div>
             </div>
           )}

@@ -30,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuthStore, getStaffCredentials } from "@/lib/store/auth-store";
-import { branches } from "@/lib/mock-data";
+import { useBranchStore } from "@/lib/store/branch-store";
 import type { UserRole } from "@/lib/types/enums";
 import { toast } from "sonner";
 import {
@@ -88,6 +88,7 @@ const assignableRoles: UserRole[] = [
 
 export default function StaffManagementPage() {
   const { user, addStaff, getAllStaff, hasAccess } = useAuthStore();
+  const branches = useBranchStore((s) => s.getBranches("super_admin", "all"));
   const canAddStaff = hasAccess(["super_admin", "super_manager"]);
   const staticCreds = getStaffCredentials();
   const allStaff = getAllStaff("all", true);
@@ -188,7 +189,7 @@ export default function StaffManagementPage() {
               <DialogHeader>
                 <DialogTitle>Add Staff to Branch</DialogTitle>
                 <DialogDescription>
-                  Assign credentials. Staff must change email and password on first login.
+                  Add Branch Managers (sub managers) and assign them to a branch, or add branch workers. They must change email and password on first login. Branch Managers can then add waiters, receptionists, and kitchen staff for their branch.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -433,15 +434,18 @@ export default function StaffManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Important Notice */}
+      {/* Hierarchy & Security Notice */}
       <Card className="bg-yellow-50 border-yellow-200">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <Shield className="h-5 w-5 text-yellow-700 mt-0.5" />
             <div className="text-sm">
-              <p className="font-semibold text-yellow-900 mb-1">Security Notice</p>
+              <p className="font-semibold text-yellow-900 mb-1">Staff hierarchy</p>
+              <p className="text-yellow-800 mb-2">
+                <strong>Super Admin</strong> and <strong>Super Manager</strong> manage all branches. Super Manager adds <strong>Branch Managers (sub managers)</strong> and assigns each to a branch; sub managers must change their credentials before accessing the dashboard. Branch Managers add <strong>waiters, receptionists, and kitchen staff</strong> for their branch and assign credentials; those staff must also change credentials on first login.
+              </p>
               <p className="text-yellow-800">
-                Only administrators can create, modify, or delete staff accounts. Staff members cannot change their own email or password - they must contact their branch manager for credential updates.
+                Demo login shows only Super Admin and Super Manager. All other roles are added via this panel or by Branch Managers in their branch.
               </p>
             </div>
           </div>

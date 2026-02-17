@@ -3,6 +3,7 @@ import WaiterSidebar from "@/components/waiter/WaiterSidebar";
 import WaiterTopbar from "@/components/waiter/WaiterTopbar";
 import AuthGuard from "@/components/shared/AuthGuard";
 import { Toaster } from "@/components/ui/sonner";
+import { StaffToolbar } from "@/components/staff/StaffToolbar";
 
 export const metadata = {
   title: "Waiter Dashboard | EastGate Hotel Rwanda",
@@ -15,7 +16,7 @@ export default function WaiterLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGuard allowedRoles={["waiter", "restaurant_staff", "kitchen_staff", "branch_manager"]}>
+    <AuthGuard allowedRoles={["waiter", "restaurant_staff", "branch_manager"]}>
       <SidebarProvider>
         <WaiterSidebar />
         <SidebarInset>

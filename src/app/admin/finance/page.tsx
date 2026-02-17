@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -16,7 +17,9 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { revenueData, expenseData, branchComparison } from "@/lib/mock-data";
+import { useAuthStore } from "@/lib/store/auth-store";
+import { useBranchStore } from "@/lib/store/branch-store";
+import { useAppDataStore } from "@/lib/store/app-data-store";
 import { formatCurrency, formatCompactCurrency } from "@/lib/format";
 import {
   DollarSign,
@@ -47,7 +50,77 @@ const CustomBarTooltip = ({ active, payload, label }: { active?: boolean; payloa
   );
 };
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 export default function FinancePage() {
+  const { user } = useAuthStore();
+  const getBranches = useBranchStore((s) => s.getBranches);
+  const getBookings = useBranchStore((s) => s.getBookings);
+  const getOrders = useBranchStore((s) => s.getOrders);
+  const getEvents = useBranchStore((s) => s.getEvents);
+  const { branches, rooms: allRooms, restaurantOrders, events } = useAppDataStore();
+
+  const role = user?.role ?? "guest";
+  const branchList = getBranches(role, "all");
+
+  const revenueData = useMemo(() => {
+    const byMonth: Record<number, { month: string; rooms: number; restaurant: number; events: number; spa: number; services: number }> = {};
+    MONTHS.forEach((m, i) => {
+      byMonth[i] = { month: m, rooms: 0, restaurant: 0, events: 0, spa: 0, services: 0 };
+    });
+    getBookings("all", role).forEach((b) => {
+      const i = new Date(b.checkIn).getMonth();
+      if (byMonth[i]) byMonth[i].rooms += b.totalAmount;
+    });
+    restaurantOrders.forEach((o) => {
+      const i = new Date(o.createdAt).getMonth();
+      if (byMonth[i]) byMonth[i].restaurant += o.total;
+    });
+    getEvents("all", role).forEach((e) => {
+      const i = new Date(e.date).getMonth();
+      if (byMonth[i]) byMonth[i].events += e.totalAmount;
+    });
+    return Object.values(byMonth);
+  }, [getBookings, getEvents, restaurantOrders, role]);
+
+  const expenseData = useMemo(() => {
+    const totalRev = revenueData.reduce((s, d) => s + d.rooms + d.restaurant + d.events + d.spa + d.services, 0);
+    const salaries = Math.round(totalRev * 0.38);
+    const utilities = Math.round(totalRev * 0.09);
+    const maintenance = Math.round(totalRev * 0.06);
+    const supplies = Math.round(totalRev * 0.05);
+    const other = Math.round(totalRev * 0.04);
+    const total = salaries + utilities + maintenance + supplies + other;
+    return [
+      { category: "Staff Salaries", amount: salaries, percentage: total ? Math.round((salaries / total) * 100) : 0 },
+      { category: "Utilities", amount: utilities, percentage: total ? Math.round((utilities / total) * 100) : 0 },
+      { category: "Maintenance", amount: maintenance, percentage: total ? Math.round((maintenance / total) * 100) : 0 },
+      { category: "Supplies", amount: supplies, percentage: total ? Math.round((supplies / total) * 100) : 0 },
+      { category: "Other", amount: other, percentage: total ? Math.round((other / total) * 100) : 0 },
+    ];
+  }, [revenueData]);
+
+  const branchComparison = useMemo(() => {
+    return branchList.map((b) => {
+      const brBookings = getBookings(b.id, role);
+      const revenue = brBookings
+        .filter((x) => ["checked_in", "checked_out", "confirmed"].includes(x.status))
+        .reduce((s, x) => s + x.totalAmount, 0);
+      const brRooms = allRooms.filter((r) => r.branchId === b.id);
+      const occupied = brRooms.filter((r) => r.status === "occupied" || r.status === "reserved").length;
+      const occupancy = brRooms.length ? Math.round((occupied / brRooms.length) * 100) : 0;
+      const adr = brBookings.filter((x) => x.status === "checked_in" || x.status === "checked_out").length
+        ? Math.round(
+            brBookings
+              .filter((x) => x.status === "checked_in" || x.status === "checked_out")
+              .reduce((s, x) => s + x.totalAmount, 0) /
+              brBookings.filter((x) => x.status === "checked_in" || x.status === "checked_out").length
+          )
+        : 0;
+      return { branch: b.name, revenue, occupancy, adr };
+    });
+  }, [branchList, getBookings, allRooms, role]);
+
   const totalRevenue = revenueData.reduce(
     (sum, d) => sum + d.rooms + d.restaurant + d.events + d.spa + d.services,
     0

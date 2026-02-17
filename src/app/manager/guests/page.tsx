@@ -35,7 +35,6 @@ import {
   useGuestStore,
   type GuestStatus,
 } from "@/stores/guest-store";
-import { bookings } from "@/lib/mock-data";
 import { formatCurrency, formatDate, getRoomTypeLabel } from "@/lib/format";
 import {
   Search,

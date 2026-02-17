@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { branches } from "@/lib/mock-data";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency } from "@/lib/format";
@@ -19,9 +18,11 @@ import Link from "next/link";
 
 export default function BranchesPage() {
   const { user, getAllStaff, hasAccess } = useAuthStore();
-  const { getBookings, getOrders } = useBranchStore();
+  const { getBranches, getBookings, getOrders } = useBranchStore();
   const isSuper = hasAccess(["super_admin", "super_manager"]);
   const branchId = user?.branchId ?? "all";
+  const role = user?.role ?? "guest";
+  const branches = getBranches(role, branchId);
 
   return (
     <div className="space-y-6">

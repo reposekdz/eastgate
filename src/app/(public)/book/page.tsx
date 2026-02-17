@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
-import { branches, rooms as allRoomsData } from "@/lib/mock-data";
+import { useAppDataStore } from "@/lib/store/app-data-store";
 import { formatCurrency } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/context";
 import { format, differenceInDays } from "date-fns";
@@ -150,6 +150,7 @@ const addOnServicesMeta = [
 export default function BookingPage() {
   const { t, locale } = useI18n();
   const { currency } = useCurrency();
+  const { branches, rooms: allRoomsData } = useAppDataStore();
   const [step, setStep] = useState(1);
 
   // Step 1

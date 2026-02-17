@@ -173,11 +173,11 @@ export const staff: StaffMember[] = [
 
 // ─── Restaurant Orders ───────────────────────────────────
 export const restaurantOrders: RestaurantOrder[] = [
-  { id: "ORD-001", tableNumber: 5, items: [{ name: "Grilled Tilapia", quantity: 2, price: 23400 }, { name: "Rwandan Coffee", quantity: 2, price: 6500 }], status: "preparing", total: 59800, guestName: "Sarah Mitchell", roomCharge: true, createdAt: "2026-02-12T12:30:00" },
-  { id: "ORD-002", tableNumber: 3, items: [{ name: "Isombe & Plantain", quantity: 1, price: 18200 }, { name: "Fresh Juice", quantity: 1, price: 7800 }], status: "ready", total: 26000, guestName: "Walk-in Guest", roomCharge: false, createdAt: "2026-02-12T12:15:00" },
-  { id: "ORD-003", tableNumber: 8, items: [{ name: "Brochette Platter", quantity: 3, price: 28600 }, { name: "Banana Wine", quantity: 3, price: 10400 }], status: "pending", total: 117000, guestName: "James Okafor", roomCharge: true, createdAt: "2026-02-12T12:45:00" },
-  { id: "ORD-004", tableNumber: 1, items: [{ name: "Continental Breakfast", quantity: 2, price: 19500 }, { name: "Orange Juice", quantity: 2, price: 6500 }], status: "served", total: 52000, guestName: "Victoria Laurent", roomCharge: true, createdAt: "2026-02-12T08:00:00" },
-  { id: "ORD-005", tableNumber: 12, items: [{ name: "Nyama Choma", quantity: 1, price: 32500 }, { name: "Fanta Citron", quantity: 1, price: 3900 }], status: "preparing", total: 36400, roomCharge: false, createdAt: "2026-02-12T13:00:00" },
+  { id: "ORD-001", tableNumber: 5, items: [{ name: "Grilled Tilapia", quantity: 2, price: 23400 }, { name: "Rwandan Coffee", quantity: 2, price: 6500 }], status: "preparing", total: 59800, guestName: "Sarah Mitchell", roomCharge: true, createdAt: "2026-02-12T12:30:00", branchId: "br-001", performedBy: "Patrick Bizimana" },
+  { id: "ORD-002", tableNumber: 3, items: [{ name: "Isombe & Plantain", quantity: 1, price: 18200 }, { name: "Fresh Juice", quantity: 1, price: 7800 }], status: "ready", total: 26000, guestName: "Walk-in Guest", roomCharge: false, createdAt: "2026-02-12T12:15:00", branchId: "br-001", performedBy: "Fabrice Nkurunziza" },
+  { id: "ORD-003", tableNumber: 8, items: [{ name: "Brochette Platter", quantity: 3, price: 28600 }, { name: "Banana Wine", quantity: 3, price: 10400 }], status: "pending", total: 117000, guestName: "James Okafor", roomCharge: true, createdAt: "2026-02-12T12:45:00", branchId: "br-001", performedBy: "Jeanne Mukamana" },
+  { id: "ORD-004", tableNumber: 1, items: [{ name: "Continental Breakfast", quantity: 2, price: 19500 }, { name: "Orange Juice", quantity: 2, price: 6500 }], status: "served", total: 52000, guestName: "Victoria Laurent", roomCharge: true, createdAt: "2026-02-12T08:00:00", branchId: "br-001", performedBy: "Patrick Bizimana" },
+  { id: "ORD-005", tableNumber: 12, items: [{ name: "Nyama Choma", quantity: 1, price: 32500 }, { name: "Fanta Citron", quantity: 1, price: 3900 }], status: "preparing", total: 36400, roomCharge: false, createdAt: "2026-02-12T13:00:00", branchId: "br-001", performedBy: "Fabrice Nkurunziza" },
 ];
 
 // ─── Menu Items ──────────────────────────────────────────

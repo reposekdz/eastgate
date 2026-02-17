@@ -28,7 +28,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { bookings } from "@/lib/mock-data";
+import { useAuthStore } from "@/lib/store/auth-store";
+import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatDate, getRoomTypeLabel } from "@/lib/format";
 import BookingStatusBadge from "@/components/admin/shared/BookingStatusBadge";
 import type { BookingStatus } from "@/lib/types/enums";
@@ -57,9 +58,15 @@ const statusFilters: { label: string; value: string }[] = [
 ];
 
 export default function BookingsPage() {
+  const { user } = useAuthStore();
+  const getBookings = useBranchStore((s) => s.getBookings);
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
+  const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
+  const role = user?.role ?? "guest";
+  const bookings = getBookings(branchId, role);
 
   const filtered = bookings.filter((b) => {
     if (statusFilter !== "all" && b.status !== statusFilter) return false;

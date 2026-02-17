@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
-import { branches } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/format";
 import { CreditCard, Search, DollarSign, CheckCircle, Clock, XCircle } from "lucide-react";
 
@@ -39,14 +38,16 @@ const paymentMethodLabels: Record<string, string> = {
 
 export default function PaymentsPage() {
   const { user, hasAccess } = useAuthStore();
-  const { getBookings } = useBranchStore();
+  const { getBranches, getBookings } = useBranchStore();
   const isSuper = hasAccess(["super_admin", "super_manager"]);
   const branchId = user?.branchId ?? "br-001";
+  const role = user?.role ?? "guest";
   const [search, setSearch] = useState("");
   const [filterBranch, setFilterBranch] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const allBookings = getBookings(isSuper ? "all" : branchId, user?.role ?? "guest");
+  const branches = getBranches(role, isSuper ? "all" : branchId);
+  const allBookings = getBookings(isSuper ? "all" : branchId, role);
   const filtered = allBookings.filter((b) => {
     const matchSearch =
       !search ||

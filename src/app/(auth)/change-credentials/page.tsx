@@ -35,7 +35,8 @@ export default function ChangeCredentialsPage() {
       else if (r === "super_admin" || r === "super_manager" || r === "accountant" || r === "event_manager" || r === "branch_admin") router.replace("/admin");
       else if (r === "branch_manager") router.replace("/manager");
       else if (r === "receptionist") router.replace("/receptionist");
-      else if (r === "waiter" || r === "restaurant_staff" || r === "kitchen_staff") router.replace("/waiter");
+      else if (r === "kitchen_staff") router.replace("/kitchen");
+      else if (r === "waiter" || r === "restaurant_staff") router.replace("/waiter");
       else router.replace("/admin");
     }
   }, [isAuthenticated, user, requiresCredentialsChange, router]);
@@ -67,7 +68,8 @@ export default function ChangeCredentialsPage() {
     if (user.role === "super_admin" || user.role === "super_manager" || user.role === "accountant" || user.role === "event_manager" || user.role === "branch_admin") router.push("/admin");
     else if (user.role === "branch_manager") router.push("/manager");
     else if (user.role === "receptionist") router.push("/receptionist");
-    else if (user.role === "waiter" || user.role === "restaurant_staff" || user.role === "kitchen_staff") router.push("/waiter");
+    else if (user.role === "kitchen_staff") router.push("/kitchen");
+    else if (user.role === "waiter" || user.role === "restaurant_staff") router.push("/waiter");
     else router.push("/admin");
   };
 

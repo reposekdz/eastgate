@@ -1,24 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuthStore, getStaffCredentials } from "@/lib/store/auth-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ShieldCheck, Mail, Lock, Building2, Loader2, ArrowLeft, Eye, EyeOff,
-  AlertCircle, ChevronDown, ChevronUp, Copy, Check, Sparkles, Shield
+  AlertCircle, Shield, Sparkles
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
 
 const branches = [
   { id: "all", name: "All Branches (Admin/Manager)" },
@@ -39,7 +36,7 @@ export default function StaffLoginPage() {
   const [showCredentials, setShowCredentials] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
-  const staffCreds = getStaffCredentials();
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,9 +58,9 @@ export default function StaffLoginPage() {
 
       if (success) {
         toast.success("Login successful! Redirecting...");
-        
+
         const { user } = useAuthStore.getState();
-        
+
         if (user) {
           switch (user.role) {
             case "super_admin":
@@ -97,17 +94,7 @@ export default function StaffLoginPage() {
     }
   };
 
-  const fillCredential = (cred: { email: string; password: string }) => {
-    setEmail(cred.email);
-    setPassword(cred.password);
-    toast.success("Credentials filled — click Sign In");
-  };
 
-  const copyCredential = (text: string, idx: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIdx(idx);
-    setTimeout(() => setCopiedIdx(null), 2000);
-  };
 
   const getRoleBadge = (role: string) => {
     const colors: Record<string, string> = {
@@ -282,70 +269,7 @@ export default function StaffLoginPage() {
                 </Button>
               </form>
 
-              {/* Staff Credentials */}
-              <div>
-                <button
-                  onClick={() => setShowCredentials(!showCredentials)}
-                  className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-gold/10 to-emerald/10 border border-gold/30 rounded-lg hover:bg-gold/20 transition-all group"
-                >
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-gold" />
-                    <span className="text-sm font-semibold text-white">Demo Credentials</span>
-                  </div>
-                  {showCredentials ? (
-                    <ChevronUp className="h-4 w-4 text-white/70 group-hover:text-white transition-colors" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-white/70 group-hover:text-white transition-colors" />
-                  )}
-                </button>
 
-                <AnimatePresence>
-                  {showCredentials && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <ScrollArea className="mt-2 max-h-72 border border-white/10 rounded-lg bg-black/20 backdrop-blur-sm">
-                        <div className="space-y-1 p-2">
-                          {staffCreds.map((cred, idx) => (
-                            <motion.div
-                              key={idx}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: idx * 0.05 }}
-                              className="flex items-center gap-2 p-3 rounded-lg hover:bg-white/10 transition-all cursor-pointer group border border-transparent hover:border-white/20"
-                              onClick={() => fillCredential(cred)}
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm font-semibold text-white truncate">{cred.name}</span>
-                                  <Badge className={cn("text-[10px] px-2 py-0.5 border", getRoleBadge(cred.role))}>
-                                    {cred.role.replace(/_/g, " ")}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-white/60">
-                                  <span className="font-mono">{cred.email}</span>
-                                  <span>•</span>
-                                  <span className="font-mono">{cred.password}</span>
-                                </div>
-                                <div className="text-[10px] text-white/40 mt-0.5">{cred.branchName}</div>
-                              </div>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); copyCredential(`${cred.email} / ${cred.password}`, idx); }}
-                                className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-all"
-                              >
-                                {copiedIdx === idx ? <Check className="h-4 w-4 text-emerald" /> : <Copy className="h-4 w-4 text-white/70" />}
-                              </button>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
 
               {/* Help Notice */}
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 flex items-start gap-3">

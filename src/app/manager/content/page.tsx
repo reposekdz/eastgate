@@ -38,31 +38,24 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAuthStore } from "@/lib/store/auth-store";
+import { useBranchStore } from "@/lib/store/branch-store";
 import { useI18n } from "@/lib/i18n/context";
 import { formatCurrency } from "@/lib/format";
 import { menuCategories } from "@/lib/menu-data";
 import {
   Plus,
-  Upload,
   Pencil,
   Trash2,
   Bed,
   UtensilsCrossed,
-  GlassWater,
   Star,
-  ImageIcon,
-  Settings,
   Save,
   Package,
   DollarSign,
-  Eye,
-  ToggleLeft,
-  CheckCircle2,
-  AlertCircle,
   Search,
-  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
+import ImageUpload from "@/components/shared/ImageUpload";
 
 // ─── Types ───────────────────────────────────────────────────
 interface ManagedRoom {
@@ -136,12 +129,6 @@ const mockRooms: ManagedRoom[] = [
   },
 ];
 
-const mockMenuItems: ManagedMenuItem[] = [
-  { id: "m-001", name: "Beef Steak", category: "beef", price: 8000, description: "Tender beef fillet in pepper sauce", imageUrl: "", available: true, popular: true, vegetarian: false, spicy: false },
-  { id: "m-002", name: "Mushroom Soup", category: "hot_starters", price: 3000, description: "Creamy mushroom soup", imageUrl: "", available: true, popular: false, vegetarian: true, spicy: false },
-  { id: "m-003", name: "Grilled Chicken", category: "chicken", price: 6000, description: "Herb marinated grilled chicken", imageUrl: "", available: true, popular: true, vegetarian: false, spicy: false },
-];
-
 const mockFeatures: ManagedFeature[] = [
   { id: "f-001", name: "Airport Pickup", type: "service", price: 30000, description: "Private car from Kigali Airport", active: true },
   { id: "f-002", name: "Spa Package", type: "package", price: 50000, description: "90-min massage + facial", active: true },
@@ -151,7 +138,11 @@ const mockFeatures: ManagedFeature[] = [
 
 export default function ManagerContentPage() {
   const { user } = useAuthStore();
-  const { isRw } = useI18n();
+  const { isRw, t } = useI18n();
+  const getMenuItems = useBranchStore((s) => s.getMenuItems);
+  const addMenuItem = useBranchStore((s) => s.addMenuItem);
+  const updateMenuItem = useBranchStore((s) => s.updateMenuItem);
+  const removeMenuItem = useBranchStore((s) => s.removeMenuItem);
   const [activeTab, setActiveTab] = useState("rooms");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -160,12 +151,31 @@ export default function ManagerContentPage() {
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [editingRoom, setEditingRoom] = useState<ManagedRoom | null>(null);
 
-  // Menu management
-  const [menuItems, setMenuItems] = useState(mockMenuItems);
+  // Menu management — real data from store
+  const menuItemsFromStore = getMenuItems();
+  const menuItems: ManagedMenuItem[] = menuItemsFromStore.map((m) => ({
+    id: m.id,
+    name: m.name,
+    category: m.category,
+    price: m.price,
+    description: m.description,
+    imageUrl: m.imageUrl ?? "",
+    available: m.available,
+    popular: m.popular ?? false,
+    vegetarian: m.vegetarian ?? false,
+    spicy: m.spicy ?? false,
+  }));
   const [showAddMenu, setShowAddMenu] = useState(false);
 
   // Features management
   const [features, setFeatures] = useState(mockFeatures);
+  const [showAddFeature, setShowAddFeature] = useState(false);
+  const [newFeature, setNewFeature] = useState({
+    name: "",
+    type: "service" as "service" | "amenity" | "package",
+    price: 0,
+    description: "",
+  });
 
   // New room form state
   const [newRoom, setNewRoom] = useState({
@@ -183,6 +193,8 @@ export default function ManagerContentPage() {
     category: "beef",
     price: 0,
     description: "",
+    imageUrl: "",
+    popular: false,
     vegetarian: false,
     spicy: false,
   });
@@ -206,20 +218,23 @@ export default function ManagerContentPage() {
 
   const handleAddMenuItem = () => {
     if (!newMenuItem.name || !newMenuItem.price) {
-      toast.error("Please fill in item name and price");
+      toast.error(isRw ? "Ongeramo izina n'igiciro" : "Please fill in item name and price");
       return;
     }
-    const item: ManagedMenuItem = {
-      id: `m-${Date.now()}`,
-      ...newMenuItem,
-      imageUrl: "",
+    addMenuItem({
+      name: newMenuItem.name,
+      category: newMenuItem.category,
+      price: newMenuItem.price,
+      description: newMenuItem.description || "",
       available: true,
-      popular: false,
-    };
-    setMenuItems([...menuItems, item]);
+      imageUrl: newMenuItem.imageUrl || undefined,
+      popular: newMenuItem.popular ?? false,
+      vegetarian: newMenuItem.vegetarian ?? false,
+      spicy: newMenuItem.spicy ?? false,
+    });
     setShowAddMenu(false);
-    setNewMenuItem({ name: "", category: "beef", price: 0, description: "", vegetarian: false, spicy: false });
-    toast.success("Menu item added successfully!");
+    setNewMenuItem({ name: "", category: "beef", price: 0, description: "", imageUrl: "", popular: false, vegetarian: false, spicy: false });
+    toast.success(isRw ? "Ibikubiyemo byongewe" : "Menu item added successfully!");
   };
 
   const handleToggleRoom = (id: string) => {
@@ -228,8 +243,16 @@ export default function ManagerContentPage() {
   };
 
   const handleToggleMenuItem = (id: string) => {
-    setMenuItems(menuItems.map((m) => (m.id === id ? { ...m, available: !m.available } : m)));
-    toast.success("Menu item availability updated");
+    const item = menuItems.find((m) => m.id === id);
+    if (item) {
+      updateMenuItem(id, { available: !item.available });
+      toast.success(isRw ? "Ibikubiyemo byahinduwe" : "Menu item availability updated");
+    }
+  };
+
+  const handleUpdateMenuItemFlags = (id: string, flags: { popular?: boolean; vegetarian?: boolean; spicy?: boolean }) => {
+    updateMenuItem(id, flags);
+    toast.success(isRw ? "Ibikubiyemo byahinduwe" : "Menu item updated");
   };
 
   const handleDeleteRoom = (id: string) => {
@@ -238,19 +261,37 @@ export default function ManagerContentPage() {
   };
 
   const handleDeleteMenuItem = (id: string) => {
-    setMenuItems(menuItems.filter((m) => m.id !== id));
-    toast.success("Menu item removed");
+    removeMenuItem(id);
+    toast.success(isRw ? "Ibikubiyemo byasibwe" : "Menu item removed");
+  };
+
+  const handleAddFeature = () => {
+    if (!newFeature.name.trim() || newFeature.price < 0) {
+      toast.error("Please fill service name and price.");
+      return;
+    }
+    setFeatures([
+      ...features,
+      {
+        id: `f-${Date.now()}`,
+        ...newFeature,
+        active: true,
+      },
+    ]);
+    setShowAddFeature(false);
+    setNewFeature({ name: "", type: "service", price: 0, description: "" });
+    toast.success("Service added.");
   };
 
   const handleUpdatePrice = (type: "room" | "menu" | "feature", id: string, newPrice: number) => {
     if (type === "room") {
       setRooms(rooms.map((r) => (r.id === id ? { ...r, price: newPrice } : r)));
     } else if (type === "menu") {
-      setMenuItems(menuItems.map((m) => (m.id === id ? { ...m, price: newPrice } : m)));
+      updateMenuItem(id, { price: newPrice });
     } else {
       setFeatures(features.map((f) => (f.id === id ? { ...f, price: newPrice } : f)));
     }
-    toast.success("Price updated!");
+    toast.success(isRw ? "Igiciro cyahinduwe" : "Price updated!");
   };
 
   return (
@@ -372,14 +413,12 @@ export default function ManagerContentPage() {
                       onChange={(e) => setNewRoom({ ...newRoom, description: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Image URL</Label>
-                    <Input
-                      placeholder="https://..."
-                      value={newRoom.imageUrl}
-                      onChange={(e) => setNewRoom({ ...newRoom, imageUrl: e.target.value })}
-                    />
-                  </div>
+                  <ImageUpload
+                    label="Room image (from device)"
+                    placeholder="Upload from computer or device"
+                    value={newRoom.imageUrl}
+                    onChange={(v) => setNewRoom({ ...newRoom, imageUrl: v })}
+                  />
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setShowAddRoom(false)}>Cancel</Button>
@@ -515,7 +554,20 @@ export default function ManagerContentPage() {
                       onChange={(e) => setNewMenuItem({ ...newMenuItem, description: e.target.value })}
                     />
                   </div>
+                  <ImageUpload
+                    label="Item image (from device)"
+                    placeholder="Upload from computer or device"
+                    value={newMenuItem.imageUrl}
+                    onChange={(v) => setNewMenuItem({ ...newMenuItem, imageUrl: v })}
+                  />
                   <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={newMenuItem.popular}
+                        onCheckedChange={(c) => setNewMenuItem({ ...newMenuItem, popular: c })}
+                      />
+                      <Label className="text-xs">Popular</Label>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={newMenuItem.vegetarian}
@@ -577,10 +629,31 @@ export default function ManagerContentPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        {item.vegetarian && <Badge className="bg-green-100 text-green-700 text-[9px]">Veg</Badge>}
-                        {item.spicy && <Badge className="bg-red-100 text-red-700 text-[9px]">Spicy</Badge>}
-                        {item.popular && <Badge className="bg-gold/20 text-gold-dark text-[9px]">Popular</Badge>}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <Switch
+                            checked={item.popular}
+                            onCheckedChange={(c) => handleUpdateMenuItemFlags(item.id, { popular: c })}
+                            className="scale-75"
+                          />
+                          <span className="text-[10px] text-muted-foreground">Popular</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Switch
+                            checked={item.vegetarian}
+                            onCheckedChange={(c) => handleUpdateMenuItemFlags(item.id, { vegetarian: c })}
+                            className="scale-75"
+                          />
+                          <span className="text-[10px] text-muted-foreground">Veg</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Switch
+                            checked={item.spicy}
+                            onCheckedChange={(c) => handleUpdateMenuItemFlags(item.id, { spicy: c })}
+                            className="scale-75"
+                          />
+                          <span className="text-[10px] text-muted-foreground">Spicy</span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -615,9 +688,65 @@ export default function ManagerContentPage() {
         <TabsContent value="features" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{features.length} services & packages</p>
-            <Button className="bg-emerald hover:bg-emerald-dark text-white gap-1.5" size="sm">
-              <Plus className="h-4 w-4" /> Add Service
-            </Button>
+            <Dialog open={showAddFeature} onOpenChange={setShowAddFeature}>
+              <DialogTrigger asChild>
+                <Button className="bg-emerald hover:bg-emerald-dark text-white gap-1.5" size="sm">
+                  <Plus className="h-4 w-4" /> Add Service
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add service or package</DialogTitle>
+                  <DialogDescription>Add a new service, amenity, or package for your branch</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Name</Label>
+                      <Input
+                        placeholder="e.g., Airport Pickup"
+                        value={newFeature.name}
+                        onChange={(e) => setNewFeature({ ...newFeature, name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Type</Label>
+                      <Select value={newFeature.type} onValueChange={(v: "service" | "amenity" | "package") => setNewFeature({ ...newFeature, type: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="service">Service</SelectItem>
+                          <SelectItem value="amenity">Amenity</SelectItem>
+                          <SelectItem value="package">Package</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Price (RWF)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={newFeature.price || ""}
+                      onChange={(e) => setNewFeature({ ...newFeature, price: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      placeholder="Describe the service..."
+                      value={newFeature.description}
+                      onChange={(e) => setNewFeature({ ...newFeature, description: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowAddFeature(false)}>Cancel</Button>
+                  <Button className="bg-emerald hover:bg-emerald-dark" onClick={handleAddFeature}>
+                    <Save className="h-4 w-4 mr-1.5" /> Add
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

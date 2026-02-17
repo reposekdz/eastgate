@@ -3,6 +3,7 @@ import ManagerSidebar from "@/components/manager/ManagerSidebar";
 import ManagerTopbar from "@/components/manager/ManagerTopbar";
 import AuthGuard from "@/components/shared/AuthGuard";
 import { Toaster } from "@/components/ui/sonner";
+import { StaffToolbar } from "@/components/staff/StaffToolbar";
 
 export const metadata = {
   title: "Manager Dashboard | EastGate Hotel Rwanda",

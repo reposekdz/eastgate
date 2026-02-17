@@ -36,7 +36,6 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { usePriceStore, type PriceCategory } from "@/stores/price-store";
-import { rooms } from "@/lib/mock-data";
 import { fullMenu } from "@/lib/menu-data";
 import { formatCurrency } from "@/lib/format";
 import { useI18n } from "@/lib/i18n/context";

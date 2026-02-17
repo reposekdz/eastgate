@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { rooms as allRooms } from "@/lib/mock-data";
+import { useAuthStore } from "@/lib/store/auth-store";
+import { useBranchStore } from "@/lib/store/branch-store";
 import { getRoomTypeLabel, formatCurrency } from "@/lib/format";
 import RoomStatusBadge from "@/components/admin/shared/RoomStatusBadge";
 import type { RoomStatus } from "@/lib/types/enums";
@@ -40,16 +41,20 @@ const statusColors: Record<RoomStatus, string> = {
   reserved: "border-status-reserved/30 bg-status-reserved/5",
 };
 
-const statusCounts = (status: RoomStatus) =>
-  allRooms.filter((r) => r.status === status).length;
-
 export default function RoomsPage() {
+  const { user } = useAuthStore();
+  const getRooms = useBranchStore((s) => s.getRooms);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [floorFilter, setFloorFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+
+  const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
+  const role = user?.role ?? "guest";
+  const allRooms = getRooms(branchId, role);
+  const statusCounts = (status: RoomStatus) => allRooms.filter((r) => r.status === status).length;
 
   const filteredRooms = allRooms.filter((room) => {
     if (statusFilter !== "all" && room.status !== statusFilter) return false;

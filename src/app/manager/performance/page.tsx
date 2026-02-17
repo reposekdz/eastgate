@@ -13,10 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMemo } from "react";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatCompactCurrency } from "@/lib/format";
-import { revenueData } from "@/lib/mock-data";
 import {
   BarChart3,
   TrendingUp,
@@ -87,15 +87,38 @@ const staffMetrics = [
   { name: "Claudine Mukamana", role: "Housekeeping", ordersHandled: 0, rating: 4.6, tips: 0 },
 ];
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 export default function PerformancePage() {
   const { user } = useAuthStore();
-  const { getOrders, getBookings, getTables, getStaff } = useBranchStore();
+  const { getOrders, getBookings, getTables, getStaff, getEvents } = useBranchStore();
   const branchId = user?.branchId || "br-001";
   const userRole = user?.role || "branch_manager";
 
   const orders = getOrders(branchId, userRole);
   const bookings = getBookings(branchId, userRole);
   const tables = getTables(branchId, userRole);
+  const events = getEvents(branchId, userRole);
+
+  const revenueData = useMemo(() => {
+    const byMonth: Record<number, { month: string; rooms: number; restaurant: number; events: number; spa: number }> = {};
+    MONTHS.forEach((m, i) => {
+      byMonth[i] = { month: m, rooms: 0, restaurant: 0, events: 0, spa: 0 };
+    });
+    bookings.forEach((b) => {
+      const i = new Date(b.checkIn).getMonth();
+      if (byMonth[i]) byMonth[i].rooms += b.totalAmount;
+    });
+    orders.forEach((o) => {
+      const i = new Date(o.createdAt).getMonth();
+      if (byMonth[i]) byMonth[i].restaurant += o.total;
+    });
+    events.forEach((e) => {
+      const i = new Date(e.date).getMonth();
+      if (byMonth[i]) byMonth[i].events += e.totalAmount;
+    });
+    return Object.values(byMonth);
+  }, [bookings, orders, events]);
 
   const totalRevenue = bookings.reduce((sum, b) => sum + b.totalAmount, 0) +
     orders.reduce((sum, o) => sum + o.total, 0);

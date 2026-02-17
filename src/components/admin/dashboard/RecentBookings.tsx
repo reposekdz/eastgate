@@ -11,14 +11,22 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { bookings } from "@/lib/mock-data";
+import { useBranchStore } from "@/lib/store/branch-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { formatCurrency, formatDate, getRoomTypeLabel } from "@/lib/format";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import BookingStatusBadge from "@/components/admin/shared/BookingStatusBadge";
 
 export default function RecentBookings() {
-  const recentBookings = bookings.slice(0, 5);
+  const { user } = useAuthStore();
+  const getBookings = useBranchStore((s) => s.getBookings);
+  const branchId = user?.branchId || "all";
+  const userRole = user?.role || "super_admin";
+  const allBookings = getBookings(branchId, userRole);
+  const recentBookings = [...allBookings]
+    .sort((a, b) => new Date(b.checkIn).getTime() - new Date(a.checkIn).getTime())
+    .slice(0, 5);
 
   return (
     <Card className="py-4 shadow-xs border-transparent">

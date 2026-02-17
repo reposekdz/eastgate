@@ -925,6 +925,34 @@ export const translations = {
     service6Desc: { en: "Round-the-clock room service", rw: "Serivisi y'icyumba igihe cyose" },
     learnMore: { en: "Learn more", rw: "Reba Byinshi" },
   },
+
+  // ─── Admin (search, operations, manager content) ─────────────
+  admin: {
+    searchTitle: { en: "Unified Search", rw: "Shakisha Byose" },
+    searchSubtitle: { en: "Search across bookings, guests, rooms, staff, orders, and events — real data from your database", rw: "Shakisha ibyifuzo, abashyitsi, ibyumba, abakozi, ibisabwa n'ibirori — amakuru nyayo" },
+    searchPlaceholder: { en: "Search rooms, bookings, guests, orders…", rw: "Shakisha ibyumba, ibyifuzo, abashyitsi, ibisabwa…" },
+    searchPalettePlaceholder: { en: "Search bookings, guests, rooms, staff, orders, events, menu…", rw: "Shakisha ibyifuzo, abashyitsi, ibyumba, abakozi, ibisabwa, ibirori, menu…" },
+    noResultsTry: { en: "No results. Try another term or open full search.", rw: "Nta bisubizo. Gerageza irindi jambo cyangwa fungura shakisha yuzuye." },
+    recent: { en: "Recent", rw: "Bigeze" },
+    typeFilter: { en: "Type", rw: "Ubwoko" },
+    branchFilter: { en: "Branch", rw: "Ishami" },
+    allBranches: { en: "All Branches", rw: "Amashami Yose" },
+    operationsTitle: { en: "Operations", rw: "Ibikorwa" },
+    operationsSubtitle: { en: "Recent activity across your branches", rw: "Ibikorwa bigeze mu mashami yawe" },
+    noActivity: { en: "No activity yet", rw: "Nta bikorwa byageze" },
+    contentTitle: { en: "Content & Menu", rw: "Ibirimo n'Menu" },
+    contentSubtitle: { en: "Manage rooms, menu items, and features", rw: "Gucunga ibyumba, ibikubiyemo n'ibikoresho" },
+    roomsTab: { en: "Rooms", rw: "Ibyumba" },
+    menuTab: { en: "Menu", rw: "Menu" },
+    featuresTab: { en: "Features", rw: "Ibikoresho" },
+    addItem: { en: "Add Item", rw: "Ongeramo" },
+    vegetarian: { en: "Vegetarian", rw: "Ibimera" },
+    spicy: { en: "Spicy", rw: "Birakaze" },
+    priceUpdated: { en: "Price updated!", rw: "Igiciro cyahinduwe!" },
+    selectBranch: { en: "Select Branch", rw: "Hitamo Ishami" },
+    staffLabel: { en: "Staff", rw: "Abakozi" },
+    eventsLabel: { en: "Events", rw: "Ibirori" },
+  },
 } as const;
 
 // Type helper to get a translation value

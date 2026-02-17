@@ -27,7 +27,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { guests } from "@/lib/mock-data";
+import { useAuthStore } from "@/lib/store/auth-store";
+import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatDate } from "@/lib/format";
 import LoyaltyBadge from "@/components/admin/shared/LoyaltyBadge";
 import type { Guest } from "@/lib/types/schema";
@@ -45,9 +46,15 @@ import {
 } from "lucide-react";
 
 export default function GuestsPage() {
+  const { user } = useAuthStore();
+  const getGuests = useBranchStore((s) => s.getGuests);
   const [tierFilter, setTierFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+
+  const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
+  const role = user?.role ?? "guest";
+  const guests = getGuests(branchId, role);
 
   const filtered = guests.filter((g) => {
     if (tierFilter !== "all") {
@@ -60,7 +67,7 @@ export default function GuestsPage() {
 
   const totalGuests = guests.length;
   const platCount = guests.filter((g) => g.loyaltyTier === "platinum").length;
-  const avgSpend = Math.round(guests.reduce((s, g) => s + g.totalSpent, 0) / guests.length);
+  const avgSpend = guests.length ? Math.round(guests.reduce((s, g) => s + g.totalSpent, 0) / guests.length) : 0;
 
   return (
     <div className="space-y-6">

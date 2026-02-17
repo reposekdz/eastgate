@@ -35,7 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
-import { bookings, staff, branches, rooms } from "@/lib/mock-data";
+import { useBranchStore } from "@/lib/store/branch-store";
 import {
   formatCurrency,
   formatDate,
@@ -156,6 +156,18 @@ export default function ReceptionistDashboard() {
     searchGuests,
   } = useGuestStore();
 
+  const getBookings = useBranchStore((s) => s.getBookings);
+  const getStaff = useBranchStore((s) => s.getStaff);
+  const getBranches = useBranchStore((s) => s.getBranches);
+  const getRooms = useBranchStore((s) => s.getRooms);
+  const userRole = user?.role ?? "receptionist";
+  const branchBookings = getBookings(userBranchId, userRole);
+  const branchStaff = getStaff(userBranchId, userRole);
+  const branches = getBranches(userRole, userBranchId);
+  const branchInfo = branches.find((b) => b.id === userBranchId);
+  const branchRooms = getRooms(userBranchId, userRole);
+  const availableRooms = branchRooms.filter((r) => r.status === "available");
+
   // Local form state
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -188,11 +200,6 @@ export default function ReceptionistDashboard() {
   // Data
   const branchGuests = getGuestsByBranch(userBranchId);
   const activeGuests = getActiveGuests(userBranchId);
-  const branchBookings = bookings.filter((b) => b.branchId === userBranchId);
-  const branchStaff = staff.filter((s) => s.branchId === userBranchId);
-  const branchInfo = branches.find((b) => b.id === userBranchId);
-  const branchRooms = rooms.filter((r) => r.branchId === userBranchId);
-  const availableRooms = branchRooms.filter((r) => r.status === "available");
 
   // Room stats
   const roomStats = useMemo(() => {
@@ -399,7 +406,7 @@ export default function ReceptionistDashboard() {
             <div>
               <h1 className="heading-md text-charcoal">{userBranchName}</h1>
               <p className="text-xs text-text-muted-custom">
-                {t("receptionist", "receptionDesk")} • {branchInfo?.location}
+                Shared receptionist dashboard · {branchInfo?.location} · Managed by branch manager
               </p>
             </div>
           </div>

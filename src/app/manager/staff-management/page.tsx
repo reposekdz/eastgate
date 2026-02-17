@@ -9,36 +9,56 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { useBranchStore } from "@/lib/store/branch-store";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { Department } from "@/lib/types/enums";
-import { UserPlus, Users, Mail, Phone, Eye, EyeOff, Copy, Check, Trash2, Search } from "lucide-react";
+import { UserPlus, Users, Mail, Phone, Eye, EyeOff, Copy, Trash2, Search, Lock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import type { UserRole } from "@/lib/types/enums";
+
+const roleColors: Record<string, string> = {
+  receptionist: "bg-blue-500",
+  waiter: "bg-emerald",
+  kitchen_staff: "bg-orange-500",
+  housekeeping: "bg-purple-500",
+  branch_manager: "bg-indigo-500",
+};
 
 export default function StaffManagementPage() {
-  const { user } = useAuthStore();
-  const { getStaff, addStaffMember } = useBranchStore();
+  const { user, getAllStaff, addStaff, removeStaff, hasAccess } = useAuthStore();
+  const branchId = user?.branchId || "";
+  const branchName = user?.branchName || "";
+  const isBranchManager = user?.role === "branch_manager";
+  const canAddBranchWorkers = isBranchManager || hasAccess(["super_admin", "super_manager"]);
+  const canRemoveStaff = isBranchManager || hasAccess(["super_admin", "super_manager"]);
+
+  const allStaff = getAllStaff(branchId === "all" ? branchId : branchId, true);
+  const staffList = allStaff.map(({ user: u, isDynamic, mustChangeCredentials }) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    avatar: u.avatar,
+    phone: u.phone,
+    isDynamic,
+    mustChangeCredentials,
+  }));
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    role: "receptionist" as "receptionist" | "waiter" | "kitchen_staff" | "housekeeping",
-    shift: "Morning" as "Morning" | "Evening" | "Night" | "Split",
+    role: "receptionist" as UserRole,
     password: "",
   });
-  const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
 
-  const branchStaff = getStaff(user?.branchId || "", user?.role || "guest");
-
-  const filteredStaff = branchStaff.filter(member => {
-    const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         member.email.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredStaff = staffList.filter((member) => {
+    const matchesSearch =
+      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === "all" || member.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -50,65 +70,58 @@ export default function StaffManagementPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const deptMap: Record<string, Department> = {
-      receptionist: "front_desk",
-      waiter: "restaurant",
-      kitchen_staff: "restaurant",
-      housekeeping: "housekeeping",
-    };
-
-    addStaffMember({
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
+    if (!formData.name.trim() || !formData.email.trim() || !formData.password) {
+      toast.error("Name, email, and password are required.");
+      return;
+    }
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+    if (branchId === "all") {
+      toast.error("Select a branch first (Super Manager can add from Admin Staff Management).");
+      return;
+    }
+    const result = addStaff({
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      password: formData.password,
       role: formData.role,
-      department: deptMap[formData.role],
-      shift: formData.shift,
-      status: "active",
-      avatar: `https://i.pravatar.cc/40?u=${formData.email}`,
-      branchId: user?.branchId || "",
-      joinDate: new Date().toISOString().split("T")[0],
+      branchId,
+      branchName,
+      phone: formData.phone || undefined,
     });
-    
-    toast.success(
-      <div className="space-y-1">
-        <p className="font-semibold">{formData.name} added!</p>
-        <p className="text-xs">Email: {formData.email}</p>
-        <p className="text-xs">Password: {formData.password}</p>
-      </div>,
-      { duration: 10000 }
-    );
-    setFormData({ name: "", email: "", phone: "", role: "receptionist", shift: "Morning", password: "" });
-    setDialogOpen(false);
-  };
-
-  const removeStaff = (memberId: string, memberName: string) => {
-    if (confirm(`Remove ${memberName} from staff?`)) {
-      const { removeStaffMember } = useBranchStore.getState();
-      removeStaffMember(memberId);
-      toast.success(`${memberName} removed`);
+    if (result.success) {
+      toast.success("Staff added. They must change their email and password on first login.");
+      setFormData({ name: "", email: "", phone: "", role: "receptionist", password: "" });
+      setDialogOpen(false);
+    } else {
+      toast.error(result.error);
     }
   };
 
-  const roleColors: Record<string, string> = {
-    receptionist: "bg-blue-500",
-    waiter: "bg-emerald",
-    kitchen_staff: "bg-orange-500",
-    housekeeping: "bg-purple-500",
+  const handleRemove = (memberId: string, memberName: string, isDynamic: boolean) => {
+    if (!isDynamic) {
+      toast.error("Only staff added by you can be removed from this panel.");
+      return;
+    }
+    if (!confirm(`Remove ${memberName} from branch staff? They will no longer be able to log in.`)) return;
+    const result = removeStaff(memberId);
+    if (result.success) toast.success(`${memberName} removed`);
+    else toast.error(result.error);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
       <section className="bg-gradient-to-br from-charcoal to-surface-dark text-white py-12">
         <div className="mx-auto max-w-7xl px-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-heading font-bold mb-2 flex items-center gap-3">
                 <Users className="h-8 w-8" />
                 Staff Management
               </h1>
-              <p className="text-white/70">Manage {user?.branchName} staff</p>
+              <p className="text-white/70">Manage {branchName} · Assign credentials; staff must change them on first login</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="relative flex-1 max-w-xs">
@@ -130,77 +143,79 @@ export default function StaffManagementPage() {
                   <SelectItem value="waiter">Waiter</SelectItem>
                   <SelectItem value="kitchen_staff">Kitchen Staff</SelectItem>
                   <SelectItem value="housekeeping">Housekeeping</SelectItem>
+                  <SelectItem value="branch_manager">Branch Manager</SelectItem>
                 </SelectContent>
               </Select>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-emerald hover:bg-emerald-dark text-white gap-2">
-                    <UserPlus className="h-5 w-5" />
-                    Add Staff
-                  </Button>
-                </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-heading">Add Staff Member</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <Label>Full Name *</Label>
-                      <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+              {canAddBranchWorkers && branchId !== "all" && (
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-emerald hover:bg-emerald-dark text-white gap-2">
+                      <UserPlus className="h-5 w-5" />
+                      Add Staff
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl font-heading">Add Branch Staff</DialogTitle>
+                    </DialogHeader>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2 mb-4">
+                      <Lock className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                      <p className="text-amber-800 text-xs">
+                        They will receive these credentials and must set a new email and password before accessing their dashboard.
+                      </p>
                     </div>
-                    <div>
-                      <Label>Email *</Label>
-                      <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
-                    </div>
-                    <div>
-                      <Label>Phone *</Label>
-                      <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} required />
-                    </div>
-                    <div>
-                      <Label>Role *</Label>
-                      <Select value={formData.role} onValueChange={(v: typeof formData.role) => setFormData({ ...formData, role: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="receptionist">Receptionist</SelectItem>
-                          <SelectItem value="waiter">Waiter</SelectItem>
-                          <SelectItem value="kitchen_staff">Kitchen Staff</SelectItem>
-                          <SelectItem value="housekeeping">Housekeeping</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Shift *</Label>
-                      <Select value={formData.shift} onValueChange={(v: typeof formData.shift) => setFormData({ ...formData, shift: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Morning">Morning</SelectItem>
-                          <SelectItem value="Evening">Evening</SelectItem>
-                          <SelectItem value="Night">Night</SelectItem>
-                          <SelectItem value="Split">Split</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-2">
-                      <Label>Password *</Label>
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Input type={showPassword ? "text" : "password"} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required />
-                          <Button type="button" variant="ghost" size="sm" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2">
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                          <Label>Full Name *</Label>
+                          <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
                         </div>
-                        <Button type="button" variant="outline" onClick={generatePassword}>Generate</Button>
+                        <div>
+                          <Label>Email (login) *</Label>
+                          <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
+                        </div>
+                        <div>
+                          <Label>Phone</Label>
+                          <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                        </div>
+                        <div>
+                          <Label>Role *</Label>
+                          <Select value={formData.role} onValueChange={(v: UserRole) => setFormData({ ...formData, role: v })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="receptionist">Receptionist</SelectItem>
+                              <SelectItem value="waiter">Waiter</SelectItem>
+                              <SelectItem value="kitchen_staff">Kitchen Staff</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-2">
+                          <Label>Initial Password (min 6) *</Label>
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <Input
+                                type={showPassword ? "text" : "password"}
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                required
+                                minLength={6}
+                              />
+                              <Button type="button" variant="ghost" size="sm" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2">
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                            <Button type="button" variant="outline" onClick={generatePassword}>Generate</Button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-3 pt-4">
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Cancel</Button>
-                    <Button type="submit" className="flex-1 bg-emerald hover:bg-emerald-dark text-white">Add Staff</Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+                      <div className="flex gap-3 pt-4">
+                        <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Cancel</Button>
+                        <Button type="submit" className="flex-1 bg-emerald hover:bg-emerald-dark text-white">Add & Assign Credentials</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </div>
         </div>
@@ -210,26 +225,26 @@ export default function StaffManagementPage() {
         <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 border-blue-500/30">
             <CardContent className="p-4 text-center">
-              <p className="text-3xl font-bold text-charcoal">{branchStaff.filter(s => s.role === "receptionist").length}</p>
+              <p className="text-3xl font-bold text-charcoal">{staffList.filter((s) => s.role === "receptionist").length}</p>
               <p className="text-xs text-text-muted-custom">Receptionists</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-emerald/20 to-emerald-dark/10 border-emerald/30">
             <CardContent className="p-4 text-center">
-              <p className="text-3xl font-bold text-charcoal">{branchStaff.filter(s => s.role === "waiter").length}</p>
+              <p className="text-3xl font-bold text-charcoal">{staffList.filter((s) => s.role === "waiter").length}</p>
               <p className="text-xs text-text-muted-custom">Waiters</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 border-orange-500/30">
             <CardContent className="p-4 text-center">
-              <p className="text-3xl font-bold text-charcoal">{branchStaff.filter(s => s.role === "kitchen_staff").length}</p>
+              <p className="text-3xl font-bold text-charcoal">{staffList.filter((s) => s.role === "kitchen_staff").length}</p>
               <p className="text-xs text-text-muted-custom">Kitchen Staff</p>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 border-purple-500/30">
             <CardContent className="p-4 text-center">
-              <p className="text-3xl font-bold text-charcoal">{branchStaff.filter(s => s.role === "housekeeping").length}</p>
-              <p className="text-xs text-text-muted-custom">Housekeeping</p>
+              <p className="text-3xl font-bold text-charcoal">{staffList.length}</p>
+              <p className="text-xs text-text-muted-custom">Total Branch Staff</p>
             </CardContent>
           </Card>
         </div>
@@ -242,9 +257,17 @@ export default function StaffManagementPage() {
                     <img src={member.avatar} alt={member.name} className="h-12 w-12 rounded-full" />
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-base truncate">{member.name}</CardTitle>
-                      <Badge className={cn("mt-1 text-white", roleColors[member.role] || "bg-gray-500")}>
-                        {member.role.replace("_", " ")}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-1 mt-1">
+                        <Badge className={cn("text-white", roleColors[member.role] || "bg-gray-500")}>
+                          {member.role.replace("_", " ")}
+                        </Badge>
+                        {member.mustChangeCredentials && (
+                          <Badge variant="outline" className="text-amber-700 border-amber-300 gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Must change login
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
@@ -253,11 +276,12 @@ export default function StaffManagementPage() {
                     <Mail className="h-4 w-4" />
                     <span className="truncate">{member.email}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-text-muted-custom">
-                    <Phone className="h-4 w-4" />
-                    <span>{member.phone}</span>
-                  </div>
-                  <Badge variant="outline" className="text-xs">{member.shift} Shift</Badge>
+                  {member.phone && (
+                    <div className="flex items-center gap-2 text-sm text-text-muted-custom">
+                      <Phone className="h-4 w-4" />
+                      <span>{member.phone}</span>
+                    </div>
+                  )}
                   <div className="flex gap-2 pt-2">
                     <Button
                       size="sm"
@@ -271,14 +295,16 @@ export default function StaffManagementPage() {
                       <Copy className="h-3 w-3 mr-1" />
                       Copy
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => removeStaff(member.id, member.name)}
-                      className="px-2"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    {canRemoveStaff && member.isDynamic && member.id !== user?.id && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleRemove(member.id, member.name, member.isDynamic)}
+                        className="px-2"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
