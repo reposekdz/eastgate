@@ -33,7 +33,11 @@ model User {
   performanceReviews PerformanceReview[]
   messagesSent      Message[]    @relation("MessageSender")
   messagesReceived  Message[]    @relation("MessageReceiver")
+  conversations     Conversation[]
   notifications     Notification[]
+  stockTransactions StockTransaction[]
+  purchaseOrders    PurchaseOrder[]
+  orderStatusChanges OrderStatusHistory[]
   
   // Metadata
   joinDate      DateTime  @default(now())
@@ -98,6 +102,13 @@ model Branch {
   services        Service[]
   revenue         Revenue[]
   menuItems       MenuItem[]
+  stockItems      StockItem[]
+  stockTransactions StockTransaction[]
+  suppliers       Supplier[]
+  purchaseOrders  PurchaseOrder[]
+  expenses        Expense[]
+  dailyFinancials DailyFinancial[]
+  payments        Payment[]
   
   // Settings
   checkInTime     String    @default("14:00")
@@ -212,6 +223,7 @@ model Guest {
   bookings        Booking[]
   reviews         Review[]
   currentRooms    Room[]      @relation("CurrentRoom")
+  orders          Order[]
   
   // Branch
   branchId        String?
@@ -358,6 +370,10 @@ model Payment {
   method          PaymentMethod
   status          PaymentStatus
   
+  // Branch
+  branchId        String?
+  branch          Branch?       @relation(fields: [branchId], references: [id])
+  
   // Booking
   bookingId       String?
   booking         Booking?      @relation(fields: [bookingId], references: [id])
@@ -460,7 +476,13 @@ model Order {
   // Customer
   guestName       String?
   guestId         String?
+  guest           Guest?        @relation(fields: [guestId], references: [id])
+  guestPhone      String?
+  guestEmail      String?
   roomCharge      Boolean       @default(false)
+  
+  // Type
+  type            OrderType     @default(DINE_IN)
   
   // Items
   items           OrderItem[]
@@ -470,6 +492,7 @@ model Order {
   tax             Int
   discount        Int           @default(0)
   total           Int
+  totalAmount     Float         @default(0)
   
   // Status
   status          OrderStatus   @default(PENDING)
@@ -497,6 +520,9 @@ model Order {
   specialRequests String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  
+  // Status History
+  statusHistory   OrderStatusHistory[]
   
   @@index([branchId])
   @@index([status])
@@ -557,6 +583,38 @@ enum OrderItemStatus {
   PREPARING
   READY
   SERVED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+  DELIVERY
+  ROOM_SERVICE
+}
+
+// ─── Order Status History ────────────────────────────────────────
+
+model OrderStatusHistory {
+  id              String        @id @default(cuid())
+  
+  // Order
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  // Status
+  status          OrderStatus
+  note            String?
+  
+  // Changed by
+  changedBy       String?
+  user            User?         @relation(fields: [changedBy], references: [id])
+  
+  // Metadata
+  createdAt       DateTime      @default(now())
+  
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // ─── Events ───────────────────────────────────────────────────
@@ -856,20 +914,27 @@ model HousekeepingTask {
 model Message {
   id              String        @id @default(cuid())
   
+  // Conversation
+  conversationId  String?
+  conversation    Conversation? @relation(fields: [conversationId], references: [id])
+  
   // Participants
   senderId        String
   sender          User          @relation("MessageSender", fields: [senderId], references: [id])
-  receiverId      String
-  receiver        User          @relation("MessageReceiver", fields: [receiverId], references: [id])
+  receiverId      String?
+  receiver        User?         @relation("MessageReceiver", fields: [receiverId], references: [id])
   
   // Content
   subject         String?
   body            String
+  content         String?       // Alternative content field
   attachments     Json?
   
   // Status
   read            Boolean       @default(false)
   readAt          DateTime?
+  isDeleted       Boolean       @default(false)
+  isBroadcast     Boolean       @default(false)
   
   // Metadata
   createdAt       DateTime      @default(now())
@@ -877,7 +942,36 @@ model Message {
   
   @@index([senderId])
   @@index([receiverId])
+  @@index([conversationId])
   @@index([read])
+}
+
+// ─── Conversations ───────────────────────────────────────────────
+
+model Conversation {
+  id              String        @id @default(cuid())
+  
+  // Type
+  type            ConversationType @default(DIRECT)
+  name            String?
+  
+  // Participants
+  participants    User[]
+  
+  // Messages
+  messages        Message[]
+  
+  // Metadata
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([type])
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+  BROADCAST
 }
 
 model Notification {
@@ -915,6 +1009,8 @@ enum NotificationType {
   SHIFT
   REVIEW
   SYSTEM
+  STOCK
+  ALERT
 }
 
 // ─── Reviews & Feedback ───────────────────────────────────────
@@ -999,4 +1095,314 @@ model Revenue {
   @@index([branchId])
   @@index([month])
   @@index([year])
+}
+
+// ─── Stock & Inventory Management ─────────────────────────────────
+
+model Supplier {
+  id              String        @id @default(cuid())
+  name            String
+  contactPerson   String?
+  email           String?
+  phone           String?
+  address         String?
+  category        String?       // Food, Beverages, Cleaning, Maintenance
+  paymentTerms    String?       // Net 30, Net 60, etc.
+  rating          Int?          // 1-5
+  isActive        Boolean       @default(true)
+  notes           String?
+  
+  // Branch (optional - can be system-wide supplier)
+  branchId        String?
+  branch          Branch?       @relation(fields: [branchId], references: [id])
+  
+  // Relations
+  stockItems      StockItem[]
+  purchases       PurchaseOrder[]
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([branchId])
+  @@index([category])
+}
+
+model StockItem {
+  id              String        @id @default(cuid())
+  name            String
+  sku             String        @unique
+  category        String        // FOOD, KITCHEN, HOUSEKEEPING, MAINTENANCE
+  subCategory     String?       // MEAT, VEGETABLES, DAIRY, etc.
+  
+  // Quantities
+  quantity        Float         @default(0)
+  unit            String        // KG, LITERS, PIECES, BOXES, etc.
+  unitCost        Float         // Cost per unit
+  reorderLevel    Float         @default(10)
+  reorderQuantity Float?
+  
+  // Location
+  location        String?       // Storage location in branch
+  
+  // Status
+  status          StockStatus   @default(IN_STOCK)
+  
+  // Expiry
+  expiryDate      DateTime?
+  
+  // Supplier
+  supplierId      String?
+  supplier        Supplier?     @relation(fields: [supplierId], references: [id])
+  
+  // Branch
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id])
+  
+  // Relations
+  transactions    StockTransaction[]
+  
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@unique([branchId, sku])
+  @@index([branchId])
+  @@index([category])
+  @@index([status])
+  @@index([sku])
+}
+
+enum StockStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+model StockTransaction {
+  id              String        @id @default(cuid())
+  
+  // Stock Item
+  stockItemId     String
+  stockItem       StockItem     @relation(fields: [stockItemId], references: [id])
+  
+  // Transaction Type
+  type            TransactionType
+  quantity        Float
+  
+  // Before/After quantities
+  quantityBefore  Float?
+  quantityAfter   Float?
+  
+  // Cost at time of transaction
+  unitCost        Float?
+  totalCost       Float?
+  
+  // Reference
+  reference       String?       // Purchase order number, etc.
+  
+  // Notes
+  notes           String?
+  
+  // Performed by
+  performedBy     String?
+  user            User?         @relation(fields: [performedBy], references: [id])
+  
+  // Branch
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id])
+  
+  createdAt       DateTime      @default(now())
+  
+  @@index([stockItemId])
+  @@index([branchId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum TransactionType {
+  IN              // Stock received
+  OUT             // Stock used/removed
+  ADJUSTMENT      // Inventory count adjustment
+  RETURN          // Returned to supplier
+  WASTAGE         // Spoiled/wasted
+  TRANSFER        // Transfer between branches
+}
+
+model PurchaseOrder {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  
+  // Supplier
+  supplierId      String
+  supplier        Supplier      @relation(fields: [supplierId], references: [id])
+  
+  // Status
+  status          PurchaseStatus @default(PENDING)
+  
+  // Items
+  items           Json          // Array of {stockItemId, quantity, unitCost}
+  
+  // Totals
+  subtotal        Float
+  taxAmount       Float         @default(0)
+  totalAmount     Float
+  
+  // Dates
+  orderDate       DateTime      @default(now())
+  expectedDelivery DateTime?
+  receivedDate    DateTime?
+  
+  // Notes
+  notes           String?
+  
+  // Branch
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id])
+  
+  // Created by
+  createdById     String?
+  createdBy       User?         @relation(fields: [createdById], references: [id])
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+enum PurchaseStatus {
+  PENDING
+  APPROVED
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+// ─── Financial Management ────────────────────────────────────────
+
+model Expense {
+  id              String        @id @default(cuid())
+  
+  // Category
+  category        ExpenseCategory
+  subCategory     String?
+  
+  // Description
+  description     String
+  amount          Float
+  currency        String        @default("RWF")
+  
+  // Payment
+  paymentMethod   String?
+  reference       String?       // Invoice number, receipt number
+  
+  // Status
+  status          ExpenseStatus @default(PENDING)
+  
+  // Date
+  expenseDate     DateTime      @default(now())
+  dueDate         DateTime?
+  paidDate        DateTime?
+  
+  // Vendor/Supplier
+  vendorName      String?
+  vendorId        String?
+  
+  // Approval
+  approvedBy      String?
+  approvedAt      DateTime?
+  
+  // Branch
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id])
+  
+  // Recurring
+  isRecurring     Boolean       @default(false)
+  recurringPeriod String?       // MONTHLY, WEEKLY, etc.
+  
+  // Notes
+  notes           String?
+  
+  // Receipt
+  receiptUrl      String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([branchId])
+  @@index([category])
+  @@index([expenseDate])
+  @@index([status])
+}
+
+enum ExpenseCategory {
+  SALARIES
+  FOOD_COST
+  BEVERAGES
+  SUPPLIES
+  MAINTENANCE
+  UTILITIES
+  MARKETING
+  INSURANCE
+  RENT
+  TAXES
+  BANK_FEES
+  OTHER
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+  CANCELLED
+}
+
+model DailyFinancial {
+  id              String        @id @default(cuid())
+  
+  // Date
+  date            DateTime
+  dateString      String        // YYYY-MM-DD
+  
+  // Branch
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id])
+  
+  // Income (from various sources)
+  roomIncome      Float         @default(0)
+  restaurantIncome Float       @default(0)
+  barIncome       Float         @default(0)
+  spaIncome       Float         @default(0)
+  eventIncome     Float         @default(0)
+  otherIncome     Float         @default(0)
+  totalIncome     Float         @default(0)
+  
+  // Expenses (outgoing)
+  foodExpense    Float         @default(0)
+  beverageExpense Float        @default(0)
+  staffExpense   Float         @default(0)
+  maintenanceExpense Float     @default(0)
+  utilitiesExpense Float       @default(0)
+  marketingExpense Float       @default(0)
+  otherExpense   Float         @default(0)
+  totalExpense   Float         @default(0)
+  
+  // Net
+  netProfit       Float         @default(0)
+  profitMargin    Float         @default(0)
+  
+  // Metrics
+  totalOrders     Int           @default(0)
+  totalBookings   Int           @default(0)
+  occupancyRate   Float         @default(0)
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@unique([branchId, dateString])
+  @@index([branchId])
+  @@index([dateString])
 }
