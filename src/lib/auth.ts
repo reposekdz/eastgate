@@ -25,10 +25,11 @@ declare module "next-auth" {
   }
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+// Auth config for use with getServerSession
+export const authOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
   },
   pages: {
     signIn: "/login",
@@ -135,4 +136,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
-});
+};
+
+// NextAuth v5 exports
+export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
+
+// For backwards compatibility - create a getServerSession wrapper
+export async function getServerSession(...args: any[]) {
+  // In NextAuth v5, we use auth() directly
+  // For backwards compatibility, accept optional args but ignore them
+  return await auth();
+}

@@ -6,8 +6,9 @@ import { z } from "zod";
 // GET /api/branches/[id] - Get branch details with comprehensive analytics
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -15,7 +16,7 @@ export async function GET(
         }
 
         const branch = await prisma.branch.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: {
                 users: {
                     select: {
@@ -60,7 +61,7 @@ export async function GET(
         // Monthly revenue
         const monthlyBookings = await prisma.booking.findMany({
             where: {
-                branchId: params.id,
+                branchId: id,
                 createdAt: { gte: monthStart },
                 status: { in: ["CHECKED_IN", "CHECKED_OUT"] },
             },
@@ -69,7 +70,7 @@ export async function GET(
 
         const monthlyOrders = await prisma.order.findMany({
             where: {
-                branchId: params.id,
+                branchId: id,
                 createdAt: { gte: monthStart },
                 status: "COMPLETED",
             },
@@ -83,7 +84,7 @@ export async function GET(
         // Room statistics
         const roomStats = await prisma.room.groupBy({
             by: ["status"],
-            where: { branchId: params.id },
+            where: { branchId: id },
             _count: { status: true },
         });
 
@@ -95,7 +96,7 @@ export async function GET(
 
         const todayCheckIns = await prisma.booking.count({
             where: {
-                branchId: params.id,
+                branchId: id,
                 checkInDate: { gte: todayStart, lte: todayEnd },
                 status: { in: ["CONFIRMED", "CHECKED_IN"] },
             },
@@ -103,7 +104,7 @@ export async function GET(
 
         const todayCheckOuts = await prisma.booking.count({
             where: {
-                branchId: params.id,
+                branchId: id,
                 checkOutDate: { gte: todayStart, lte: todayEnd },
                 status: "CHECKED_IN",
             },
@@ -111,7 +112,7 @@ export async function GET(
 
         const todayOrders = await prisma.order.count({
             where: {
-                branchId: params.id,
+                branchId: id,
                 createdAt: { gte: todayStart },
             },
         });
@@ -119,7 +120,7 @@ export async function GET(
         // Staff statistics
         const staffByRole = await prisma.user.groupBy({
             by: ["role"],
-            where: { branchId: params.id, status: "ACTIVE" },
+            where: { branchId: id, status: "ACTIVE" },
             _count: { role: true },
         });
 
@@ -154,8 +155,9 @@ export async function GET(
 // PATCH /api/branches/[id] - Update branch
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -184,7 +186,7 @@ export async function PATCH(
         const validatedData = updateSchema.parse(body);
 
         const branch = await prisma.branch.update({
-            where: { id: params.id },
+            where: { id },
             data: validatedData,
         });
 
@@ -207,8 +209,9 @@ export async function PATCH(
 // DELETE /api/branches/[id] - Delete branch (Super Admin only)
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -222,7 +225,7 @@ export async function DELETE(
         // Check if branch has active bookings or orders
         const activeBookings = await prisma.booking.count({
             where: {
-                branchId: params.id,
+                branchId: id,
                 status: { in: ["CONFIRMED", "CHECKED_IN"] },
             },
         });
@@ -235,7 +238,7 @@ export async function DELETE(
         }
 
         await prisma.branch.delete({
-            where: { id: params.id },
+            where: { id },
         });
 
         return NextResponse.json({ message: "Branch deleted successfully" });
