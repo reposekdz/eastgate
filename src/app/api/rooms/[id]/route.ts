@@ -5,8 +5,9 @@ import { auth } from "@/lib/auth";
 // PATCH /api/rooms/[id] - Update room status
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -16,7 +17,7 @@ export async function PATCH(
         const body = await request.json();
 
         const room = await prisma.room.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 ...(body.status && { status: body.status }),
                 ...(body.price !== undefined && { price: body.price }),
@@ -45,8 +46,9 @@ export async function PATCH(
 // PUT /api/rooms/[id] - Full room update
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -56,7 +58,7 @@ export async function PUT(
         const body = await request.json();
 
         const room = await prisma.room.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 number: body.number,
                 floor: body.floor,
@@ -81,8 +83,9 @@ export async function PUT(
 // DELETE /api/rooms/[id] - Delete room
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -90,7 +93,7 @@ export async function DELETE(
         }
 
         await prisma.room.delete({
-            where: { id: params.id },
+            where: { id },
         });
 
         return NextResponse.json({ success: true });

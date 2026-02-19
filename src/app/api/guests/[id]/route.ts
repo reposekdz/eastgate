@@ -5,8 +5,9 @@ import { auth } from "@/lib/auth";
 // GET /api/guests/[id] - Get specific guest with details
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -14,7 +15,7 @@ export async function GET(
         }
 
         const guest = await prisma.guest.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: {
                 bookings: {
                     include: {
@@ -62,8 +63,9 @@ export async function GET(
 // PATCH /api/guests/[id] - Update guest
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -73,7 +75,7 @@ export async function PATCH(
         const body = await request.json();
 
         const guest = await prisma.guest.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 ...(body.firstName && { firstName: body.firstName }),
                 ...(body.lastName && { lastName: body.lastName }),

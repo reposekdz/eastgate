@@ -5,8 +5,9 @@ import { auth } from "@/lib/auth";
 // PATCH /api/orders/[id] - Update order status
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -40,7 +41,7 @@ export async function PATCH(
         if (paymentMethod) updateData.paymentMethod = paymentMethod;
 
         const order = await prisma.order.update({
-            where: { id: params.id },
+            where: { id },
             data: updateData,
             include: {
                 items: {

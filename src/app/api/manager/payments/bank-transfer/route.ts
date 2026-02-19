@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession, authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
 // Dynamic for real-time data
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ const BANK_CONFIG = {
 // GET /api/manager/payments/bank-transfer - Get bank transfer details
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 // POST /api/manager/payments/bank-transfer - Initiate/verify bank transfer
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -297,70 +297,6 @@ export async function POST(request: NextRequest) {
     console.error("Bank transfer error:", error);
     return NextResponse.json(
       { error: "Bank transfer failed", details: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
-  }
-}
-
-// GET bank transfer history
-export async function GET_ALL(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-    const branchId = searchParams.get("branchId");
-    const limit = parseInt(searchParams.get("limit") || "50");
-
-    const userRole = session.user.role;
-    let userBranchId = session.user.branchId;
-
-    // Build where clause
-    const where: any = {
-      method: "BANK_TRANSFER" as any,
-    };
-
-    // Filter by status
-    if (status && status !== "all") {
-      where.status = status.toUpperCase();
-    }
-
-    // Filter by branch (super admin can see all)
-    if (userRole !== "SUPER_ADMIN" && userRole !== "SUPER_MANAGER") {
-      where.branchId = userBranchId;
-    } else if (branchId) {
-      where.branchId = branchId;
-    }
-
-    const payments = await prisma.payment.findMany({
-      where,
-      include: {
-        booking: true,
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-    });
-
-    // Parse gateway response for each payment
-    const formattedPayments = payments.map(p => ({
-      ...p,
-      amount: p.amount / 100,
-      gatewayDetails: JSON.parse(p.gatewayResponse as string || "{}"),
-    }));
-
-    return NextResponse.json({
-      success: true,
-      payments: formattedPayments,
-      total: formattedPayments.length,
-    });
-  } catch (error) {
-    console.error("Get bank transfers error:", error);
-    return NextResponse.json(
-      { error: "Failed to get bank transfers" },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession, authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
 // Enhanced admin search with server-side processing
 export const dynamic = 'force-dynamic';
@@ -42,7 +42,7 @@ function parseAdvancedQuery(query: string): {
 // GET /api/admin/search - Advanced server-side search for admin
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

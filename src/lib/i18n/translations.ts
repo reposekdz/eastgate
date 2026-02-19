@@ -880,6 +880,16 @@ export const translations = {
     stat2Label: { en: "Happy Guests", rw: "Abashyitsi Bazishimiye", fr: "Invités Satisfaits", sw: "Wageni Wenye Furaha", es: "Huéspedes Felices", de: "Zufriedene Gäste", zh: "满意的客人", ar: "ضيوف سعداء", pt: "Hóspedes Felizes", ja: "幸せな客人" },
     stat3Label: { en: "Luxury Rooms", rw: "Ibyumba by'Ubwiza", fr: "Chambres de Luxe", sw: "Chumba za Luxi", es: "Habitaciones de Lujo", de: "Luxuszimmer", zh: "豪华客房", ar: "غرف فاخرة", pt: "Quartos de Luxo", ja: "豪華な客室" },
     stat4Label: { en: "Awards Won", rw: "Ibirango Byatswe", fr: "Prix Gagnés", sw: "Tuzo Zilizoshinda", es: "Premios Ganados", de: "Gewonnene Auszeichnungen", zh: "获得奖项", ar: "الجوائز المحصلة", pt: "Prêmios Ganhos", ja: "受賞" },
+    value1Title: { en: "Excellence", rw: "Ubwitange" },
+    value1Desc: { en: "We exceed our guests' expectations every time.", rw: "Turenze ibyo abashyitsi bacu biteze buri gihe." },
+    value2Title: { en: "Ubuntu", rw: "Ubuntu" },
+    value2Desc: { en: "We welcome everyone with dignity and warmth.", rw: "Twakira buri muntu n'icyubahiro n'ubushyuhe." },
+    value3Title: { en: "Integrity", rw: "Ubunyangamugayo" },
+    value3Desc: { en: "We do the right thing in an open and safe way.", rw: "Dukora ibintu byiza mu buryo bugaragara kandi bw'umutekano." },
+    value4Title: { en: "Culture", rw: "Umuco" },
+    value4Desc: { en: "We honor Rwanda's rich heritage.", rw: "Twirata kandi duha agaciro umurage ukungahaye w'u Rwanda." },
+    titleAccent: { en: "Luxury", rw: "Ubwiza" },
+    ourStory: { en: "Our Story", rw: "Inkuru Yacu" },
   },
 
   // ─── Spa page ─────────────────────────────────────────────
