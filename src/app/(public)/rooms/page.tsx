@@ -8,19 +8,85 @@ import {
   StaggerContainer,
   StaggerItem,
 } from "@/components/animations/MotionWrapper";
-import { roomsContent } from "@/lib/kw-data";
 import { images } from "@/lib/data";
 import { Wifi, Tv, Wine, ConciergeBell, ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n/context";
 
 const amenityIcons: Record<string, React.ElementType> = {
-  "Wi-Fi Kubuntu": Wifi,
-  "TV Nini": Tv,
+  "Wi-Fi": Wifi,
+  "TV": Tv,
   "Mini Bar": Wine,
-  "Serivisi y'Icyumba": ConciergeBell,
+  "Room Service": ConciergeBell,
 };
 
 export default function RoomsPage() {
+  const { t } = useI18n();
+  
+  // Room data with translations
+  const roomsData = [
+    {
+      id: 1,
+      type: "standard",
+      image: images.hero,
+      alt: "Standard Room",
+      price: "$89",
+      nameEn: "Standard Room",
+      name: t("roomTypes", "standard"),
+      description: t("roomDesc", "standard"),
+      amenities: ["Wi-Fi", "TV", "Mini Bar", "Room Service"],
+      maxGuests: 2,
+    },
+    {
+      id: 2,
+      type: "deluxe",
+      image: images.hero,
+      alt: "Deluxe Room",
+      price: "$129",
+      nameEn: "Deluxe Room",
+      name: t("roomTypes", "deluxe"),
+      description: t("roomDesc", "deluxe"),
+      amenities: ["Wi-Fi", "Smart TV", "Mini Bar", "Room Service", "Balcony"],
+      maxGuests: 2,
+    },
+    {
+      id: 3,
+      type: "family",
+      image: images.hero,
+      alt: "Family Suite",
+      price: "$199",
+      nameEn: "Family Suite",
+      name: t("roomTypes", "family"),
+      description: t("roomDesc", "family"),
+      amenities: ["Wi-Fi", "Smart TV", "Mini Bar", "Room Service", "Kitchenette", "Extra Bed"],
+      maxGuests: 4,
+    },
+    {
+      id: 4,
+      type: "executive_suite",
+      image: images.hero,
+      alt: "Executive Suite",
+      price: "$299",
+      nameEn: "Executive Suite",
+      name: t("roomTypes", "executive_suite"),
+      description: t("roomDesc", "executive_suite"),
+      amenities: ["Wi-Fi", "Smart TV", "Mini Bar", "Butler Service", "Work Desk", "Lounge Area"],
+      maxGuests: 2,
+    },
+    {
+      id: 5,
+      type: "presidential_suite",
+      image: images.hero,
+      alt: "Presidential Suite",
+      price: "$599",
+      nameEn: "Presidential Suite",
+      name: t("roomTypes", "presidential_suite"),
+      description: t("roomDesc", "presidential_suite"),
+      amenities: ["Wi-Fi", "Smart TV", "Private Bar", "Butler Service", "Private Dining", "Jacuzzi", "Panoramic View"],
+      maxGuests: 4,
+    },
+  ];
+
   return (
     <>
       {/* Hero Banner */}
@@ -38,7 +104,7 @@ export default function RoomsPage() {
             transition={{ delay: 0.2 }}
             className="body-sm uppercase tracking-[0.25em] text-gold-light mb-3 font-medium"
           >
-            {roomsContent.sectionLabel}
+            {t("rooms", "sectionLabel")}
           </motion.p>
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
@@ -46,7 +112,7 @@ export default function RoomsPage() {
             transition={{ delay: 0.4 }}
             className="text-3xl sm:text-4xl md:heading-xl text-white font-heading font-bold mb-4"
           >
-            {roomsContent.title}
+            {t("rooms", "title")}
           </motion.h1>
           <motion.div
             initial={{ scaleX: 0 }}
@@ -60,7 +126,7 @@ export default function RoomsPage() {
             transition={{ delay: 0.8 }}
             className="body-md sm:body-lg text-white/70 max-w-2xl"
           >
-            {roomsContent.description}
+            {t("rooms", "description")}
           </motion.p>
         </div>
       </section>
@@ -69,7 +135,7 @@ export default function RoomsPage() {
       <section className="section-padding bg-pearl">
         <div className="mx-auto max-w-7xl">
           <StaggerContainer className="space-y-12 sm:space-y-16">
-            {roomsContent.rooms.map((room, idx) => (
+            {roomsData.map((room, idx) => (
               <StaggerItem key={room.id}>
                 <div
                   className={`grid gap-8 lg:grid-cols-2 items-center ${
@@ -80,12 +146,12 @@ export default function RoomsPage() {
                   <div className={`relative overflow-hidden rounded-[4px] ${idx % 2 === 1 ? "lg:order-2" : ""}`}>
                     <img
                       src={room.image}
-                      alt={room.alt}
+                      alt={room.nameEn}
                       className="w-full h-64 sm:h-80 lg:h-[450px] object-cover transition-transform duration-700 hover:scale-105"
                     />
                     <div className="absolute top-4 left-4">
                       <Badge className="bg-emerald text-white px-3 py-1 text-sm rounded-[2px]">
-                        {room.price}
+                        {room.price} <span className="text-xs ml-1">{t("rooms", "perNight")}</span>
                       </Badge>
                     </div>
                   </div>
@@ -93,7 +159,7 @@ export default function RoomsPage() {
                   {/* Content */}
                   <div className={`${idx % 2 === 1 ? "lg:order-1" : ""} px-2 sm:px-0`}>
                     <p className="body-sm uppercase tracking-[0.2em] text-gold-dark mb-2 font-medium">
-                      {room.nameEn}
+                      {t("rooms", "guests")}: {room.maxGuests}
                     </p>
                     <h2 className="heading-md sm:heading-lg text-charcoal mb-4 font-heading">
                       {room.name}
@@ -105,12 +171,15 @@ export default function RoomsPage() {
 
                     {/* Amenities */}
                     <div className="grid grid-cols-2 gap-3 mb-8">
-                      {room.amenities.map((amenity) => (
-                        <div key={amenity} className="flex items-center gap-2">
-                          <Check size={16} className="text-emerald shrink-0" />
-                          <span className="body-sm text-slate-custom">{amenity}</span>
-                        </div>
-                      ))}
+                      {room.amenities.map((amenity) => {
+                        const Icon = amenityIcons[amenity] || Check;
+                        return (
+                          <div key={amenity} className="flex items-center gap-2">
+                            <Check size={16} className="text-emerald shrink-0" />
+                            <span className="body-sm text-slate-custom">{amenity}</span>
+                          </div>
+                        );
+                      })}
                     </div>
 
                     <Button
@@ -118,7 +187,7 @@ export default function RoomsPage() {
                       className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 py-5 rounded-[2px] uppercase tracking-wider text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(200,169,81,0.3)]"
                     >
                       <Link href="/book" className="flex items-center gap-2">
-                        {roomsContent.bookText}
+                        {t("rooms", "bookNow")}
                         <ArrowRight size={16} />
                       </Link>
                     </Button>
@@ -135,17 +204,17 @@ export default function RoomsPage() {
         <FadeInUp>
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="text-2xl sm:heading-md text-white mb-4 font-heading font-bold">
-              Ntago Ubona Icyo Ushaka?
+              {t("rooms", "ctaTitle")}
             </h2>
             <p className="body-md text-white/60 mb-8">
-              Twandikire kandi tuzagufasha kubona icyumba gikwiye.
+              {t("rooms", "ctaDescription")}
             </p>
             <Button
               asChild
               variant="outline"
               className="border-gold text-gold hover:bg-gold hover:text-charcoal rounded-[2px] uppercase tracking-wider text-sm px-8 py-5"
             >
-              <Link href="/contact">Twandikire</Link>
+              <Link href="/contact">{t("rooms", "ctaButton")}</Link>
             </Button>
           </div>
         </FadeInUp>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -27,6 +27,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -43,7 +46,22 @@ import {
   Calendar,
   CreditCard,
   BedDouble,
+  Filter,
+  Download,
+  MoreHorizontal,
+  Star,
+  Clock,
+  XCircle,
+  RefreshCw,
 } from "lucide-react";
+
+const tierFilters = [
+  { label: "All", value: "all" },
+  { label: "Platinum", value: "platinum", color: "bg-purple-100" },
+  { label: "Gold", value: "gold", color: "bg-yellow-100" },
+  { label: "Silver", value: "silver", color: "bg-slate-100" },
+  { label: "Member", value: "member", color: "bg-emerald-100" },
+];
 
 export default function GuestsPage() {
   const { user } = useAuthStore();
@@ -51,47 +69,123 @@ export default function GuestsPage() {
   const [tierFilter, setTierFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+  const [selectedGuests, setSelectedGuests] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<"name" | "spent" | "stays" | "lastVisit">("spent");
 
   const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
   const role = user?.role ?? "guest";
   const guests = getGuests(branchId, role);
 
-  const filtered = guests.filter((g) => {
-    if (tierFilter !== "all") {
-      if (tierFilter === "member" && g.loyaltyTier !== null) return false;
-      if (tierFilter !== "member" && g.loyaltyTier !== tierFilter) return false;
-    }
-    if (search && !g.name.toLowerCase().includes(search.toLowerCase()) && !g.email.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  // Filter and sort guests
+  const filtered = useMemo(() => {
+    let result = guests.filter((g) => {
+      if (tierFilter !== "all") {
+        if (tierFilter === "member" && g.loyaltyTier !== null) return false;
+        if (tierFilter !== "member" && g.loyaltyTier !== tierFilter) return false;
+      }
+      if (search && 
+          !g.name.toLowerCase().includes(search.toLowerCase()) && 
+          !g.email.toLowerCase().includes(search.toLowerCase()) &&
+          !g.phone?.includes(search)) 
+        return false;
+      return true;
+    });
+
+    // Sort
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "spent":
+          return b.totalSpent - a.totalSpent;
+        case "stays":
+          return b.totalStays - a.totalStays;
+        case "lastVisit":
+          return new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [guests, tierFilter, search, sortBy]);
 
   const totalGuests = guests.length;
   const platCount = guests.filter((g) => g.loyaltyTier === "platinum").length;
+  const goldCount = guests.filter((g) => g.loyaltyTier === "gold").length;
   const avgSpend = guests.length ? Math.round(guests.reduce((s, g) => s + g.totalSpent, 0) / guests.length) : 0;
+
+  // Selection handlers
+  const toggleSelectAll = () => {
+    if (selectedGuests.length === filtered.length) {
+      setSelectedGuests([]);
+    } else {
+      setSelectedGuests(filtered.map(g => g.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedGuests(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  // Bulk actions
+  const handleBulkAction = (action: string) => {
+    console.log(`Bulk action: ${action} on guests:`, selectedGuests);
+    setSelectedGuests([]);
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="heading-md text-charcoal">Guests & CRM</h1>
-        <p className="body-sm text-text-muted-custom mt-1">
-          Manage guest profiles, loyalty tiers, and engagement
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="heading-md text-charcoal">Guests & CRM</h1>
+          <p className="body-sm text-text-muted-custom mt-1">
+            Manage guest profiles, loyalty tiers, and engagement
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2 text-sm">
+            <Download className="h-4 w-4" /> Export
+          </Button>
+          <Button className="bg-emerald hover:bg-emerald-dark text-white gap-2 text-sm">
+            <Users className="h-4 w-4" /> Add Guest
+          </Button>
+        </div>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="py-3 shadow-xs border-transparent">
-          <CardContent className="px-4 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-emerald/10 shrink-0">
-              <Users className="h-4 w-4 text-emerald" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-charcoal">{totalGuests}</p>
-              <p className="text-[10px] text-text-muted-custom uppercase tracking-wider">Total Guests</p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+        {tierFilters.map((tf) => (
+          <Card 
+            key={tf.value} 
+            className={`py-3 shadow-xs border-transparent cursor-pointer transition-all ${
+              tierFilter === tf.value ? "ring-2 ring-emerald" : ""
+            }`}
+            onClick={() => setTierFilter(tf.value)}
+          >
+            <CardContent className="px-3 flex items-center gap-2">
+              {tf.value !== "all" && <div className={`w-2 h-2 rounded-full ${tf.color}`} />}
+              <div className="flex-1 min-w-0">
+                <p className="text-lg font-bold text-charcoal">
+                  {tf.value === "all" 
+                    ? guests.length 
+                    : tf.value === "member" 
+                      ? guests.filter((g) => g.loyaltyTier !== null && !["platinum", "gold", "silver"].includes(g.loyaltyTier)).length
+                      : guests.filter((g) => g.loyaltyTier === tf.value).length
+                  }
+                </p>
+                <p className="text-[10px] text-text-muted-custom truncate">{tf.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 gap-3">
         <Card className="py-3 shadow-xs border-transparent">
           <CardContent className="px-4 flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-loyalty-platinum/10 shrink-0">
@@ -99,7 +193,7 @@ export default function GuestsPage() {
             </div>
             <div>
               <p className="text-lg font-bold text-charcoal">{platCount}</p>
-              <p className="text-[10px] text-text-muted-custom uppercase tracking-wider">Platinum Members</p>
+              <p className="text-[10px] text-text-muted-custom uppercase tracking-wider">Platinum</p>
             </div>
           </CardContent>
         </Card>
@@ -114,42 +208,104 @@ export default function GuestsPage() {
             </div>
           </CardContent>
         </Card>
+        <Card className="py-3 shadow-xs border-transparent">
+          <CardContent className="px-4 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-emerald/10 shrink-0">
+              <Star className="h-4 w-4 text-emerald" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-charcoal">{guests.reduce((s, g) => s + g.loyaltyPoints, 0).toLocaleString()}</p>
+              <p className="text-[10px] text-text-muted-custom uppercase tracking-wider">Total Points</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Table */}
       <Card className="py-4 shadow-xs border-transparent">
         <CardContent className="px-5">
+          {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <div className="relative flex-1 min-w-[200px]">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px] max-w-md">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted-custom" />
               <Input
-                placeholder="Search by name or email..."
+                placeholder="Search by name, email, phone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-sm"
+                className="h-8 pl-8 pr-8 text-sm"
               />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2"
+                >
+                  <XCircle className="h-4 w-4 text-text-muted-custom" />
+                </button>
+              )}
             </div>
-            <Select value={tierFilter} onValueChange={setTierFilter}>
-              <SelectTrigger className="w-[150px] h-8 text-sm">
-                <SelectValue placeholder="Loyalty Tier" />
+
+            {/* Sort */}
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="w-[140px] h-8 text-sm">
+                <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Tiers</SelectItem>
-                <SelectItem value="platinum">Platinum</SelectItem>
-                <SelectItem value="gold">Gold</SelectItem>
-                <SelectItem value="silver">Silver</SelectItem>
-                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="spent">Total Spent</SelectItem>
+                <SelectItem value="stays">Total Stays</SelectItem>
+                <SelectItem value="lastVisit">Last Visit</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Bulk Actions */}
+            {selectedGuests.length > 0 && (
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-xs text-text-muted-custom">
+                  {selectedGuests.length} selected
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkAction("email")}
+                  className="h-8 gap-1.5"
+                >
+                  <Mail className="h-3.5 w-3.5" /> Email
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkAction("export")}
+                  className="h-8 gap-1.5"
+                >
+                  <Download className="h-3.5 w-3.5" /> Export
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedGuests([])}
+                  className="h-8"
+                >
+                  Clear
+                </Button>
+              </div>
+            )}
           </div>
 
+          {/* Table */}
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent border-b-pearl">
+              <TableRow className="hover:bg-transparent border-b-pearl bg-pearl/30">
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    checked={selectedGuests.length === filtered.length && filtered.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider text-text-muted-custom font-semibold">Guest</TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider text-text-muted-custom font-semibold hidden md:table-cell">Tier</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider text-text-muted-custom font-semibold hidden sm:table-cell">Total Stays</TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider text-text-muted-custom font-semibold hidden lg:table-cell">Total Spent</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider text-text-muted-custom font-semibold hidden sm:table-cell">Stays</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-wider text-text-muted-custom font-semibold hidden lg:table-cell">Spent</TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider text-text-muted-custom font-semibold hidden md:table-cell">Points</TableHead>
                 <TableHead className="text-[10px] uppercase tracking-wider text-text-muted-custom font-semibold text-right">Last Visit</TableHead>
               </TableRow>
@@ -158,9 +314,17 @@ export default function GuestsPage() {
               {filtered.map((guest) => (
                 <TableRow
                   key={guest.id}
-                  className="hover:bg-pearl/30 border-b-pearl/50 cursor-pointer"
+                  className={`hover:bg-pearl/30 border-b-pearl/50 cursor-pointer ${
+                    selectedGuests.includes(guest.id) ? "bg-emerald/5" : ""
+                  }`}
                   onClick={() => setSelectedGuest(guest)}
                 >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedGuests.includes(guest.id)}
+                      onCheckedChange={() => toggleSelect(guest.id)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2.5">
                       <Avatar className="h-8 w-8">
@@ -184,6 +348,13 @@ export default function GuestsPage() {
               ))}
             </TableBody>
           </Table>
+
+          {filtered.length === 0 && (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 text-text-muted-custom/30 mx-auto mb-3" />
+              <p className="text-sm text-text-muted-custom">No guests found</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -260,6 +431,16 @@ export default function GuestsPage() {
                   </div>
                   <p className="text-sm font-bold text-charcoal">{formatDate(selectedGuest.lastVisit)}</p>
                 </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex gap-2 pt-2">
+                <Button className="flex-1 bg-emerald hover:bg-emerald-dark text-white" size="sm">
+                  <Mail className="h-4 w-4 mr-2" /> Send Email
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Phone className="h-4 w-4 mr-2" /> Call
+                </Button>
               </div>
             </div>
           )}

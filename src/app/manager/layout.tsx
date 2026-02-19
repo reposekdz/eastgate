@@ -21,7 +21,7 @@ export default function ManagerLayout({
         <ManagerSidebar />
         <SidebarInset>
           <ManagerTopbar />
-          <main className="flex-1 overflow-auto bg-pearl/30 p-4 md:p-6">
+          <main className="flex-1 overflow-auto bg-pearl/30 p-3 md:p-4">
             {children}
           </main>
         </SidebarInset>

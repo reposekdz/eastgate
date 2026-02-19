@@ -5,8 +5,9 @@ import { auth } from "@/lib/auth";
 // GET /api/bookings/[id] - Get specific booking
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -14,7 +15,7 @@ export async function GET(
         }
 
         const booking = await prisma.booking.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: {
                 guest: true,
                 room: {
@@ -60,8 +61,9 @@ export async function GET(
 // PATCH /api/bookings/[id] - Update booking
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
         if (!session?.user) {
@@ -73,7 +75,7 @@ export async function PATCH(
 
         // Get existing booking
         const existingBooking = await prisma.booking.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: { room: true },
         });
 
@@ -92,7 +94,7 @@ export async function PATCH(
 
         // Update booking
         const updatedBooking = await prisma.booking.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 ...(status && { status }),
                 ...(paymentStatus && { paymentStatus }),

@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,15 @@ import {
   Lock,
   DollarSign as DollarSignIcon,
   LayoutDashboard,
+  Search,
+  Bell,
+  Settings,
+  RefreshCw,
+  Zap,
+  Target,
+  AlertCircle,
+  CheckCircle2,
+  Timer,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -40,6 +49,8 @@ export default function ManagerDashboard() {
   const { t, isRw } = useI18n();
   const { getStaff, getBookings, getRooms, getOrders, getServiceRequests, getTables } = useBranchStore();
   const [activeTab, setActiveTab] = useState("overview");
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const userRole = user?.role || "branch_manager";
   const branchId = user?.branchId || "br-001";
@@ -65,31 +76,78 @@ export default function ManagerDashboard() {
   const waiters = branchStaff.filter((s) => s.role === "waiter");
   const recentBookings = branchBookings.slice(0, 4);
 
+  // Quick refresh
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setLastUpdate(new Date());
+      setIsRefreshing(false);
+    }, 1000);
+  };
+
+  // Auto refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLastUpdate(new Date());
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Quick actions
+  const quickActions = [
+    { label: "New Booking", href: "/admin/bookings", icon: CalendarCheck, color: "bg-emerald" },
+    { label: "View Orders", href: "/manager/orders", icon: UtensilsCrossed, color: "bg-orange-500" },
+    { label: "Service Requests", href: "/manager/services", icon: ClipboardList, color: "bg-purple-500" },
+    { label: "Staff Schedule", href: "/manager/staff", icon: Users, color: "bg-blue-500" },
+  ];
+
+  // Alerts and notifications
+  const alerts = useMemo(() => {
+    const result = [];
+    if (occupancyRate > 90) {
+      result.push({ type: "warning", message: "High occupancy - consider overbooking" });
+    }
+    if (pendingRequests > 5) {
+      result.push({ type: "info", message: `${pendingRequests} pending service requests` });
+    }
+    if (activeOrders > 10) {
+      result.push({ type: "success", message: `${activeOrders} orders in progress` });
+    }
+    return result;
+  }, [occupancyRate, pendingRequests, activeOrders]);
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="h-10 w-10 bg-emerald rounded-xl flex items-center justify-center shadow-lg">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="heading-md text-charcoal">
-                {isSuperRole ? t("management", "allBranches") : user?.branchName}
-              </h1>
-              <p className="text-xs text-text-muted-custom">
-                {isSuperRole ? t("management", "superManagerDashboard") : t("dashboard", "managerDashboard")}
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 bg-emerald rounded-xl flex items-center justify-center shadow-lg">
+            <Building2 className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="heading-md text-charcoal">
+              {isSuperRole ? t("management", "allBranches") : user?.branchName}
+            </h1>
+            <p className="text-xs text-text-muted-custom flex items-center gap-2">
+              {isSuperRole ? t("management", "superManagerDashboard") : t("dashboard", "managerDashboard")}
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-emerald rounded-full animate-pulse"></span>
+                Live
+              </span>
+            </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          {/* Credentials Notice */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
-            <Lock className="h-3.5 w-3.5" />
-            {t("management", "credentialsManaged")}
+        <div className="flex items-center gap-2">
+          {/* Last Update */}
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-pearl rounded-lg text-xs text-text-muted-custom">
+            <Clock className="h-3.5 w-3.5" />
+            Updated {lastUpdate.toLocaleTimeString()}
           </div>
+          {/* Refresh Button */}
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          </Button>
+          {/* Quick Links */}
           <Link href="/manager/staff">
             <Button variant="outline" size="sm">
               <Users className="mr-2 h-4 w-4" /> {t("management", "manageStaff")}
@@ -108,13 +166,34 @@ export default function ManagerDashboard() {
         </div>
       </div>
 
+      {/* Alerts Banner */}
+      {alerts.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {alerts.map((alert, idx) => (
+            <div
+              key={idx}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs ${
+                alert.type === "warning" ? "bg-amber-100 text-amber-700" :
+                alert.type === "info" ? "bg-blue-100 text-blue-700" :
+                "bg-emerald-100 text-emerald-700"
+              }`}
+            >
+              {alert.type === "warning" ? <AlertCircle className="h-3.5 w-3.5" /> :
+               alert.type === "info" ? <Activity className="h-3.5 w-3.5" /> :
+               <CheckCircle2 className="h-3.5 w-3.5" />}
+              {alert.message}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Branch Info Banner for Super Managers */}
       {isSuperRole && (
         <Card className="bg-gradient-to-r from-emerald/5 to-gold/5 border-emerald/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Shield className="h-5 w-5 text-emerald" />
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-semibold text-charcoal">
                   {isRw ? "Ikibaho cy'Umucunga Mukuru — Gucunga Amashami Yose" : "Super Manager Dashboard — Managing All Branches"}
                 </p>
@@ -122,10 +201,30 @@ export default function ManagerDashboard() {
                   {t("management", "accountsNote")}
                 </p>
               </div>
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                <Lock className="h-3.5 w-3.5" />
+                {t("management", "credentialsManaged")}
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Quick Actions Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {quickActions.map((action) => (
+          <Link key={action.label} href={action.href}>
+            <Card className="hover:shadow-md hover:border-emerald/30 transition-all cursor-pointer">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`w-10 h-10 ${action.color} rounded-xl flex items-center justify-center`}>
+                  <action.icon className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-sm font-medium text-charcoal">{action.label}</span>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -149,7 +248,7 @@ export default function ManagerDashboard() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-6">
-          {/* KPI Cards */}
+          {/* KPI Cards - Enhanced */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
               <CardContent className="p-5">
@@ -513,7 +612,7 @@ export default function ManagerDashboard() {
                   <div className="flex items-center gap-3">
                     <div className={`h-2 w-2 rounded-full ${sr.priority === "urgent" ? "bg-red-500" : sr.priority === "high" ? "bg-orange-500" : sr.priority === "medium" ? "bg-yellow-500" : "bg-green-500"}`} />
                     <div>
-                      <p className="text-sm font-medium text-charcoal">{sr.guestName} — {isRw ? "Icyumba" : "Room"} {sr.roomNumber}</p>
+                      <p className="text-sm font-medium text-charcoal">{sr.guestName} - {isRw ? "Icyumba" : "Room"} {sr.roomNumber}</p>
                       <p className="text-xs text-text-muted-custom">{sr.description}</p>
                     </div>
                   </div>
@@ -526,24 +625,6 @@ export default function ManagerDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
-}
-
-function EfficiencyBar({ label, value, color }: { label: string, value: number, color: string }) {
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="font-medium text-slate-700">{label}</span>
-        <span className="font-bold text-slate-900">{value}%</span>
-      </div>
-      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${value}%` }}
-          className={`h-full ${color}`}
-        />
-      </div>
     </div>
   );
 }

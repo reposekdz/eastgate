@@ -16,8 +16,18 @@ export async function GET(request: NextRequest) {
         const type = searchParams.get("type");
         const floor = searchParams.get("floor");
         const available = searchParams.get("available");
+        const search = searchParams.get("q");
 
         const filters: any = {};
+
+        // Search functionality
+        if (search) {
+            filters.OR = [
+                { number: { contains: search, mode: "insensitive" } },
+                { type: { contains: search, mode: "insensitive" } },
+                { description: { contains: search, mode: "insensitive" } },
+            ];
+        }
 
         // Branch filter
         if (session.user.role === "RECEPTIONIST" || session.user.role === "BRANCH_MANAGER") {

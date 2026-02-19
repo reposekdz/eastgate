@@ -72,14 +72,14 @@ export default function SpaPage() {
                 Serivisi Zacu
               </p>
               <h2 className="text-2xl sm:heading-lg text-charcoal mb-4 font-heading font-bold">
-                Imiti y&apos;Ubuzima
+                Imiti y'Ubuzima
               </h2>
               <div className="mx-auto h-[2px] w-16 bg-gold" />
             </div>
           </FadeInUp>
 
           <StaggerContainer className="grid gap-6 sm:gap-8 sm:grid-cols-2">
-            {spaContent.services.map((service) => (
+            {spaContent.services.map((service: { name: string; description: string; duration: string; price: string }) => (
               <StaggerItem key={service.name}>
                 <Card className="group bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-1 h-full">
                   <CardContent className="p-6 sm:p-8">
@@ -121,7 +121,7 @@ export default function SpaPage() {
           <SlideIn direction="left" className="relative h-64 sm:h-80 lg:h-auto">
             <img
               src="https://images.unsplash.com/photo-1649446326998-a16524cfa667?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTAwNDR8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBob3RlbCUyMGJhdGhyb29tJTIwbWFyYmxlJTIwYmF0aHR1YiUyMHdpdGglMjBmbG93ZXJzfGVufDB8MHx8fDE3NzA5MjAxMjd8MA&ixlib=rb-4.1.0&q=85"
-              alt="Ubwiherero bw'ubwiza — Ifoto na Rohit Tandon kuri Unsplash"
+              alt="Luxury Spa Bathroom"
               className="h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-charcoal/10" />
@@ -134,18 +134,18 @@ export default function SpaPage() {
                   Uburambe Bwihariye
                 </p>
                 <h2 className="heading-md sm:heading-lg text-white mb-6 font-heading">
-                  Ahantu h&apos;Amahoro{" "}
-                  <span className="italic text-gold-light">n&apos;Ubwiza</span>
+                  Ahantu h'Amahoro{" "}
+                  <span className="italic text-gold-light">n'Ubwiza</span>
                 </h2>
                 <div className="h-[2px] w-12 bg-gold mb-6" />
                 <p className="body-md sm:body-lg text-white/70 mb-8">
-                  Spa yacu ni ahantu hihariye aho ushobora gusiga ibibazo byose bya buri munsi. Ibikoresho byacu by&apos;umwimerere hamwe n&apos;abahanga bacu bazagufasha gusubiza imbaraga n&apos;amahoro.
+                  Spa yacu ni ahantu hihariye aho ushobora gusiga ibibazo byose bya buri munsi. Ibikoresho byacu bw'umwimerere hamwe n'abahanga bacu bazagufasha gusubiza imbaraga n'amahoro.
                 </p>
                 <Button
                   asChild
                   className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 py-5 rounded-[2px] uppercase tracking-wider text-sm"
                 >
-                <Link href="/contact" className="flex items-center gap-2">
+                  <Link href="/contact" className="flex items-center gap-2">
                     {spaContent.ctaText}
                     <ArrowRight size={16} />
                   </Link>

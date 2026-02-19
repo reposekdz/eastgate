@@ -15,6 +15,7 @@ import {
   UserCheck,
   DollarSign,
   Package,
+  Bed,
 } from "lucide-react";
 
 const navGroups: NavGroup[] = [
@@ -27,13 +28,14 @@ const navGroups: NavGroup[] = [
   {
     label: "Operations",
     items: [
+      { title: "Rooms", href: "/manager/rooms", icon: Bed },
       { title: "Guest Management", href: "/manager/guests", icon: UserCheck },
       { title: "Staff Management", href: "/manager/staff-management", icon: Users },
       { title: "Price Management", href: "/manager/prices", icon: DollarSign },
       { title: "Content Management", href: "/manager/content", icon: Package },
-      { title: "Orders", href: "/manager/orders", icon: UtensilsCrossed, badge: "3" },
+      { title: "Orders", href: "/manager/orders", icon: UtensilsCrossed },
       { title: "Bookings", href: "/manager/bookings", icon: CalendarCheck },
-      { title: "Service Requests", href: "/manager/services", icon: ClipboardList, badge: "5" },
+      { title: "Service Requests", href: "/manager/services", icon: ClipboardList },
     ],
   },
   {
@@ -46,7 +48,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Communication",
     items: [
-      { title: "Notifications", href: "/manager/notifications", icon: Bell, badge: "4" },
+      { title: "Notifications", href: "/manager/notifications", icon: Bell },
       { title: "Settings", href: "/manager/settings", icon: Settings },
     ],
   },

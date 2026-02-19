@@ -6,7 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 // ─── User & Authentication ───────────────────────────────────
@@ -127,8 +128,8 @@ model Room {
   view            String?
   
   // Features
-  amenities       String[]    // WiFi, AC, TV, Minibar, etc.
-  images          String[]
+  amenities       Json?       // WiFi, AC, TV, Minibar, etc.
+  images          Json?
   
   // Branch
   branchId        String
@@ -279,7 +280,7 @@ model Booking {
   paymentMethod   PaymentMethod?
   
   // Add-ons
-  addOns          String[]
+  addOns          Json?
   specialRequests String?
   
   // Branch
@@ -398,10 +399,10 @@ model MenuItem {
   cost            Int?          // Cost to make (for profit calculation)
   
   // Details
-  images          String[]
-  ingredients     String[]
-  allergens       String[]
-  dietary         String[]      // Vegan, Vegetarian, Gluten-Free
+  images          Json?
+  ingredients     Json?
+  allergens       Json?
+  dietary         Json?       // Vegan, Vegetarian, Gluten-Free
   
   // Nutrition (per serving)
   calories        Int?
@@ -521,7 +522,7 @@ model OrderItem {
   
   // Customization
   notes           String?
-  modifications   String[]
+  modifications   Json?
   
   // Status
   status          OrderItemStatus @default(PENDING)
@@ -766,8 +767,8 @@ model PerformanceReview {
   // Review
   period          String        // e.g., "Q1 2026"
   rating          Int           // 1-5
-  strengths       String[]
-  improvements    String[]
+  strengths       Json?
+  improvements    Json?
   comments        String?
   
   // Reviewers
@@ -864,7 +865,7 @@ model Message {
   // Content
   subject         String?
   body            String
-  attachments     String[]
+  attachments     Json?
   
   // Status
   read            Boolean       @default(false)

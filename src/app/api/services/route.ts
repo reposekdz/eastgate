@@ -33,18 +33,12 @@ export async function GET(request: NextRequest) {
         const services = await prisma.service.findMany({
             where: filters,
             include: {
-                room: {
-                    select: { number: true },
-                },
                 booking: {
                     select: {
                         guest: {
                             select: { firstName: true, lastName: true },
                         },
                     },
-                },
-                assignedTo: {
-                    select: { name: true },
                 },
             },
             orderBy: {
@@ -71,10 +65,10 @@ export async function POST(request: NextRequest) {
         }
 
         const serviceSchema = z.object({
-            type: z.enum(["HOUSEKEEPING", "MAINTENANCE", "ROOM_SERVICE", "SPA", "TRANSPORT", "OTHER"]),
+            type: z.enum(["HOUSEKEEPING", "MAINTENANCE", "ROOM_SERVICE", "SPA", "LAUNDRY", "CONCIERGE", "WAKE_UP_CALL", "OTHER"]),
             description: z.string().min(3),
-            priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
-            roomId: z.string().optional(),
+            priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]),
+            roomNumber: z.string().optional(),
             bookingId: z.string().optional(),
             branchId: z.string().optional(),
             scheduledFor: z.string().datetime().optional(),
@@ -96,11 +90,11 @@ export async function POST(request: NextRequest) {
                 type: validatedData.type,
                 description: validatedData.description,
                 priority: validatedData.priority,
-                status: "PENDING",
-                roomId: validatedData.roomId,
+                status: "REQUESTED",
+                roomNumber: validatedData.roomNumber,
                 bookingId: validatedData.bookingId,
                 branchId,
-                requestedById: session.user.id,
+                requestedAt: new Date(),
                 scheduledFor: validatedData.scheduledFor ? new Date(validatedData.scheduledFor) : undefined,
             },
         });
@@ -118,5 +112,40 @@ export async function POST(request: NextRequest) {
             { error: "Failed to create service request" },
             { status: 500 }
         );
+    }
+}
+
+// PATCH /api/services - Update service request status
+export async function PATCH(request: NextRequest) {
+    try {
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const body = await request.json();
+        const { id, status, assignedToId, notes } = body;
+
+        if (!id) {
+            return NextResponse.json({ error: "Service ID required" }, { status: 400 });
+        }
+
+        const updateData: any = {};
+        if (status) updateData.status = status;
+        if (assignedToId) updateData.assignedToId = assignedToId;
+        if (notes) updateData.notes = notes;
+
+        const service = await prisma.service.update({
+            where: { id },
+            data: updateData,
+        });
+
+        return NextResponse.json({
+            ...service,
+            room: { number: service.roomNumber },
+        });
+    } catch (error) {
+        console.error("Error updating service:", error);
+        return NextResponse.json({ error: "Failed to update service" }, { status: 500 });
     }
 }
