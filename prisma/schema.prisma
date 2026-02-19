@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 // ─── User & Authentication ───────────────────────────────────
@@ -148,7 +149,7 @@ model Room {
   
   // Relations
   bookings        Booking[]
-  currentGuest    Guest?      @relation("CurrentRoom", fields: [currentGuestId], references: [id])
+  currentGuest    Guest?      @relation("CurrentRoom", fields: [currentGuestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   currentGuestId  String?
   maintenanceLogs MaintenanceLog[]
   housekeepingTasks HousekeepingTask[]
@@ -237,7 +238,7 @@ model Guest {
   
   // Smart Linking (Parent/Student style)
   parentGuestId   String?
-  parentGuest     Guest?      @relation("FamilyLink", fields: [parentGuestId], references: [id])
+  parentGuest     Guest?      @relation("FamilyLink", fields: [parentGuestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   childGuests     Guest[]      @relation("FamilyLink")
   
   @@index([email])
@@ -262,11 +263,11 @@ model Booking {
   
   // Guest
   guestId         String
-  guest           Guest         @relation(fields: [guestId], references: [id])
+  guest           Guest         @relation(fields: [guestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   
   // Room
   roomId          String
-  room            Room          @relation(fields: [roomId], references: [id])
+  room            Room          @relation(fields: [roomId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   
   // Dates
   checkInDate     DateTime
@@ -376,7 +377,7 @@ model Payment {
   
   // Booking
   bookingId       String?
-  booking         Booking?      @relation(fields: [bookingId], references: [id])
+  booking         Booking?      @relation(fields: [bookingId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   
   // Event (if payment is for event)
   eventId         String?

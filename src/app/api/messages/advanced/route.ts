@@ -204,10 +204,13 @@ export async function POST(request: NextRequest) {
           data: {
             conversationId: targetConversationId,
             senderId,
-            receiverId: receiverId || (await prisma.conversation.findUnique({
-              where: { id: targetConversationId },
-              include: { participants: true },
-            })).?.participants.find(p => p.id !== senderId)?.id,
+            receiverId: receiverId || (async () => {
+              const conv = await prisma.conversation.findUnique({
+                where: { id: targetConversationId },
+                include: { participants: true },
+              });
+              return conv?.participants.find(p => p.id !== senderId)?.id;
+            })(),
             content,
             subject: subject || null,
             attachments: attachments || [],
