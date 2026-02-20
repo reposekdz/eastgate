@@ -531,6 +531,7 @@ export const translations = {
     pricesInfo: { en: "Room prices?", rw: "Ibiciro by'ibyumba?" },
     contactUs: { en: "Contact us", rw: "Twandikire" },
     writeUs: { en: "Write to us", rw: "Twandikire" },
+    chatBtn: { en: "Chat", rw: "Gusenga" },
     noMessages: { en: "No messages yet", rw: "Nta butumwa buhari" },
     teamMessages: { en: "Team Messages", rw: "Ubutumwa bw'Itsinda" },
     teamComm: { en: "Internal team communication", rw: "Itumanaho ry'imbere mu itsinda" },

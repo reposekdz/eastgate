@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -235,7 +235,7 @@ model PageContent {
   slug        String   @unique
   title       String
   subtitle    String?
-  content     String   @db.LongText
+  content     String   @db.Text
   imageUrl    String?  @map("image_url")
   gallery     Json?
   metaTitle   String?  @map("meta_title")

@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -148,6 +149,7 @@ const addOnServicesMeta = [
 // Using full world countries from CountrySelect component
 
 export default function BookingPage() {
+  const router = useRouter();
   const { t, locale } = useI18n();
   const { currency } = useCurrency();
   const { branches, rooms: allRoomsData } = useAppDataStore();
@@ -675,7 +677,7 @@ export default function BookingPage() {
                       </div>
                     )}
 
-                    <Button onClick={() => setShowMenuDialog(true)} variant="outline" className="w-full border-emerald text-emerald hover:bg-emerald hover:text-white">
+                    <Button onClick={() => router.push("/menu")} variant="outline" className="w-full border-emerald text-emerald hover:bg-emerald hover:text-white">
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       {menuCart.length > 0 ? t("booking", "updateMenuOrder") : t("booking", "browseMenu")}
                     </Button>

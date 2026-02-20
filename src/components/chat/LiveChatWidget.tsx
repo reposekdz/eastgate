@@ -196,7 +196,7 @@ export default function LiveChatWidget() {
               className="h-auto rounded-full bg-emerald hover:bg-emerald-dark text-white shadow-xl hover:shadow-2xl transition-all duration-300 px-5 py-3 gap-2 relative"
             >
               <MessageCircle className="h-5 w-5" />
-              <span className="font-semibold text-sm">{t("chat", "writeUs")}</span>
+              <span className="font-semibold text-sm">{t("chat", "chatBtn")}</span>
               {unread > 0 && (
                 <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gold text-charcoal text-[10px] font-bold flex items-center justify-center">
                   {unread}
@@ -291,11 +291,10 @@ export default function LiveChatWidget() {
                         )}
                         <div className={`max-w-[75%] ${msg.sender === "guest" ? "text-right" : ""}`}>
                           <div
-                            className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
-                              msg.sender === "guest"
+                            className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${msg.sender === "guest"
                                 ? "bg-emerald text-white rounded-br-sm"
                                 : "bg-pearl/80 text-charcoal rounded-bl-sm"
-                            }`}
+                              }`}
                           >
                             {msg.message}
                           </div>
