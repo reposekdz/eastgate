@@ -4,40 +4,54 @@ import prisma from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get("branchId");
+    const branchId = searchParams.get("branchId") || "br-001";
 
-    const where = branchId && branchId !== "all" ? { branchId } : {};
+    // Get room stats using raw SQL
+    const rooms = await prisma.$queryRaw`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'occupied' THEN 1 ELSE 0 END) as occupied,
+        SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available
+      FROM rooms WHERE branch_id = ${branchId}
+    ` as any[];
 
-    const [totalRooms, occupiedRooms, bookings, revenue] = await Promise.all([
-      prisma.room.count({ where }),
-      prisma.room.count({ where: { ...where, status: "occupied" } }),
-      prisma.booking.findMany({
-        where: { ...where, status: { in: ["confirmed", "checked_in"] } },
-        include: { room: true, guest: true },
-        orderBy: { checkIn: "asc" },
-      }),
-      prisma.payment.aggregate({
-        where: { ...where, status: "completed" },
-        _sum: { amount: true },
-      }),
-    ]);
+    // Get bookings
+    const bookings = await prisma.$queryRaw`
+      SELECT * FROM bookings 
+      WHERE branch_id = ${branchId} 
+        AND (status = 'confirmed' OR status = 'checked_in')
+      ORDER BY check_in ASC
+      LIMIT 20
+    ` as any[];
+
+    // Get revenue
+    const revenue = await prisma.$queryRaw`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM payments 
+      WHERE branch_id = ${branchId} AND status = 'completed'
+    ` as any[];
+
+    const totalRooms = Number(rooms[0]?.total || 0);
+    const occupiedRooms = Number(rooms[0]?.occupied || 0);
+    const revenueAmount = Number(revenue[0]?.total || 0);
 
     const occupancyRate = totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0;
-    const adr = occupiedRooms > 0 ? (revenue._sum.amount || 0) / occupiedRooms : 0;
-    const revpar = totalRooms > 0 ? (revenue._sum.amount || 0) / totalRooms : 0;
+    const adr = occupiedRooms > 0 ? revenueAmount / occupiedRooms : 0;
+    const revpar = totalRooms > 0 ? revenueAmount / totalRooms : 0;
 
-    const next7Days = bookings.filter(b => {
-      const checkIn = new Date(b.checkIn);
+    // Forecast for next 7 days
+    const next7Days = bookings.filter((b: any) => {
+      const checkIn = new Date(b.check_in);
       const now = new Date();
       const diff = (checkIn.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
       return diff >= 0 && diff <= 7;
     });
 
-    const forecast = next7Days.reduce((acc, b) => {
-      const day = b.checkIn.toISOString().split("T")[0];
-      acc[day] = (acc[day] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const forecast: Record<string, number> = {};
+    next7Days.forEach((b: any) => {
+      const day = b.check_in.toISOString().split("T")[0];
+      forecast[day] = (forecast[day] || 0) + 1;
+    });
 
     return NextResponse.json({
       success: true,

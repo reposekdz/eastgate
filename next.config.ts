@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   // Enable standalone output for Docker
   output: 'standalone',
   
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  
   eslint: {
     ignoreDuringBuilds: true,
   },

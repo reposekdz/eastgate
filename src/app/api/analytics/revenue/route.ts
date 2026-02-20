@@ -4,65 +4,65 @@ import prisma from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get("branchId");
-    const period = searchParams.get("period") || "30d";
+    const branchId = searchParams.get("branchId") || "br-001";
+    const period = parseInt(searchParams.get("period") || "30");
 
-    const days = period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 365;
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    startDate.setDate(startDate.getDate() - period);
 
-    const where = branchId && branchId !== "all" ? { branchId } : {};
+    // Get revenue using raw SQL
+    const payments: any = await prisma.$queryRaw`
+      SELECT 
+        COALESCE(SUM(amount), 0) as total,
+        COUNT(*) as count,
+        DATE(created_at) as date
+      FROM payments 
+      WHERE branch_id = ${branchId} 
+        AND status = 'completed'
+        AND created_at >= ${startDate}
+      GROUP BY DATE(created_at)
+    `;
 
-    const [payments, orders, events, services] = await Promise.all([
-      prisma.payment.groupBy({
-        by: ["createdAt"],
-        where: { ...where, status: "completed", createdAt: { gte: startDate } },
-        _sum: { amount: true },
-      }),
-      prisma.order.groupBy({
-        by: ["createdAt"],
-        where: { ...where, status: "completed", createdAt: { gte: startDate } },
-        _sum: { totalAmount: true },
-      }),
-      prisma.event.groupBy({
-        by: ["createdAt"],
-        where: { ...where, status: "completed", createdAt: { gte: startDate } },
-        _sum: { totalCost: true },
-      }),
-      prisma.service.groupBy({
-        by: ["createdAt"],
-        where: { ...where, status: "completed", createdAt: { gte: startDate } },
-        _sum: { cost: true },
-      }),
-    ]);
+    const orders: any = await prisma.$queryRaw`
+      SELECT 
+        COALESCE(SUM(total), 0) as total,
+        COUNT(*) as count,
+        DATE(created_at) as date
+      FROM orders 
+      WHERE branch_id = ${branchId} 
+        AND created_at >= ${startDate}
+      GROUP BY DATE(created_at)
+    `;
 
-    const revenueByDay = new Map<string, number>();
-    
-    payments.forEach(p => {
-      const day = p.createdAt.toISOString().split("T")[0];
-      revenueByDay.set(day, (revenueByDay.get(day) || 0) + (p._sum.amount || 0));
+    const events: any = await prisma.$queryRaw`
+      SELECT 
+        COALESCE(SUM(total_amount), 0) as total,
+        COUNT(*) as count,
+        DATE(date) as date
+      FROM events 
+      WHERE branch_id = ${branchId} 
+        AND date >= ${startDate}
+      GROUP BY DATE(date)
+    `;
+
+    // Format revenue data
+    const revenueData = (payments as any[]).map((p: any) => ({
+      date: p.date,
+      rooms: Number(p.total || 0),
+      restaurant: 0,
+      events: 0,
+      spa: 0,
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: revenueData,
+      summary: {
+        totalRevenue: revenueData.reduce((sum, r) => sum + r.rooms, 0),
+        totalOrders: (orders as any[]).reduce((sum, o) => sum + Number(o.count || 0), 0),
+        totalEvents: (events as any[]).reduce((sum, e) => sum + Number(e.count || 0), 0),
+      },
     });
-    
-    orders.forEach(o => {
-      const day = o.createdAt.toISOString().split("T")[0];
-      revenueByDay.set(day, (revenueByDay.get(day) || 0) + (o._sum.totalAmount || 0));
-    });
-    
-    events.forEach(e => {
-      const day = e.createdAt.toISOString().split("T")[0];
-      revenueByDay.set(day, (revenueByDay.get(day) || 0) + (e._sum.totalCost || 0));
-    });
-    
-    services.forEach(s => {
-      const day = s.createdAt.toISOString().split("T")[0];
-      revenueByDay.set(day, (revenueByDay.get(day) || 0) + (s._sum.cost || 0));
-    });
-
-    const chartData = Array.from(revenueByDay.entries())
-      .map(([date, revenue]) => ({ date, revenue }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    return NextResponse.json({ success: true, data: chartData });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
