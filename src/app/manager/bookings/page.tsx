@@ -213,7 +213,7 @@ export default function ManagerBookingsPage() {
                 <Label>Payment method</Label>
                 <Select
                   value={newBooking.paymentMethod}
-                  onValueChange={(v: "cash" | "visa" | "mastercard" | "stripe" | "mtn_mobile" | "airtel_money") =>
+                  onValueChange={(v: any) =>
                     setNewBooking({ ...newBooking, paymentMethod: v })
                   }
                 >

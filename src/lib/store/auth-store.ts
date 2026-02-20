@@ -67,7 +67,7 @@ const staffUsers: (User & { password: string })[] = [
   {
     id: "u-000",
     name: "EastGate Admin",
-    email: "admin@eastgates.com",
+    email: "eastgate@gmail.com",
     password: "2026",
     role: "super_admin",
     branchId: "all",
@@ -77,8 +77,8 @@ const staffUsers: (User & { password: string })[] = [
   {
     id: "u-001",
     name: "Manager Chief",
-    email: "manager@eastgates.com",
-    password: "2026",
+    email: "manager@eastgate.rw",
+    password: "manager123",
     role: "super_manager",
     branchId: "all",
     branchName: "All Branches",
@@ -93,16 +93,6 @@ const staffUsers: (User & { password: string })[] = [
     branchId: "all",
     branchName: "All Branches",
     avatar: "https://i.pravatar.cc/40?u=admin",
-  },
-  {
-    id: "u-003",
-    name: "Manager Superuser",
-    email: "manager@eastgate.rw",
-    password: "manager123",
-    role: "super_manager",
-    branchId: "all",
-    branchName: "All Branches",
-    avatar: "https://i.pravatar.cc/40?u=manager-rw",
   },
 
   // ═══ Kigali Main Branch (br-001) ═══
@@ -310,12 +300,14 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             requiresCredentialsChange: mustChangeCredentials === true,
           });
-          document.cookie = `eastgate-auth=${JSON.stringify({
-            isAuthenticated: true,
-            role: userData.role,
-            branchId: userData.branchId,
-            userId: userData.id,
-          })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+          if (typeof window !== 'undefined') {
+            document.cookie = `eastgate-auth=${JSON.stringify({
+              isAuthenticated: true,
+              role: userData.role,
+              branchId: userData.branchId,
+              userId: userData.id,
+            })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+          }
           return true;
         }
 
@@ -329,11 +321,13 @@ export const useAuthStore = create<AuthState>()(
         if (staffUser) {
           const { password: _, ...userData } = staffUser;
           set({ user: userData, isAuthenticated: true, requiresCredentialsChange: false });
-          document.cookie = `eastgate-auth=${JSON.stringify({
-            isAuthenticated: true,
-            role: userData.role,
-            branchId: userData.branchId,
-          })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+          if (typeof window !== 'undefined') {
+            document.cookie = `eastgate-auth=${JSON.stringify({
+              isAuthenticated: true,
+              role: userData.role,
+              branchId: userData.branchId,
+            })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+          }
           return true;
         }
 
@@ -346,11 +340,13 @@ export const useAuthStore = create<AuthState>()(
         if (guestUser) {
           const { password: _, ...userData } = guestUser;
           set({ user: userData, isAuthenticated: true, requiresCredentialsChange: false });
-          document.cookie = `eastgate-auth=${JSON.stringify({
-            isAuthenticated: true,
-            role: "guest",
-            branchId: "all",
-          })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+          if (typeof window !== 'undefined') {
+            document.cookie = `eastgate-auth=${JSON.stringify({
+              isAuthenticated: true,
+              role: "guest",
+              branchId: "all",
+            })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+          }
           return true;
         }
 
@@ -396,22 +392,41 @@ export const useAuthStore = create<AuthState>()(
         // Auto-login after registration
         const { password: _, ...userData } = newGuest;
         set({ user: userData, isAuthenticated: true });
-        document.cookie = `eastgate-auth=${JSON.stringify({
-          isAuthenticated: true,
-          role: "guest",
-          branchId: "all",
-        })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        if (typeof window !== 'undefined') {
+          document.cookie = `eastgate-auth=${JSON.stringify({
+            isAuthenticated: true,
+            role: "guest",
+            branchId: "all",
+          })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        }
 
         return { success: true };
       },
 
       logout: () => {
         set({ user: null, isAuthenticated: false, requiresCredentialsChange: false });
-        document.cookie = "eastgate-auth=; path=/; max-age=0; SameSite=Lax";
+        if (typeof window !== 'undefined') {
+          document.cookie = "eastgate-auth=; path=/; max-age=0; SameSite=Lax";
+        }
       },
 
       addStaff: (data) => {
         const state = get();
+        const currentUser = state.user;
+        
+        // Branch managers can only add staff to their own branch
+        if (currentUser?.role === "branch_manager" && currentUser.branchId !== data.branchId) {
+          return { success: false, error: "You can only add staff to your assigned branch." };
+        }
+        
+        // Branch managers cannot add other branch managers or super roles
+        if (currentUser?.role === "branch_manager") {
+          const restrictedRoles: UserRole[] = ["super_admin", "super_manager", "branch_manager", "accountant", "event_manager"];
+          if (restrictedRoles.includes(data.role)) {
+            return { success: false, error: "You don't have permission to add this role." };
+          }
+        }
+        
         const exists =
           staffUsers.some((u) => u.email.toLowerCase() === data.email.toLowerCase()) ||
           state.dynamicStaff.some((u) => u.email.toLowerCase() === data.email.toLowerCase()) ||
@@ -483,9 +498,17 @@ export const useAuthStore = create<AuthState>()(
 
       removeStaff: (userId) => {
         const state = get();
-        if (state.user?.id === userId) return { success: false, error: "Cannot remove your own account." };
-        const idx = state.dynamicStaff.findIndex((u) => u.id === userId);
-        if (idx === -1) return { success: false, error: "User not found or cannot be removed." };
+        const currentUser = state.user;
+        if (currentUser?.id === userId) return { success: false, error: "Cannot remove your own account." };
+        
+        const staffToRemove = state.dynamicStaff.find((u) => u.id === userId);
+        if (!staffToRemove) return { success: false, error: "User not found or cannot be removed." };
+        
+        // Branch managers can only remove staff from their own branch
+        if (currentUser?.role === "branch_manager" && staffToRemove.branchId !== currentUser.branchId) {
+          return { success: false, error: "You can only remove staff from your assigned branch." };
+        }
+        
         set((s) => ({ dynamicStaff: s.dynamicStaff.filter((u) => u.id !== userId) }));
         return { success: true };
       },

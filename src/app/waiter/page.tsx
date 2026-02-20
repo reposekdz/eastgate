@@ -1,6 +1,7 @@
 "use client";
 
-export const dynamic = "force-dynamic";
+import { useState, useEffect } from "react";
+import { RefreshCw } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,40 +34,66 @@ import Link from "next/link";
 export default function WaiterDashboard() {
   const { user } = useAuthStore();
   const { t, isRw } = useI18n();
-  const {
-    getOrders,
-    getTables,
-    getBookings,
-    getServiceRequests,
-  } = useBranchStore();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const userRole = user?.role || "waiter";
   const branchId = user?.branchId || "br-001";
 
-  const orders = getOrders(branchId, userRole);
-  const tables = getTables(branchId, userRole);
-  const bookings = getBookings(branchId, userRole);
-  const serviceRequests = getServiceRequests(branchId, userRole);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const res = await fetch(`/api/waiter/dashboard?branchId=${branchId}&waiterId=${user?.id}`);
+        const result = await res.json();
+        setData(result);
+      } catch (error) {
+        console.error("Failed to load waiter dashboard", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (branchId) {
+      loadData();
+      const interval = setInterval(loadData, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [branchId, user?.id]);
+
+  const orders = data?.orders || [];
+  const myOrders = data?.myOrders || [];
+  const services = data?.services || [];
+  const metrics = data?.metrics || {};
+  const tables: any[] = [];
+  const bookings: any[] = [];
+  const serviceRequests = services;
 
   // Stats
-  const pendingOrders = orders.filter((o) => o.status === "pending").length;
-  const preparingOrders = orders.filter((o) => o.status === "preparing").length;
-  const readyOrders = orders.filter((o) => o.status === "ready").length;
-  const activeOrders = orders.filter((o) => o.status !== "served").length;
-  const todayRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+  const pendingOrders = metrics.pending || 0;
+  const preparingOrders = metrics.preparing || 0;
+  const readyOrders = metrics.ready || 0;
+  const activeOrders = metrics.totalOrders || 0;
+  const todayRevenue = metrics.myRevenue || 0;
 
   const occupiedTables = tables.filter((t) => t.status === "occupied").length;
   const availableTables = tables.filter((t) => t.status === "available").length;
   const reservedTables = tables.filter((t) => t.status === "reserved").length;
 
   const pendingServices = serviceRequests.filter(
-    (sr) => sr.status === "pending"
+    (sr: any) => sr.status === "pending"
   ).length;
   const todayBookings = bookings.filter(
     (b) => b.status === "checked_in"
   ).length;
 
-  const liveOrders = orders.filter((o) => o.status !== "served").slice(0, 5);
+  const liveOrders = orders.filter((o: any) => o.status !== "SERVED" && o.status !== "COMPLETED").slice(0, 5);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <RefreshCw className="h-8 w-8 animate-spin text-emerald" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -127,7 +154,7 @@ export default function WaiterDashboard() {
                 <Flame className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-lg font-bold">{orders.filter((o) => o.status === "served").length}</p>
+                <p className="text-lg font-bold">{orders.filter((o: any) => o.status === "served").length}</p>
                 <p className="text-[11px] text-white/80">{t("dashboard", "completedToday")}</p>
               </div>
             </div>
@@ -145,7 +172,7 @@ export default function WaiterDashboard() {
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-lg font-bold">{orders.reduce((sum, o) => sum + o.items.length, 0)}</p>
+                <p className="text-lg font-bold">{orders.reduce((sum: number, o: any) => sum + o.items.length, 0)}</p>
                 <p className="text-[11px] text-white/80">{t("dashboard", "itemsServed")}</p>
               </div>
             </div>
@@ -257,7 +284,7 @@ export default function WaiterDashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {liveOrders.map((order) => (
+            {liveOrders.map((order: any) => (
               <div
                 key={order.id}
                 className="flex items-center justify-between p-3 rounded-xl border hover:border-amber-300 transition-colors"
@@ -293,7 +320,7 @@ export default function WaiterDashboard() {
                     </div>
                     <p className="text-xs text-text-muted-custom mt-0.5">
                       {order.items
-                        .map((i) => `${i.quantity}x ${i.name}`)
+                        .map((i: any) => `${i.quantity}x ${i.name}`)
                         .join(", ")}
                     </p>
                   </div>

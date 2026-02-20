@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAppDataStore } from "@/lib/store/app-data-store";
+import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
 import { formatCurrency, formatPercentage } from "@/lib/format";
 import {
   DollarSign,
@@ -11,38 +10,29 @@ import {
   BarChart3,
   ArrowUpRight,
   ArrowDownRight,
+  Loader2,
 } from "lucide-react";
 
 export default function KpiCards() {
-  const { bookings, restaurantOrders, rooms } = useAppDataStore();
+  const { data, loading } = useAdminDashboard();
 
-  const kpi = useMemo(() => {
-    const totalBookingRevenue = bookings.reduce((s, b) => s + b.totalAmount, 0);
-    const totalOrderRevenue = restaurantOrders.reduce((s, o) => s + o.total, 0);
-    const totalRevenue = totalBookingRevenue + totalOrderRevenue;
-    const totalRooms = rooms.length;
-    const occupiedOrReserved = rooms.filter(
-      (r) => r.status === "occupied" || r.status === "reserved"
-    ).length;
-    const occupancyRate = totalRooms ? Math.round((occupiedOrReserved / totalRooms) * 100) : 0;
-    const roomNights = bookings.reduce((s, b) => {
-      const in_ = new Date(b.checkIn).getTime();
-      const out = new Date(b.checkOut).getTime();
-      return s + Math.max(0, Math.ceil((out - in_) / (24 * 60 * 60 * 1000)));
-    }, 0);
-    const adr = roomNights > 0 ? Math.round(totalBookingRevenue / roomNights) : 0;
-    const revpar = totalRooms > 0 ? Math.round(totalRevenue / totalRooms) : 0;
-    return {
-      totalRevenue,
-      revenueChange: 0,
-      occupancyRate,
-      occupancyChange: 0,
-      adr,
-      adrChange: 0,
-      revpar,
-      revparChange: 0,
-    };
-  }, [bookings, restaurantOrders, rooms]);
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="py-4 shadow-xs border-transparent">
+            <CardContent className="px-5 flex items-center justify-center h-32">
+              <Loader2 className="h-6 w-6 animate-spin text-emerald" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const kpi = data.kpi;
 
   const kpis = [
     {

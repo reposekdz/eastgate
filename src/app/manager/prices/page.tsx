@@ -361,19 +361,9 @@ export default function PriceManagementPage() {
                             {formatCurrency(item.price)}
                           </TableCell>
                           <TableCell className="text-center">
-                            {item.status === "AVAILABLE" ? (
-                              <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">
-                                {isRw ? "Ibanze" : "Available"}
-                              </Badge>
-                            ) : item.status === "OCCUPIED" ? (
-                              <Badge className="bg-amber-100 text-amber-700 text-[10px]">
-                                {isRw ? "Ikoroshye" : "Occupied"}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-[10px]">
-                                {isRw ? "Gisanzwe" : "Default"}
-                              </Badge>
-                            )}
+                            <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">
+                              {isRw ? "Ibanze" : "Available"}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
@@ -424,15 +414,9 @@ export default function PriceManagementPage() {
                             {formatCurrency(item.price)}
                           </TableCell>
                           <TableCell className="text-center">
-                            {item.available ? (
-                              <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">
-                                {isRw ? "Ibanze" : "Available"}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-[10px]">
-                                {isRw ? "Utagaraguje" : "Unavailable"}
-                              </Badge>
-                            )}
+                            <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">
+                              {isRw ? "Ibanze" : "Available"}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button

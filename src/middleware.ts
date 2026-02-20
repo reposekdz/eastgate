@@ -1,40 +1,38 @@
-import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Protected route prefixes that require authentication
 const protectedPrefixes = ["/admin", "/manager", "/receptionist", "/waiter", "/kitchen", "/dashboard", "/profile"];
 
-export default auth((req) => {
+export function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  const session = req.auth;
+  const authCookie = req.cookies.get("eastgate-auth");
   const isProtected = protectedPrefixes.some((prefix) => nextUrl.pathname.startsWith(prefix));
 
-  // 1. If hitting change-password page, allow if authenticated
+  let session = null;
+  if (authCookie?.value) {
+    try {
+      session = JSON.parse(authCookie.value);
+    } catch {
+      session = null;
+    }
+  }
+
   if (nextUrl.pathname === "/change-password") {
-    if (!session) {
+    if (!session?.isAuthenticated) {
       return NextResponse.redirect(new URL("/login", nextUrl));
     }
     return NextResponse.next();
   }
 
-  // 2. If unprotected route, allow
   if (!isProtected) return NextResponse.next();
 
-  // 3. If protected but not authenticated, redirect to login
-  if (!session) {
+  if (!session?.isAuthenticated) {
     const loginUrl = new URL("/login", nextUrl);
     loginUrl.searchParams.set("redirect", nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // 4. Force password change if required
-  if (session.user?.mustChangePassword && nextUrl.pathname !== "/change-password") {
-    return NextResponse.redirect(new URL("/change-password", nextUrl));
-  }
-
-  // 5. Role-based access control
-  const role = session.user?.role;
+  const role = session.role;
   const routePermissions: Record<string, string[]> = {
     "/admin": ["super_admin", "super_manager"],
     "/manager": ["super_admin", "super_manager", "branch_manager"],
@@ -55,9 +53,8 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-  runtime: 'nodejs',
 };

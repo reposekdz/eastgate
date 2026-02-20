@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
   Timer,
   ArrowRight,
   Zap,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -31,16 +33,46 @@ function formatOrderTime(iso: string) {
 
 export default function KitchenDashboard() {
   const { user } = useAuthStore();
-  const { getOrders, getNotifications } = useBranchStore();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const branchId = user?.branchId || "br-001";
   const userRole = user?.role || "kitchen_staff";
-  const orders = getOrders(branchId, userRole);
-  const notifications = getNotifications(branchId, userRole);
 
-  const pendingOrders = orders.filter((o) => o.status === "pending");
-  const preparingOrders = orders.filter((o) => o.status === "preparing");
-  const readyOrders = orders.filter((o) => o.status === "ready");
-  const unreadNotifs = notifications.filter((n) => !n.read);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const res = await fetch(`/api/kitchen/dashboard?branchId=${branchId}`);
+        const result = await res.json();
+        setData(result);
+      } catch (error) {
+        console.error("Failed to load kitchen dashboard", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (branchId) {
+      loadData();
+      const interval = setInterval(loadData, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [branchId]);
+
+  const orders = data?.orders || [];
+  const metrics = data?.metrics || {};
+  const notifications: any[] = [];
+
+  const pendingOrders = orders.filter((o: any) => o.status === "PENDING");
+  const preparingOrders = orders.filter((o: any) => o.status === "PREPARING");
+  const readyOrders = orders.filter((o: any) => o.status === "READY");
+  const unreadNotifs = notifications.filter((n: any) => !n.read);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <RefreshCw className="h-8 w-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -130,7 +162,7 @@ export default function KitchenDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          {orders.filter((o) => o.status !== "served").length === 0 ? (
+          {orders.filter((o: any) => o.status !== "served").length === 0 ? (
             <div className="py-8 text-center text-text-muted-custom">
               <ChefHat className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p className="font-medium">No active orders</p>
@@ -139,21 +171,21 @@ export default function KitchenDashboard() {
           ) : (
             <div className="space-y-3">
               {orders
-                .filter((o) => o.status !== "served")
+                .filter((o: any) => o.status !== "SERVED" && o.status !== "COMPLETED")
                 .slice(0, 5)
-                .map((order) => (
+                .map((order: any) => (
                   <div
                     key={order.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-pearl/50 border border-border"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="font-mono font-semibold text-charcoal">{order.id}</div>
+                      <div className="font-mono font-semibold text-charcoal">{order.orderNumber}</div>
                       <Badge
                         variant="secondary"
                         className={
-                          order.status === "pending"
+                          order.status === "PENDING"
                             ? "bg-orange-100 text-orange-700"
-                            : order.status === "preparing"
+                            : order.status === "PREPARING"
                               ? "bg-blue-100 text-blue-700"
                               : "bg-emerald-100 text-emerald-700"
                         }

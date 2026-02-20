@@ -11,22 +11,28 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useBranchStore } from "@/lib/store/branch-store";
-import { useAuthStore } from "@/lib/store/auth-store";
+import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
 import { formatCurrency, formatDate, getRoomTypeLabel } from "@/lib/format";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import BookingStatusBadge from "@/components/admin/shared/BookingStatusBadge";
 
 export default function RecentBookings() {
-  const { user } = useAuthStore();
-  const getBookings = useBranchStore((s) => s.getBookings);
-  const branchId = user?.branchId || "all";
-  const userRole = user?.role || "super_admin";
-  const allBookings = getBookings(branchId, userRole);
-  const recentBookings = [...allBookings]
-    .sort((a, b) => new Date(b.checkIn).getTime() - new Date(a.checkIn).getTime())
-    .slice(0, 5);
+  const { data, loading } = useAdminDashboard();
+
+  if (loading) {
+    return (
+      <Card className="py-4 shadow-xs border-transparent">
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!data) return null;
+
+  const recentBookings = data.recentBookings.slice(0, 5);
 
   return (
     <Card className="py-4 shadow-xs border-transparent">

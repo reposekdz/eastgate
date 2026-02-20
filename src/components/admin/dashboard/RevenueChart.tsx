@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -18,9 +17,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { useAppDataStore } from "@/lib/store/app-data-store";
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
+import { Loader2 } from "lucide-react";
 
 const CustomTooltip = ({
   active,
@@ -54,42 +52,30 @@ const CustomTooltip = ({
 };
 
 export default function RevenueChart() {
-  const { bookings, restaurantOrders } = useAppDataStore();
+  const { data, loading } = useAdminDashboard();
 
-  const chartData = useMemo(() => {
-    const byMonth: Record<
-      number,
-      { month: string; rooms: number; restaurant: number; events: number; spa: number; services: number }
-    > = {};
-    MONTHS.forEach((m, i) => {
-      byMonth[i] = {
-        month: m,
-        rooms: 0,
-        restaurant: 0,
-        events: 0,
-        spa: 0,
-        services: 0,
-      };
-    });
-    bookings.forEach((b) => {
-      const monthIdx = new Date(b.checkIn).getMonth();
-      if (byMonth[monthIdx]) byMonth[monthIdx].rooms += b.totalAmount;
-    });
-    restaurantOrders.forEach((o) => {
-      const monthIdx = new Date(o.createdAt).getMonth();
-      if (byMonth[monthIdx]) byMonth[monthIdx].restaurant += o.total;
-    });
-    return Object.values(byMonth);
-  }, [bookings, restaurantOrders]);
+  if (loading) {
+    return (
+      <Card className="py-4 shadow-xs border-transparent">
+        <CardContent className="flex items-center justify-center h-[350px]">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!data) return null;
+
+  const chartData = data.revenueData;
 
   return (
     <Card className="py-4 shadow-xs border-transparent">
       <CardHeader className="px-5 pb-0">
         <CardTitle className="text-sm font-semibold text-charcoal">
-          Revenue Overview (real data)
+          Revenue Overview
         </CardTitle>
         <CardDescription className="text-xs text-text-muted-custom">
-          Revenue from bookings and restaurant orders
+          Multi-stream revenue from database
         </CardDescription>
       </CardHeader>
       <CardContent className="px-5 pt-4">

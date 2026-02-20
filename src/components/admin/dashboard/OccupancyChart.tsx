@@ -1,41 +1,33 @@
 "use client";
 
-import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { useAppDataStore } from "@/lib/store/app-data-store";
-
-const STATUS_COLORS: Record<string, string> = {
-  occupied: "#0B6E4F",
-  reserved: "#8B5CF6",
-  available: "#10B981",
-  cleaning: "#F59E0B",
-  maintenance: "#EF4444",
-};
+import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
+import { Loader2 } from "lucide-react";
 
 export default function OccupancyChart() {
-  const rooms = useAppDataStore((s) => s.rooms);
+  const { data, loading } = useAdminDashboard();
 
-  const occupancyData = useMemo(() => {
-    const byStatus: Record<string, number> = {};
-    rooms.forEach((r) => {
-      byStatus[r.status] = (byStatus[r.status] || 0) + 1;
-    });
-    const total = rooms.length;
-    return Object.entries(byStatus).map(([statusKey, count]) => ({
-      name: statusKey.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      value: total ? Math.round((count / total) * 100) : 0,
-      color: STATUS_COLORS[statusKey] || "#6B7280",
-    }));
-  }, [rooms]);
+  if (loading) {
+    return (
+      <Card className="py-4 shadow-xs border-transparent">
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald" />
+        </CardContent>
+      </Card>
+    );
+  }
 
+  if (!data) return null;
+
+  const occupancyData = data.occupancyData;
   const total = occupancyData.reduce((sum, d) => sum + d.value, 0);
 
   return (
     <Card className="py-4 shadow-xs border-transparent">
       <CardHeader className="px-5 pb-0">
         <CardTitle className="text-sm font-semibold text-charcoal">
-          Room Status (real data)
+          Room Status
         </CardTitle>
       </CardHeader>
       <CardContent className="px-5 pt-2">
@@ -57,7 +49,7 @@ export default function OccupancyChart() {
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number) => [`${value}%`, ""]}
+                formatter={(value: number | undefined) => [`${value || 0}%`, ""]}
                 contentStyle={{
                   borderRadius: "8px",
                   border: "1px solid #E5E7EB",

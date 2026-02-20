@@ -203,6 +203,35 @@ export const events: HotelEvent[] = [
   { id: "ev-005", name: "Private Wine Tasting", type: "private_dining", date: "2026-02-14", startTime: "18:00", endTime: "21:00", hall: "VIP Dining Room", capacity: 30, attendees: 24, status: "completed", totalAmount: 4160000, organizer: "Laurent Estate" },
 ];
 
+// ─── Payments ────────────────────────────────────────────
+export interface Payment {
+  id: string;
+  bookingId?: string;
+  orderId?: string;
+  amount: number;
+  method: 'cash' | 'visa' | 'mastercard' | 'stripe' | 'paypal' | 'mtn_mobile' | 'airtel_money' | 'bank_transfer';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
+  transactionId?: string;
+  guestName: string;
+  date: string;
+  branchId: string;
+  processedBy: string;
+  receiptUrl?: string;
+}
+
+export const payments: Payment[] = [
+  { id: 'PAY-001', bookingId: 'BK-2024001', amount: 1300000, method: 'visa', status: 'completed', transactionId: 'VI-20240212-001', guestName: 'Sarah Mitchell', date: '2026-02-10T14:30:00', branchId: 'br-001', processedBy: 'Grace Uwase' },
+  { id: 'PAY-002', bookingId: 'BK-2024002', amount: 2340000, method: 'mastercard', status: 'completed', transactionId: 'MC-20240212-002', guestName: 'James Okafor', date: '2026-02-11T10:15:00', branchId: 'br-001', processedBy: 'Grace Uwase' },
+  { id: 'PAY-003', bookingId: 'BK-2024003', amount: 1300000, method: 'stripe', status: 'completed', transactionId: 'ST-20240212-003', guestName: 'Amara Chen', date: '2026-02-09T16:45:00', branchId: 'br-001', processedBy: 'Emmanuel Ndayisaba' },
+  { id: 'PAY-004', bookingId: 'BK-2024004', amount: 7735000, method: 'visa', status: 'completed', transactionId: 'VI-20240212-004', guestName: 'Victoria Laurent', date: '2026-02-10T11:20:00', branchId: 'br-001', processedBy: 'Grace Uwase' },
+  { id: 'PAY-005', bookingId: 'BK-2024005', amount: 832000, method: 'mtn_mobile', status: 'completed', transactionId: 'MTN-20240212-005', guestName: 'Mohammed Al-Rashid', date: '2026-02-12T09:30:00', branchId: 'br-001', processedBy: 'Grace Uwase' },
+  { id: 'PAY-006', bookingId: 'BK-2024005', amount: 832000, method: 'mtn_mobile', status: 'pending', guestName: 'Mohammed Al-Rashid', date: '2026-02-12T09:35:00', branchId: 'br-001', processedBy: 'Grace Uwase' },
+  { id: 'PAY-007', orderId: 'ORD-001', amount: 59800, method: 'cash', status: 'completed', guestName: 'Sarah Mitchell', date: '2026-02-12T13:15:00', branchId: 'br-001', processedBy: 'Patrick Bizimana' },
+  { id: 'PAY-008', orderId: 'ORD-002', amount: 26000, method: 'cash', status: 'completed', guestName: 'Walk-in Guest', date: '2026-02-12T12:45:00', branchId: 'br-001', processedBy: 'Fabrice Nkurunziza' },
+  { id: 'PAY-009', bookingId: 'BK-2024008', amount: 650000, method: 'visa', status: 'completed', transactionId: 'VI-20240212-009', guestName: 'Ingrid Johansson', date: '2026-02-12T11:00:00', branchId: 'br-001', processedBy: 'Emmanuel Ndayisaba' },
+  { id: 'PAY-010', bookingId: 'BK-2024009', amount: 468000, method: 'cash', status: 'completed', guestName: 'Carlos Mendoza', date: '2026-02-10T10:30:00', branchId: 'br-001', processedBy: 'Grace Uwase' },
+];
+
 // ─── Financial Data ──────────────────────────────────────
 export const expenseData = [
   { category: "Staff Salaries", amount: 240500000, percentage: 38 },

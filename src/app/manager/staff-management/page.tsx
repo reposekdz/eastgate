@@ -20,6 +20,7 @@ const roleColors: Record<string, string> = {
   waiter: "bg-emerald",
   kitchen_staff: "bg-orange-500",
   housekeeping: "bg-purple-500",
+  restaurant_staff: "bg-teal-500",
   branch_manager: "bg-indigo-500",
 };
 
@@ -28,10 +29,13 @@ export default function StaffManagementPage() {
   const branchId = user?.branchId || "";
   const branchName = user?.branchName || "";
   const isBranchManager = user?.role === "branch_manager";
-  const canAddBranchWorkers = isBranchManager || hasAccess(["super_admin", "super_manager"]);
-  const canRemoveStaff = isBranchManager || hasAccess(["super_admin", "super_manager"]);
+  const isSuperUser = hasAccess(["super_admin", "super_manager"]);
+  const canAddBranchWorkers = isBranchManager || isSuperUser;
+  const canRemoveStaff = isBranchManager || isSuperUser;
 
-  const allStaff = getAllStaff(branchId === "all" ? branchId : branchId, true);
+  // Branch managers see only their branch staff; super users see all or selected branch
+  const staffBranchFilter = isBranchManager ? branchId : (branchId === "all" ? "all" : branchId);
+  const allStaff = getAllStaff(staffBranchFilter, true);
   const staffList = allStaff.map(({ user: u, isDynamic, mustChangeCredentials }) => ({
     id: u.id,
     name: u.name,
@@ -39,6 +43,8 @@ export default function StaffManagementPage() {
     role: u.role,
     avatar: u.avatar,
     phone: u.phone,
+    branchId: u.branchId,
+    branchName: u.branchName,
     isDynamic,
     mustChangeCredentials,
   }));
@@ -78,8 +84,12 @@ export default function StaffManagementPage() {
       toast.error("Password must be at least 6 characters.");
       return;
     }
-    if (branchId === "all") {
-      toast.error("Select a branch first (Super Manager can add from Admin Staff Management).");
+    if (branchId === "all" && isBranchManager) {
+      toast.error("Branch managers must be assigned to a specific branch.");
+      return;
+    }
+    if (branchId === "all" && !isSuperUser) {
+      toast.error("Select a branch first.");
       return;
     }
     const result = addStaff({
@@ -121,7 +131,7 @@ export default function StaffManagementPage() {
                 <Users className="h-8 w-8" />
                 Staff Management
               </h1>
-              <p className="text-white/70">Manage {branchName} · Assign credentials; staff must change them on first login</p>
+              <p className="text-white/70">Manage {branchName} staff · {isBranchManager ? "Add receptionists, waiters, kitchen staff & housekeeping" : "Assign credentials; staff must change them on first login"}</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="relative flex-1 max-w-xs">
@@ -143,6 +153,7 @@ export default function StaffManagementPage() {
                   <SelectItem value="waiter">Waiter</SelectItem>
                   <SelectItem value="kitchen_staff">Kitchen Staff</SelectItem>
                   <SelectItem value="housekeeping">Housekeeping</SelectItem>
+                  <SelectItem value="restaurant_staff">Restaurant Staff</SelectItem>
                   <SelectItem value="branch_manager">Branch Manager</SelectItem>
                 </SelectContent>
               </Select>
@@ -186,6 +197,8 @@ export default function StaffManagementPage() {
                               <SelectItem value="receptionist">Receptionist</SelectItem>
                               <SelectItem value="waiter">Waiter</SelectItem>
                               <SelectItem value="kitchen_staff">Kitchen Staff</SelectItem>
+                              <SelectItem value="housekeeping">Housekeeping</SelectItem>
+                              <SelectItem value="restaurant_staff">Restaurant Staff</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -243,8 +256,14 @@ export default function StaffManagementPage() {
           </Card>
           <Card className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 border-purple-500/30">
             <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-charcoal">{staffList.filter((s) => s.role === "housekeeping").length}</p>
+              <p className="text-xs text-text-muted-custom">Housekeeping</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-gray-500/20 to-gray-600/10 border-gray-500/30">
+            <CardContent className="p-4 text-center">
               <p className="text-3xl font-bold text-charcoal">{staffList.length}</p>
-              <p className="text-xs text-text-muted-custom">Total Branch Staff</p>
+              <p className="text-xs text-text-muted-custom">Total Staff</p>
             </CardContent>
           </Card>
         </div>
