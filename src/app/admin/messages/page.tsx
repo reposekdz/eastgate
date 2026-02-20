@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useI18n } from "@/lib/i18n/context";
 import {
     MessageCircle,
     Search,
@@ -48,6 +49,7 @@ interface MessageStats {
 
 export default function MessagesPage() {
     const router = useRouter();
+    const { t, isRw } = useI18n();
     const [messages, setMessages] = useState<Message[]>([]);
     const [stats, setStats] = useState<MessageStats>({ total: 0, unread: 0, starred: 0 });
     const [loading, setLoading] = useState(true);
@@ -420,8 +422,8 @@ function MessagesList({
                     <div
                         key={msg.id}
                         className={`flex items-start gap-4 p-4 rounded-lg border transition-colors ${!msg.read
-                                ? "bg-emerald/5 border-emerald/20"
-                                : "bg-white border-border hover:bg-pearl/50"
+                            ? "bg-emerald/5 border-emerald/20"
+                            : "bg-white border-border hover:bg-pearl/50"
                             }`}
                     >
                         <Checkbox
