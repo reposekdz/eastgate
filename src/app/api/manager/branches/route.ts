@@ -7,7 +7,7 @@ import { isSuperAdmin } from "@/lib/auth";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession();
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     // Build query based on role
     let branches: any[];
-    
+
     if (!isSuperAdmin(userRole)) {
       // Non-super admins can only see their branch
       branches = await prisma.$queryRaw`
@@ -49,10 +49,10 @@ export async function GET(req: NextRequest) {
       })
     );
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       branches: branchesWithStaff,
-      count: branchesWithStaff.length 
+      count: branchesWithStaff.length
     });
   } catch (error) {
     console.error("Error fetching branches:", error);
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession();
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -109,8 +109,8 @@ export async function POST(req: NextRequest) {
       )
     `;
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Branch created successfully",
       branchId
     });
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession();
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -172,8 +172,8 @@ export async function PUT(req: NextRequest) {
       await prisma.$executeRaw`UPDATE branches SET is_active = ${isActive}, updated_at = NOW() WHERE id = ${id}`;
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Branch updated successfully"
     });
   } catch (error) {
@@ -186,7 +186,7 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession();
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -220,8 +220,8 @@ export async function DELETE(req: NextRequest) {
     ` as any[];
 
     if (staffCount[0]?.count > 0) {
-      return NextResponse.json({ 
-        error: "Cannot delete branch with active staff. Please reassign staff first." 
+      return NextResponse.json({
+        error: "Cannot delete branch with active staff. Please reassign staff first."
       }, { status: 400 });
     }
 
@@ -230,8 +230,8 @@ export async function DELETE(req: NextRequest) {
       DELETE FROM branches WHERE id = ${id}
     `;
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Branch deleted successfully"
     });
   } catch (error) {

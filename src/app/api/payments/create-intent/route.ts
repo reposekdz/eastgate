@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-    apiVersion: "2025-01-27.acacia",
-});
+// Lazy load Stripe to avoid build-time initialization errors
+const getStripe = async () => {
+    const { default: Stripe } = await import("stripe");
+    const apiKey = process.env.STRIPE_SECRET_KEY;
+    if (!apiKey) {
+        return null;
+    }
+    return new Stripe(apiKey, {
+        apiVersion: "2025-01-27.acacia",
+    });
+};
 
 export async function POST(req: NextRequest) {
     try {
+        const stripe = await getStripe();
+        if (!stripe) {
+            return NextResponse.json(
+                { error: "Payment provider not configured" },
+                { status: 503 }
+            );
+        }
+
         const body = await req.json();
         const { amount, currency = "rwf", customerEmail, description, metadata } = body;
 
@@ -45,6 +60,14 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     try {
+        const stripe = await getStripe();
+        if (!stripe) {
+            return NextResponse.json(
+                { error: "Payment provider not configured" },
+                { status: 503 }
+            );
+        }
+
         const { searchParams } = new URL(req.url);
         const paymentIntentId = searchParams.get("paymentIntentId");
 

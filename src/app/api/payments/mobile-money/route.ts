@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 // Simulated mobile money payment processing
 // In production, this would integrate with MTN/Airtel APIs
