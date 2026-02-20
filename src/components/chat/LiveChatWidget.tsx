@@ -75,6 +75,26 @@ export default function LiveChatWidget() {
   const [onlineUsers] = useState(3);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Save message to database
+  const saveMessageToDB = async (msg: { sender: string; senderName: string; senderEmail?: string; senderPhone?: string; message: string; branchId?: string }) => {
+    try {
+      await fetch("/api/public/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender: msg.sender,
+          senderName: msg.senderName,
+          senderEmail: msg.senderEmail || "guest@eastgate.rw",
+          senderPhone: msg.senderPhone || "",
+          message: msg.message,
+          branchId: msg.branchId || "main-branch",
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to save message to database:", error);
+    }
+  };
+
   // Initialize greeting message based on locale
   useEffect(() => {
     setMessages([{
@@ -89,6 +109,67 @@ export default function LiveChatWidget() {
       status: "seen",
     }]);
   }, [isRw]);
+
+  // Quick reply buttons
+  const quickReplies = isRw ? [
+    { label: "🛏️ Ibyumba", value: "rooms" },
+    { label: "🍽️ Ibiryo", value: "restaurant" },
+    { label: "💆 Spa", value: "spa" },
+    { label: "📅 Ibirori", value: "events" },
+  ] : [
+    { label: "🛏️ Rooms", value: "rooms" },
+    { label: "🍽️ Dining", value: "restaurant" },
+    { label: "💆 Spa", value: "spa" },
+    { label: "📅 Events", value: "events" },
+  ];
+
+  const handleQuickReply = (value: string) => {
+    const quickMessages: Record<string, string> = {
+      rooms: isRw ? "Ndashaka ibyumba!" : "I'm interested in rooms!",
+      restaurant: isRw ? "Ndashaka ibiryo!" : "I'd like to know about dining!",
+      spa: isRw ? "Ndashaka spa!" : "Tell me about the spa!",
+      events: isRw ? "Ndashaka ibirori!" : "I want to know about events!",
+    };
+    const message = quickMessages[value] || "";
+    if (!message) return;
+
+    const userMsg: ChatMsg = {
+      id: `user-${Date.now()}`,
+      sender: "guest",
+      name: isRw ? "Wowe" : "You",
+      avatar: "",
+      message: message,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      status: "sent",
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+
+    // Save guest message to database
+    saveMessageToDB({
+      sender: "guest",
+      senderName: isRw ? "Umugenzi" : "Guest",
+      message: message,
+    });
+
+    setInput("");
+    setIsTyping(true);
+
+    setTimeout(() => {
+      setIsTyping(false);
+      const botReply = getAutoReply(message);
+      const botMsg: ChatMsg = {
+        id: `bot-${Date.now()}`,
+        sender: "bot",
+        name: "EastGate Concierge",
+        avatar: "https://i.pravatar.cc/40?u=eastgate-bot",
+        message: botReply,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "seen",
+      };
+      setMessages((prev) => [...prev, botMsg]);
+    }, 1000 + Math.random() * 1000);
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -121,6 +202,13 @@ export default function LiveChatWidget() {
     setMessages((prev) => [...prev, userMsg]);
     const userText = input.trim();
     setInput("");
+
+    // Save guest message to database
+    saveMessageToDB({
+      sender: "guest",
+      senderName: isRw ? "Umugenzi" : "Guest",
+      message: userText,
+    });
 
     // Mark as delivered after 300ms
     setTimeout(() => {
@@ -226,7 +314,7 @@ export default function LiveChatWidget() {
             style={{ maxHeight: isMinimized ? "auto" : "min(600px, calc(100vh - 140px))" }}
           >
             {/* Chat Header */}
-            <div className="bg-gradient-to-r from-emerald to-emerald-dark px-4 py-3 text-white shrink-0">
+            <div className="bg-gradient-to-r from-emerald to-emerald-dark px-4 py-3 text-white shrink-0 sticky top-0 z-10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9 border-2 border-white/20">
@@ -278,6 +366,27 @@ export default function LiveChatWidget() {
                       <div className="h-px flex-1 bg-border" />
                     </div>
 
+                    {/* Quick Reply Buttons */}
+                    {messages.length <= 1 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-wrap gap-2 justify-center"
+                      >
+                        {quickReplies.map((reply) => (
+                          <Button
+                            key={reply.value}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuickReply(reply.value)}
+                            className="text-xs border-emerald/50 text-emerald hover:bg-emerald hover:text-white"
+                          >
+                            {reply.label}
+                          </Button>
+                        ))}
+                      </motion.div>
+                    )}
+
                     {messages.map((msg) => (
                       <div
                         key={msg.id}
@@ -292,8 +401,8 @@ export default function LiveChatWidget() {
                         <div className={`max-w-[75%] ${msg.sender === "guest" ? "text-right" : ""}`}>
                           <div
                             className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${msg.sender === "guest"
-                                ? "bg-emerald text-white rounded-br-sm"
-                                : "bg-pearl/80 text-charcoal rounded-bl-sm"
+                              ? "bg-emerald text-white rounded-br-sm"
+                              : "bg-pearl/80 text-charcoal rounded-bl-sm"
                               }`}
                           >
                             {msg.message}

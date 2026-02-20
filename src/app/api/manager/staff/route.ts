@@ -8,7 +8,7 @@ import { ROLE_PERMISSIONS, isSuperAdmin, isManager } from "@/lib/auth";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession();
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
     // Build query
     let where: any = {};
-    
+
     // Non-super admins can only see their branch
     if (!isSuperAdmin(userRole) && branchId) {
       where.branchId = branchId;
@@ -59,10 +59,10 @@ export async function GET(req: NextRequest) {
       ORDER BY created_at DESC
     ` as any[];
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       staff,
-      count: staff.length 
+      count: staff.length
     });
   } catch (error) {
     console.error("Error fetching staff:", error);
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession();
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -133,8 +133,8 @@ export async function POST(req: NextRequest) {
       )
     `;
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Staff member created successfully",
       staffId: crypto.randomUUID()
     });
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession();
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -194,7 +194,7 @@ export async function PUT(req: NextRequest) {
     if (shift !== undefined) { updates.push("shift = ?"); values.push(shift); }
     if (status) { updates.push("status = ?"); values.push(status); }
     if (branchId && isSuperAdmin(userRole)) { updates.push("branch_id = ?"); values.push(branchId); }
-    
+
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
       updates.push("password = ?");
@@ -215,8 +215,8 @@ export async function PUT(req: NextRequest) {
       WHERE id = ${id}
     `;
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Staff member updated successfully"
     });
   } catch (error) {
@@ -229,7 +229,7 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession();
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -244,6 +244,32 @@ export async function DELETE(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const branchId = searchParams.get("branchId");
+    const deleteAll = searchParams.get("deleteAll");
+
+    // Delete all staff from a branch
+    if (deleteAll === "true" && branchId) {
+      // Check if there are staff in this branch
+      const existingStaff = await prisma.$queryRaw`
+        SELECT COUNT(*) as count FROM staff WHERE branch_id = ${branchId}
+      ` as any[];
+
+      const count = Number(existingStaff[0]?.count || 0);
+
+      if (count === 0) {
+        return NextResponse.json({ error: "No staff members found in this branch" }, { status: 404 });
+      }
+
+      // Delete all staff from branch (except super admin)
+      await prisma.$executeRaw`
+        DELETE FROM staff WHERE branch_id = ${branchId} AND role != 'SUPER_ADMIN'
+      `;
+
+      return NextResponse.json({
+        success: true,
+        message: `Successfully deleted ${count} staff members from branch`
+      });
+    }
 
     if (!id) {
       return NextResponse.json({ error: "Staff ID is required" }, { status: 400 });
@@ -263,8 +289,8 @@ export async function DELETE(req: NextRequest) {
       DELETE FROM staff WHERE id = ${id}
     `;
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Staff member deleted successfully"
     });
   } catch (error) {

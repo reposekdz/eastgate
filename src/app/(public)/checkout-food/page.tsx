@@ -44,6 +44,7 @@ import {
   Percent,
   Gift,
   Truck,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -222,7 +223,7 @@ export default function CheckoutFoodPage() {
 
     setProcessing(false);
     setStep(3);
-    
+
     toast.success("Order placed successfully!");
   };
 
@@ -320,7 +321,7 @@ export default function CheckoutFoodPage() {
               >
                 <Check className="h-10 w-10 text-white" />
               </motion.div>
-              
+
               <h1 className="text-3xl font-heading font-bold text-charcoal mb-2">
                 Order Confirmed!
               </h1>
@@ -393,6 +394,58 @@ export default function CheckoutFoodPage() {
                   </Link>
                 </Button>
                 <Button
+                  onClick={() => {
+                    const orderNumber = `ORD-${Date.now()}`;
+                    const receiptContent = `
+══════════════════════════════════════════════════════════
+                    EASTGATE HOTEL RWANDA
+                 Food Order Confirmation Receipt
+══════════════════════════════════════════════════════════
+
+Order Number: ${orderNumber}
+Date: ${new Date().toLocaleDateString()}
+Time: ${new Date().toLocaleTimeString()}
+
+──────────────────────────────────────────────────────────
+ORDER DETAILS
+──────────────────────────────────────────────────────────
+${cart.map(c => `${c.item.name} x${c.quantity} - ${formatWithCurrency(c.item.price * c.quantity, currency.code)}`).join('\n')}
+
+──────────────────────────────────────────────────────────
+PAYMENT SUMMARY
+──────────────────────────────────────────────────────────
+Subtotal: ${formatWithCurrency(subtotal, currency.code)}
+Service Fee: ${formatWithCurrency(serviceFee, currency.code)}
+${deliveryFee > 0 ? `Delivery Fee: ${formatWithCurrency(deliveryFee, currency.code)}
+` : ''}${discountAmount > 0 ? `Discount: -${formatWithCurrency(discountAmount, currency.code)}
+` : ''}
+Total: ${formatWithCurrency(total, currency.code)}
+
+Payment Method: ${paymentMethod}
+
+══════════════════════════════════════════════════════════
+     Thank you for choosing Eastgate Hotel!
+        Tel: +250 788 123 456
+           orders@eastgate.com
+══════════════════════════════════════════════════════════
+`;
+                    const blob = new Blob([receiptContent], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `Eastgate-Order-${orderNumber}.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  }}
+                  variant="outline"
+                  className="w-full h-12 border-emerald text-emerald hover:bg-emerald hover:text-white"
+                >
+                  <Download size={18} className="mr-2" />
+                  Download Receipt
+                </Button>
+                <Button
                   asChild
                   variant="outline"
                   className="w-full h-12"
@@ -431,7 +484,7 @@ export default function CheckoutFoodPage() {
                 <p className="text-xs text-white/60">Complete your order</p>
               </div>
             </Link>
-            
+
             <Button
               asChild
               variant="ghost"

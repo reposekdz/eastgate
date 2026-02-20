@@ -188,7 +188,7 @@ export default function OrderFoodPage() {
               {filteredItems.map((item, idx) => {
                 const cartItem = items.find((i) => i.item.id === item.id);
                 const Icon = categoryIcons[item.category as keyof typeof categoryIcons];
-                
+
                 return (
                   <motion.div
                     key={item.id}
@@ -366,7 +366,7 @@ export default function OrderFoodPage() {
 
               {/* Cart Footer */}
               {items.length > 0 && (
-                <div className="p-4 border-t bg-gray-50 space-y-3">
+                <div className="p-4 border-t bg-gray-50 space-y-3 sticky bottom-0 z-10">
                   <div className="flex items-center justify-between text-lg font-bold">
                     <span className="text-charcoal">Total</span>
                     <span className="text-emerald">{formatCurrency(cartTotal)}</span>
@@ -393,6 +393,21 @@ export default function OrderFoodPage() {
           </>
         )}
       </AnimatePresence>
+
+      {/* Floating Checkout Button for Mobile */}
+      {cartItemCount > 0 && (
+        <div className="fixed bottom-20 left-0 right-0 z-40 p-4 md:hidden">
+          <Button
+            asChild
+            className="w-full bg-emerald hover:bg-emerald-dark text-white h-14 text-lg font-bold shadow-lg"
+          >
+            <Link href="/checkout-food">
+              <ShoppingCart className="h-5 w-5 mr-2" />
+              Checkout ({cartItemCount}) - {formatCurrency(cartTotal)}
+            </Link>
+          </Button>
+        </div>
+      )}
     </>
   );
 }

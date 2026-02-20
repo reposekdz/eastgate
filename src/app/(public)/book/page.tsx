@@ -70,6 +70,7 @@ import {
   Bed,
   Palmtree,
   Heart,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -916,6 +917,75 @@ export default function BookingPage() {
                       </p>
                     </div>
                   </div>
+
+                  <Button
+                    onClick={() => {
+                      // Generate receipt
+                      const receiptContent = `
+══════════════════════════════════════════════════════════
+                    EASTGATE HOTEL RWANDA
+               Booking Confirmation Receipt
+══════════════════════════════════════════════════════════
+
+Booking Reference: ${bookingRef}
+Date: ${new Date().toLocaleDateString()}
+
+──────────────────────────────────────────────────────────
+GUEST INFORMATION
+──────────────────────────────────────────────────────────
+Name: ${guestName}
+Email: ${guestEmail}
+Phone: ${guestPhone}
+
+──────────────────────────────────────────────────────────
+BOOKING DETAILS
+──────────────────────────────────────────────────────────
+Branch: ${selectedBranch?.name}
+Room Type: ${selectedRoom ? getRoomLabel(selectedRoom.value) : ""}
+Check-in: ${checkIn ? format(checkIn, "PPP") : ""}
+Check-out: ${checkOut ? format(checkOut, "PPP") : ""}
+Adults: ${adults}
+Children: ${children}
+
+──────────────────────────────────────────────────────────
+PAYMENT INFORMATION
+──────────────────────────────────────────────────────────
+Payment Method: ${paymentMethod}
+Total Paid: ${formatCurrency(totalAmount)}
+
+${selectedAddOns.length > 0 ? `
+──────────────────────────────────────────────────────────
+ADD-ONS
+──────────────────────────────────────────────────────────
+${selectedAddOns.map((id) => getAddonLabel(id)).join("\n")}
+` : ""}
+
+══════════════════════════════════════════════════════════
+     Thank you for choosing Eastgate Hotel!
+        Tel: +250 788 123 456
+           info@eastgate.com
+══════════════════════════════════════════════════════════
+`;
+
+                      // Create and download receipt
+                      const blob = new Blob([receiptContent], { type: "text/plain" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `Eastgate-Receipt-${bookingRef}.txt`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+
+                      toast.success("Receipt downloaded successfully!");
+                    }}
+                    variant="outline"
+                    className="bg-white border-emerald text-emerald hover:bg-emerald hover:text-white px-6 gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    {t("booking", "downloadReceipt")}
+                  </Button>
 
                   <Button
                     onClick={() => {

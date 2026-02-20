@@ -182,6 +182,170 @@ async function main() {
     console.log("Waiter:       waiter@eastgate.com / waiter123");
     console.log("Kitchen:      kitchen@eastgate.com / kitchen123");
     console.log("========================================");
+
+    // Create sample messages from guests
+    console.log("\n💬 Creating sample messages...");
+    const sampleMessages = [
+        {
+            sender: "guest",
+            senderName: "John Smith",
+            senderEmail: "john.smith@email.com",
+            senderPhone: "+250 789 123 456",
+            message: "Hi, I'm interested in booking a deluxe room for 3 nights. Do you have availability next week?",
+            branchId: branch.id,
+            read: false,
+            starred: false,
+        },
+        {
+            sender: "guest",
+            senderName: "Marie Mukamana",
+            senderEmail: "marie.m@email.com",
+            senderPhone: "+250 788 987 654",
+            message: "Muraho! Ndashaka kumenya ibiciro by'ibyumba bitandukanye. Mugaragaze ikindi kiguzi?",
+            branchId: branch.id,
+            read: true,
+            starred: true,
+        },
+        {
+            sender: "guest",
+            senderName: "David Wilson",
+            senderEmail: "david.w@company.com",
+            senderPhone: "+250 790 111 222",
+            message: "Hello, I'm looking to organize a corporate event for about 50 people. What facilities do you have?",
+            branchId: branch.id,
+            read: false,
+            starred: false,
+        },
+        {
+            sender: "guest",
+            senderName: "Sarah Johnson",
+            senderEmail: "sarah.j@email.com",
+            senderPhone: "+250 791 333 444",
+            message: "Do you offer spa services? I'd like to book a massage during my stay.",
+            branchId: branch.id,
+            read: true,
+            starred: false,
+        },
+        {
+            sender: "guest",
+            senderName: "Pierre Nkurunziza",
+            senderEmail: "pierre.n@email.com",
+            senderPhone: "+250 792 555 666",
+            message: "Ndashaka gufata icyumba kugira ngo ndindane. Ni shyanga iki?",
+            branchId: branch.id,
+            read: false,
+            starred: false,
+        },
+    ];
+
+    await prisma.message.deleteMany({ where: { branchId: branch.id } });
+    for (const msg of sampleMessages) {
+        await prisma.message.create({
+            data: {
+                ...msg,
+                recipientId: "reception",
+                archived: false,
+            },
+        });
+    }
+    console.log("✅ Created sample messages:", sampleMessages.length);
+
+    // Create sample events with correct schema fields
+    console.log("\n📅 Creating sample events...");
+    const events = [
+        {
+            name: "New Year's Gala Dinner",
+            type: "Gala",
+            date: new Date("2026-12-31"),
+            startTime: "19:00",
+            endTime: "23:00",
+            hall: "Grand Ballroom",
+            capacity: 200,
+            organizer: "Events Team",
+            description: "Celebrate the new year with an exquisite dinner experience featuring live music and fireworks.",
+            branchId: branch.id,
+        },
+        {
+            name: "Rwanda Cultural Night",
+            type: "Cultural",
+            date: new Date("2026-03-15"),
+            startTime: "18:00",
+            endTime: "22:00",
+            hall: "Garden Terrace",
+            capacity: 100,
+            organizer: "Cultural Affairs",
+            description: "Experience the rich culture of Rwanda through traditional dance, music, and cuisine.",
+            branchId: branch.id,
+        },
+        {
+            name: "Corporate Leadership Summit",
+            type: "Business",
+            date: new Date("2026-04-20"),
+            startTime: "08:00",
+            endTime: "17:00",
+            hall: "Conference Center",
+            capacity: 150,
+            organizer: "Business Development",
+            description: "A 2-day conference for business leaders featuring workshops and networking opportunities.",
+            branchId: branch.id,
+        },
+        {
+            name: "Wedding Expo 2026",
+            type: "Wedding",
+            date: new Date("2026-05-10"),
+            startTime: "10:00",
+            endTime: "18:00",
+            hall: "Exhibition Hall",
+            capacity: 300,
+            organizer: "Wedding Planning",
+            description: "Meet top wedding vendors and plan your perfect day at our annual wedding expo.",
+            branchId: branch.id,
+        },
+    ];
+
+    await prisma.event.deleteMany({ where: { branchId: branch.id } });
+    for (const evt of events) {
+        await prisma.event.create({
+            data: evt,
+        });
+    }
+    console.log("✅ Created events:", events.length);
+
+    // Create sample guests with correct schema fields
+    console.log("\n👥 Creating sample guests...");
+    const guests = [
+        {
+            name: "James Cameron",
+            email: "james.c@email.com",
+            phone: "+250 793 777 888",
+            nationality: "Canadian",
+            branchId: branch.id,
+        },
+        {
+            name: "Alice Uwera",
+            email: "alice.u@email.com",
+            phone: "+250 794 999 000",
+            nationality: "Rwandan",
+            branchId: branch.id,
+        },
+        {
+            name: "Michael Chen",
+            email: "michael.c@company.com",
+            phone: "+250 795 111 333",
+            nationality: "Chinese",
+            branchId: branch.id,
+        },
+    ];
+
+    await prisma.guest.deleteMany({ where: { branchId: branch.id } });
+    for (const guest of guests) {
+        await prisma.guest.create({
+            data: guest,
+        });
+    }
+    console.log("✅ Created guests:", guests.length);
+
+    console.log("\n🎉 All seed data created successfully!");
 }
 
 main()

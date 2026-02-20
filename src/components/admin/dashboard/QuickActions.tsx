@@ -10,6 +10,7 @@ import {
   BedDouble,
   UtensilsCrossed,
   CreditCard,
+  MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/context";
@@ -22,6 +23,7 @@ const actionConfig = [
   { labelKey: "manageRooms" as const, icon: BedDouble, href: "/admin/rooms", color: "text-emerald-light", bg: "bg-emerald-light/10 hover:bg-emerald-light/15" },
   { labelKey: "restaurant" as const, icon: UtensilsCrossed, href: "/admin/restaurant", color: "text-status-cleaning", bg: "bg-status-cleaning/10 hover:bg-status-cleaning/15" },
   { labelKey: "viewPayments" as const, icon: CreditCard, href: "/admin/payments", color: "text-blue-600", bg: "bg-blue-500/10 hover:bg-blue-500/15" },
+  { labelKey: "guestMessages" as const, icon: MessageCircle, href: "/admin/messages", color: "text-purple", bg: "bg-purple/10 hover:bg-purple/15" },
 ];
 
 export default function QuickActions() {

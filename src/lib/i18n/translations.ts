@@ -206,6 +206,7 @@ export const translations = {
       rw: "Imeli y'icyemeso ifite amakuru yuzuye y'ifatwa yoherejwe kuri"
     },
     bookAnother: { en: "Book Another Stay", rw: "Fata Ikindi Cyumba" },
+    downloadReceipt: { en: "Download Receipt", rw: "Kugira Ikimenyetere" },
 
     // Trust Features
     securePayment: { en: "Secure Payment", rw: "Kwishyura Kwizewe" },
@@ -490,6 +491,7 @@ export const translations = {
     manageRooms: { en: "Manage Rooms", rw: "Gucunga Ibyumba" },
     restaurant: { en: "Restaurant", rw: "Iresitora" },
     viewPayments: { en: "View Payments", rw: "Reba Kwishyura" },
+    guestMessages: { en: "Guest Messages", rw: "Ubutumwa b'Abashyitsi" },
   },
 
   // ─── Menu Categories ────────────────────────────────────────
