@@ -284,142 +284,99 @@ export const useAuthStore = create<AuthState>()(
       dynamicStaff: [],
 
       login: async (email: string, password: string, branchId: string) => {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // 1. Check dynamic staff (added by super; may require credential change)
-        const dynamic = get().dynamicStaff.find(
-          (u) =>
-            u.email.toLowerCase() === email.toLowerCase() &&
-            u.password === password &&
-            (u.branchId === "all" || u.branchId === branchId)
-        );
-        if (dynamic) {
-          const { password: _, mustChangeCredentials, ...userData } = dynamic;
-          set({
-            user: userData,
-            isAuthenticated: true,
-            requiresCredentialsChange: mustChangeCredentials === true,
+        try {
+          const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, branchId }),
           });
-          if (typeof window !== 'undefined') {
-            document.cookie = `eastgate-auth=${JSON.stringify({
+          const data = await res.json();
+          if (data.success && data.user) {
+            set({
+              user: data.user,
               isAuthenticated: true,
-              role: userData.role,
-              branchId: userData.branchId,
-              userId: userData.id,
-            })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+              requiresCredentialsChange: data.requiresCredentialsChange || false,
+            });
+            await fetch("/api/realtime/activity", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: data.user.id,
+                branchId: data.user.branchId,
+                action: "login",
+                entity: "auth",
+                entityId: data.user.id,
+                details: { email, timestamp: new Date().toISOString() },
+              }),
+            });
+            return true;
           }
-          return true;
+          return false;
+        } catch (error) {
+          console.error("Login error:", error);
+          return false;
         }
-
-        // 2. Check static staff users
-        const staffUser = staffUsers.find(
-          (u) =>
-            u.email.toLowerCase() === email.toLowerCase() &&
-            u.password === password &&
-            (u.branchId === "all" || u.branchId === branchId)
-        );
-        if (staffUser) {
-          const { password: _, ...userData } = staffUser;
-          set({ user: userData, isAuthenticated: true, requiresCredentialsChange: false });
-          if (typeof window !== 'undefined') {
-            document.cookie = `eastgate-auth=${JSON.stringify({
-              isAuthenticated: true,
-              role: userData.role,
-              branchId: userData.branchId,
-            })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-          }
-          return true;
-        }
-
-        // 3. Check registered guest accounts
-        const guestUser = get().registeredGuests.find(
-          (u) =>
-            u.email.toLowerCase() === email.toLowerCase() &&
-            u.password === password
-        );
-        if (guestUser) {
-          const { password: _, ...userData } = guestUser;
-          set({ user: userData, isAuthenticated: true, requiresCredentialsChange: false });
-          if (typeof window !== 'undefined') {
-            document.cookie = `eastgate-auth=${JSON.stringify({
-              isAuthenticated: true,
-              role: "guest",
-              branchId: "all",
-            })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-          }
-          return true;
-        }
-
-        return false;
       },
 
       registerGuestAccount: async (data) => {
-        await new Promise((resolve) => setTimeout(resolve, 600));
-
-        // Check if email already exists in staff
-        const existsInStaff = staffUsers.some(
-          (u) => u.email.toLowerCase() === data.email.toLowerCase()
-        );
-        if (existsInStaff) {
-          return { success: false, error: "This email is reserved for staff accounts." };
+        try {
+          const res = await fetch("/api/guests/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          const result = await res.json();
+          if (result.success && result.guest) {
+            const userData: User = {
+              id: result.guest.id,
+              name: result.guest.name,
+              email: result.guest.email,
+              phone: result.guest.phone,
+              role: "guest",
+              branchId: "all",
+              branchName: "Guest",
+              nationality: result.guest.nationality,
+              avatar: `https://i.pravatar.cc/40?u=${result.guest.email}`,
+            };
+            set({ user: userData, isAuthenticated: true });
+            return { success: true };
+          }
+          return { success: false, error: result.error || "Registration failed" };
+        } catch (error: any) {
+          return { success: false, error: error.message };
         }
-
-        // Check if email already exists in registered guests
-        const existsInGuests = get().registeredGuests.some(
-          (u) => u.email.toLowerCase() === data.email.toLowerCase()
-        );
-        if (existsInGuests) {
-          return { success: false, error: "An account with this email already exists." };
-        }
-
-        const newGuest: User & { password: string } = {
-          id: `guest-${Date.now().toString(36)}`,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          password: data.password,
-          role: "guest",
-          branchId: "all",
-          branchName: "Guest",
-          nationality: data.nationality || "",
-          avatar: `https://i.pravatar.cc/40?u=${data.email}`,
-        };
-
-        set((state) => ({
-          registeredGuests: [...state.registeredGuests, newGuest],
-        }));
-
-        // Auto-login after registration
-        const { password: _, ...userData } = newGuest;
-        set({ user: userData, isAuthenticated: true });
-        if (typeof window !== 'undefined') {
-          document.cookie = `eastgate-auth=${JSON.stringify({
-            isAuthenticated: true,
-            role: "guest",
-            branchId: "all",
-          })}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        }
-
-        return { success: true };
       },
 
-      logout: () => {
+      logout: async () => {
+        const user = get().user;
+        if (user) {
+          await fetch("/api/realtime/activity", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: user.id,
+              branchId: user.branchId,
+              action: "logout",
+              entity: "auth",
+              entityId: user.id,
+              details: { timestamp: new Date().toISOString() },
+            }),
+          }).catch(() => {});
+        }
         set({ user: null, isAuthenticated: false, requiresCredentialsChange: false });
         if (typeof window !== 'undefined') {
           document.cookie = "eastgate-auth=; path=/; max-age=0; SameSite=Lax";
         }
       },
 
-      addStaff: (data) => {
+      addStaff: async (data) => {
         const state = get();
         const currentUser = state.user;
         
-        // Branch managers can only add staff to their own branch
         if (currentUser?.role === "branch_manager" && currentUser.branchId !== data.branchId) {
           return { success: false, error: "You can only add staff to your assigned branch." };
         }
         
-        // Branch managers cannot add other branch managers or super roles
         if (currentUser?.role === "branch_manager") {
           const restrictedRoles: UserRole[] = ["super_admin", "super_manager", "branch_manager", "accountant", "event_manager"];
           if (restrictedRoles.includes(data.role)) {
@@ -427,27 +384,32 @@ export const useAuthStore = create<AuthState>()(
           }
         }
         
-        const exists =
-          staffUsers.some((u) => u.email.toLowerCase() === data.email.toLowerCase()) ||
-          state.dynamicStaff.some((u) => u.email.toLowerCase() === data.email.toLowerCase()) ||
-          state.registeredGuests.some((u) => u.email.toLowerCase() === data.email.toLowerCase());
-        if (exists) return { success: false, error: "An account with this email already exists." };
-        const id = `dyn-${Date.now().toString(36)}`;
-        const branchName = useAppDataStore.getState().branches.find((b) => b.id === data.branchId)?.name ?? data.branchName;
-        const newStaff: DynamicStaffMember = {
-          id,
-          name: data.name,
-          email: data.email,
-          password: data.password,
-          role: data.role,
-          branchId: data.branchId,
-          branchName,
-          avatar: `https://i.pravatar.cc/40?u=${id}`,
-          phone: data.phone,
-          mustChangeCredentials: true,
-        };
-        set((s) => ({ dynamicStaff: [...s.dynamicStaff, newStaff] }));
-        return { success: true };
+        try {
+          const res = await fetch("/api/staff", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...data, createdBy: currentUser?.id }),
+          });
+          const result = await res.json();
+          if (result.success) {
+            await fetch("/api/realtime/activity", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: currentUser?.id,
+                branchId: data.branchId,
+                action: "create_staff",
+                entity: "staff",
+                entityId: result.staff.id,
+                details: { name: data.name, role: data.role },
+              }),
+            });
+            return { success: true };
+          }
+          return { success: false, error: result.error };
+        } catch (error: any) {
+          return { success: false, error: error.message };
+        }
       },
 
       updateStaffCredentials: (userId, newEmail, newPassword) => {

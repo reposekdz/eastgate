@@ -1,0 +1,286 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  number      String
+  floor       Int
+  type        String   @map("room_type")
+  status      String   @default("available")
+  price       Float
+  description String?  @db.Text
+  imageUrl    String?
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("rooms")
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+  guestName       String
+  guestEmail      String
+  guestPhone      String?
+  guestAvatar     String?
+  roomId          String
+  roomNumber      String
+  roomType        String
+  checkIn         DateTime
+  checkOut        DateTime
+  adults          Int      @default(1)
+  children        Int      @default(0)
+  status          String   @default("pending")
+  totalAmount     Float    @map("total_amount")
+  paymentMethod   String?  @map("payment_method")
+  specialRequests String?  @map("special_requests") @db.Text
+  addOns          Json?
+  branchId        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("bookings")
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  bookingId     String?  @map("booking_id")
+  orderId       String?  @map("order_id")
+  amount        Float
+  status        String   @default("pending")
+  paymentMethod String?  @map("payment_method")
+  transactionId String?  @map("transaction_id")
+  branchId      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("payments")
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  tableNumber   Int      @map("table_number")
+  guestName     String?  @map("guest_name")
+  items         Json
+  status        String   @default("pending")
+  total         Float
+  roomCharge    Boolean  @default(false) @map("room_charge")
+  notes         String?  @db.Text
+  performedBy   String?  @map("performed_by")
+  branchId      String
+  roomId        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("orders")
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  name        String
+  category    String
+  price       Float
+  description String?  @db.Text
+  imageUrl    String?  @map("image_url")
+  available   Boolean  @default(true)
+  popular     Boolean  @default(false)
+  vegetarian  Boolean  @default(false)
+  spicy       Boolean  @default(false)
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("menu_items")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  name        String
+  type        String
+  date        DateTime
+  startTime   String   @map("start_time")
+  endTime     String   @map("end_time")
+  hall        String
+  capacity    Int
+  attendees   Int      @default(0)
+  status      String   @default("upcoming")
+  totalAmount Float    @map("total_amount") @default(0)
+  organizer   String
+  description String?  @db.Text
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("events")
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  type        String
+  price       Float
+  duration    Int
+  description String?  @db.Text
+  imageUrl    String?  @map("image_url")
+  available   Boolean  @default(true)
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("services")
+}
+
+model Inventory {
+  id           String   @id @default(cuid())
+  name         String
+  category     String
+  quantity     Int
+  unitPrice    Float    @map("unit_price")
+  reorderLevel Int      @map("reorder_level")
+  supplier     String?
+  branchId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("inventory")
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  category    String
+  amount      Float
+  description String?  @db.Text
+  date        DateTime
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("expenses")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String   @db.Text
+  type      String
+  read      Boolean  @default(false)
+  userId    String?
+  branchId  String
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  branchId  String
+  action    String
+  entity    String?
+  entityId  String?  @map("entity_id")
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@map("activity_logs")
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  sender      String   // "guest" or "staff"
+  senderName  String   @map("sender_name")
+  senderEmail String?  @map("sender_email")
+  senderPhone String?  @map("sender_phone")
+  senderAvatar String? @map("sender_avatar")
+  message     String   @db.Text
+  recipientId String?  @map("recipient_id")
+  branchId    String
+  read        Boolean  @default(false)
+  starred     Boolean  @default(false)
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("messages")
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  subject     String?
+  message     String   @db.Text
+  department  String?
+  status      String   @default("pending") // pending, responded, resolved
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("contacts")
+}
+
+model PageContent {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  subtitle    String?
+  content     String   @db.LongText
+  imageUrl    String?  @map("image_url")
+  gallery     Json?
+  metaTitle   String?  @map("meta_title")
+  metaDescription String? @map("meta_description")
+  published   Boolean  @default(true)
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("page_contents")
+}
+
+model Staff {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  phone          String?
+  role           String
+  department     String
+  shift          String?
+  status         String   @default("active")
+  avatar         String?
+  branchId       String
+  joinDate       DateTime @map("join_date") @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("staff")
+}
+
+model Guest {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  phone         String?
+  avatar        String?
+  nationality   String?
+  loyaltyTier   String?  @map("loyalty_tier")
+  loyaltyPoints Int      @map("loyalty_points") @default(0)
+  totalStays    Int      @map("total_stays") @default(0)
+  totalSpent    Float    @map("total_spent") @default(0)
+  lastVisit     DateTime? @map("last_visit")
+  branchId      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("guests")
+}
