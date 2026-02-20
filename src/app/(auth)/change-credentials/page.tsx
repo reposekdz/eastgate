@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -13,6 +11,8 @@ import { useI18n } from "@/lib/i18n/context";
 import { Lock, Mail, Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+export const dynamic = 'force-dynamic';
 
 export default function ChangeCredentialsPage() {
   const { user, isAuthenticated, requiresCredentialsChange, updateStaffCredentials, setCredentialsChanged } = useAuthStore();

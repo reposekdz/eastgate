@@ -11,9 +11,13 @@ import { toast } from "sonner";
 import { Lock, Loader2, Eye, EyeOff, ShieldCheck, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 
+export const dynamic = 'force-dynamic';
+
 export default function ChangePasswordPage() {
     const router = useRouter();
-    const { data: session, update } = useSession();
+    const sessionResult = useSession();
+    const session = sessionResult?.data;
+    const update = sessionResult?.update;
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");

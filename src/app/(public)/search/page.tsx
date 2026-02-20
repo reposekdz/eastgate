@@ -1,6 +1,9 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -150,7 +153,7 @@ const quickSearchTags = [
   { label: "Pool", icon: Waves, query: "pool" },
 ];
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
   const { t, isRw } = useI18n();
@@ -738,5 +741,14 @@ function EmptyState({ onClear }: { onClear: () => void }) {
         </Link>
       </div>
     </div>
+  );
+}
+
+// Wrapper component with Suspense boundary
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>}>
+      <SearchContent />
+    </Suspense>
   );
 }
