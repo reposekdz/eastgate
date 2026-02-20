@@ -248,6 +248,20 @@ model PageContent {
   @@map("page_contents")
 }
 
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  location  String?
+  address   String?
+  phone     String?
+  email     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("branches")
+}
+
 model Staff {
   id             String   @id @default(cuid())
   name           String
