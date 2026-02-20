@@ -6,37 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  ShieldCheck, Mail, Lock, Building2, Loader2, ArrowLeft, Eye, EyeOff,
-  AlertCircle, Shield, Sparkles
+  ShieldCheck, Lock, Loader2, ArrowLeft, Eye, EyeOff,
+  AlertCircle, Sparkles, Building2, User
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-
-const branches = [
-  { id: "all", name: "All Branches (Admin/Manager)" },
-  { id: "br-001", name: "Kigali Main" },
-  { id: "br-002", name: "Ngoma Branch" },
-  { id: "br-003", name: "Kirehe Branch" },
-  { id: "br-004", name: "Gatsibo Branch" },
-];
 
 export default function StaffLoginPage() {
   const router = useRouter();
   const { login } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [branchId, setBranchId] = useState("all");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showCredentials, setShowCredentials] = useState(false);
-  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +40,7 @@ export default function StaffLoginPage() {
     setLoading(true);
 
     try {
-      const success = await login(email, password, branchId);
+      const success = await login(email, password, "all");
 
       if (success) {
         toast.success("Login successful! Redirecting...");
@@ -63,28 +49,34 @@ export default function StaffLoginPage() {
 
         if (user) {
           switch (user.role) {
+            case "SUPER_ADMIN":
             case "super_admin":
               router.push("/admin");
               break;
+            case "SUPER_MANAGER":
             case "super_manager":
+            case "BRANCH_MANAGER":
             case "branch_manager":
               router.push("/manager");
               break;
+            case "RECEPTIONIST":
             case "receptionist":
               router.push("/receptionist");
               break;
+            case "WAITER":
             case "waiter":
               router.push("/waiter");
               break;
-            case "accountant":
-              router.push("/admin/finance");
+            case "KITCHEN":
+            case "kitchen":
+              router.push("/kitchen");
               break;
             default:
               router.push("/");
           }
         }
       } else {
-        toast.error("Invalid credentials or branch access");
+        toast.error("Invalid credentials or account not active");
       }
     } catch (error) {
       toast.error("An error occurred during login");
@@ -94,216 +86,187 @@ export default function StaffLoginPage() {
     }
   };
 
-
-
-  const getRoleBadge = (role: string) => {
-    const colors: Record<string, string> = {
-      super_admin: "bg-red-500/20 text-red-300 border-red-500/30",
-      super_manager: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-      branch_manager: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-      receptionist: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-      waiter: "bg-orange-500/20 text-orange-300 border-orange-500/30",
-      accountant: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-    };
-    return colors[role] || "bg-gray-500/20 text-gray-300 border-gray-500/30";
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-charcoal via-surface-dark to-charcoal flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `radial-gradient(circle at 25px 25px, rgba(200,169,81,0.4) 2%, transparent 0%), 
-                           radial-gradient(circle at 75px 75px, rgba(11,110,79,0.4) 2%, transparent 0%)`,
-          backgroundSize: "100px 100px",
-        }} />
-      </div>
-
-      {/* Floating Orbs */}
-      <motion.div
-        className="absolute top-20 left-20 w-64 h-64 bg-emerald/20 rounded-full blur-3xl"
-        animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute bottom-20 right-20 w-80 h-80 bg-gold/20 rounded-full blur-3xl"
-        animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-      />
-
-      <div className="relative z-10 w-full max-w-md">
-        {/* Logo Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 text-center"
-        >
-          <Link href="/" className="inline-block mb-4 group">
-            <Image
-              src="/eastgatelogo.png"
-              alt="EastGate Hotel"
-              width={200}
-              height={50}
-              className="h-16 w-auto object-contain mx-auto drop-shadow-2xl group-hover:scale-105 transition-transform"
-            />
+    <div className="min-h-screen bg-gradient-to-br from-charcoal via-surface-dark to-charcoal flex flex-col">
+      {/* Header with Logo */}
+      <header className="w-full py-4 px-6 border-b border-white/10 bg-black/20 backdrop-blur-lg">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-4 group">
+            <div className="relative">
+              <Image
+                src="/eastgatelogo.png"
+                alt="EastGate Hotel"
+                width={180}
+                height={45}
+                className="h-12 w-auto object-contain"
+              />
+            </div>
+            <div className="hidden sm:block">
+              <h1 className="text-xl font-heading font-bold text-white">EastGate Hotel</h1>
+              <p className="text-xs text-gold">Luxury Hospitality Management</p>
+            </div>
           </Link>
-          <Link href="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm transition-colors group">
-            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-            Back to Home
+          <Link href="/" className="flex items-center gap-2 text-white/60 hover:text-white text-sm transition-colors">
+            <ArrowLeft size={16} />
+            <span className="hidden sm:inline">Back to Home</span>
           </Link>
-        </motion.div>
+        </div>
+      </header>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl">
-            <CardHeader className="text-center pb-4">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring" }}
-                className="mx-auto mb-4 h-20 w-20 rounded-2xl bg-gradient-to-br from-emerald via-emerald-dark to-emerald flex items-center justify-center shadow-lg shadow-emerald/50 relative"
-              >
-                <ShieldCheck className="h-10 w-10 text-white" />
-                <motion.div
-                  className="absolute inset-0 rounded-2xl bg-white/20"
-                  animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-              </motion.div>
-              <CardTitle className="text-3xl font-heading text-white mb-2 flex items-center justify-center gap-2">
-                Staff Portal
-                <Sparkles className="h-5 w-5 text-gold" />
-              </CardTitle>
-              <CardDescription className="text-white/70 text-base">
-                Secure access to your EastGate dashboard
-              </CardDescription>
-            </CardHeader>
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Animated Background */}
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `radial-gradient(circle at 25px 25px, rgba(200,169,81,0.4) 2%, transparent 0%), 
+                               radial-gradient(circle at 75px 75px, rgba(11,110,79,0.4) 2%, transparent 0%)`,
+              backgroundSize: "100px 100px",
+            }} />
+          </div>
 
-            <CardContent className="space-y-6 px-6 pb-6">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Branch Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="branch" className="text-white/90 flex items-center gap-2 text-sm font-semibold">
-                    <Building2 size={16} className="text-gold" />
-                    Branch Location
-                  </Label>
-                  <Select value={branchId} onValueChange={setBranchId}>
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white h-12 hover:bg-white/15 transition-colors backdrop-blur-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Floating Orbs */}
+          <motion.div
+            className="absolute top-40 left-10 w-64 h-64 bg-emerald/20 rounded-full blur-3xl"
+            animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute bottom-40 right-10 w-80 h-80 bg-gold/20 rounded-full blur-3xl"
+            animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          />
 
-                {/* Email */}
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white/90 flex items-center gap-2 text-sm font-semibold">
-                    <Mail size={16} className="text-gold" />
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your.email@eastgate.rw"
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40 h-12 hover:bg-white/15 transition-colors backdrop-blur-sm focus:ring-2 focus:ring-emerald/50"
-                    disabled={loading}
-                  />
-                </div>
-
-                {/* Password */}
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white/90 flex items-center gap-2 text-sm font-semibold">
-                    <Lock size={16} className="text-gold" />
-                    Access Code
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your secure code"
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/40 h-12 pr-12 hover:bg-white/15 transition-colors backdrop-blur-sm focus:ring-2 focus:ring-emerald/50"
-                      disabled={loading}
+          <div className="relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl">
+                <CardHeader className="text-center pb-2">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring" }}
+                    className="mx-auto mb-3 h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald via-emerald-dark to-emerald flex items-center justify-center shadow-lg shadow-emerald/50 relative"
+                  >
+                    <ShieldCheck className="h-8 w-8 text-white" />
+                    <motion.div
+                      className="absolute inset-0 rounded-2xl bg-white/20"
+                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity }}
                     />
+                  </motion.div>
+                  <CardTitle className="text-2xl font-heading text-white mb-1 flex items-center justify-center gap-2">
+                    Staff Portal
+                    <Sparkles className="h-4 w-4 text-gold" />
+                  </CardTitle>
+                  <CardDescription className="text-white/60 text-sm">
+                    Sign in to access your dashboard
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="pt-4">
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    {/* Email */}
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-white/80 text-sm font-medium">
+                        Email Address
+                      </Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="staff@eastgatehotel.rw"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-emerald focus:ring-emerald"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Password */}
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-white/80 text-sm font-medium">
+                        Access Code
+                      </Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your access code"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="pl-10 pr-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-emerald focus:ring-emerald"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
                     <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 p-0 text-white/60 hover:text-white hover:bg-white/10"
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-emerald to-emerald-dark hover:from-emerald-dark hover:to-emerald text-white font-semibold py-6 rounded-lg transition-all duration-300 shadow-lg shadow-emerald/25"
+                      disabled={loading}
                     >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Authenticating...
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="mr-2 h-4 w-4" />
+                          Sign In
+                        </>
+                      )}
                     </Button>
+
+                    {/* Help Text */}
+                    <p className="text-center text-white/40 text-xs mt-4">
+                      Contact your administrator if you cannot access your account
+                    </p>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Demo Credentials */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-6 p-4 rounded-lg bg-white/5 border border-white/10"
+              >
+                <p className="text-white/60 text-xs text-center mb-3">Demo Credentials</p>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between text-white/80">
+                    <span>Super Admin:</span>
+                    <span className="font-mono text-emerald">admin@eastgate.rw / admin123</span>
+                  </div>
+                  <div className="flex justify-between text-white/80">
+                    <span>Manager:</span>
+                    <span className="font-mono text-emerald">manager@eastgate.rw / manager123</span>
+                  </div>
+                  <div className="flex justify-between text-white/80">
+                    <span>Staff:</span>
+                    <span className="font-mono text-emerald">staff@eastgate.rw / demo123</span>
                   </div>
                 </div>
-
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-emerald via-emerald-dark to-emerald hover:from-emerald-dark hover:via-emerald hover:to-emerald-dark text-white h-12 font-bold text-base shadow-lg shadow-emerald/30 hover:shadow-emerald/50 transition-all hover:scale-[1.02]"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Authenticating...
-                    </>
-                  ) : (
-                    <>
-                      <Shield className="mr-2 h-5 w-5" />
-                      Sign In to Dashboard
-                    </>
-                  )}
-                </Button>
-              </form>
-
-
-
-              {/* Help Notice */}
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-400 shrink-0 mt-0.5" />
-                <div className="text-xs text-blue-300">
-                  <p className="font-semibold mb-1">Staff Access Only</p>
-                  <p className="text-blue-300/80">Contact your branch manager if you need credentials or have access issues.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Guest Login Link */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6 text-center"
-        >
-          <p className="text-white/60 text-sm mb-2">Not a staff member?</p>
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 text-gold hover:text-gold-light transition-colors text-sm font-semibold group"
-          >
-            <span>Guest Login / Create Account</span>
-            <ArrowLeft className="h-4 w-4 rotate-180 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </motion.div>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-white/40 mt-6">
-          © 2026 EastGate Hotel Rwanda. Secure Enterprise Portal.
-        </p>
+              </motion.div>
+            </motion.div>
+          </div>
+        </div>
       </div>
     </div>
   );

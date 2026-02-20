@@ -43,6 +43,14 @@ const contactSubjectKeys = ["subject1", "subject2", "subject3", "subject4", "sub
 export default function ContactPage() {
   const { t } = useI18n();
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    message: ""
+  });
   const infoTitles: Record<string, string> = {
     address: t("contact", "addressTitle"),
     phone: t("contact", "phoneTitle"),
@@ -56,10 +64,32 @@ export default function ContactPage() {
     hours: "24/7",
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 4000);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/public/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          subject: formData.subject,
+          message: formData.message
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSubmitted(true);
+        setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
+        setTimeout(() => setSubmitted(false), 5000);
+      }
+    } catch (error) {
+      console.error("Failed to submit contact form:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -136,6 +166,8 @@ export default function ContactPage() {
                             placeholder={t("contact", "namePlaceholder")}
                             className="rounded-[2px] border-border focus:border-emerald focus:ring-emerald"
                             required
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           />
                         </div>
                         <div>
@@ -147,6 +179,8 @@ export default function ContactPage() {
                             placeholder={t("contact", "emailPlaceholder")}
                             className="rounded-[2px] border-border focus:border-emerald focus:ring-emerald"
                             required
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                           />
                         </div>
                       </div>
@@ -160,13 +194,15 @@ export default function ContactPage() {
                             type="tel"
                             placeholder={t("contact", "phonePlaceholder")}
                             className="rounded-[2px] border-border focus:border-emerald focus:ring-emerald"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                           />
                         </div>
                         <div>
                           <label className="body-sm font-medium text-charcoal mb-1.5 block">
                             {t("contact", "subjectLabel")}
                           </label>
-                          <Select>
+                          <Select value={formData.subject} onValueChange={(val) => setFormData({ ...formData, subject: val })}>
                             <SelectTrigger className="rounded-[2px] border-border focus:border-emerald focus:ring-emerald">
                               <SelectValue
                                 placeholder={t("contact", "subjectPlaceholder")}
@@ -192,15 +228,18 @@ export default function ContactPage() {
                           rows={5}
                           className="rounded-[2px] border-border focus:border-emerald focus:ring-emerald resize-none"
                           required
+                          value={formData.message}
+                          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                         />
                       </div>
 
                       <Button
                         type="submit"
                         className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 py-5 rounded-[2px] uppercase tracking-wider text-sm transition-all duration-300 w-full sm:w-auto"
+                        disabled={loading}
                       >
                         <Send size={16} className="mr-2" />
-                        {t("contact", "submitText")}
+                        {loading ? t("contact", "sending") || "Sending..." : t("contact", "submitText")}
                       </Button>
                     </form>
                   </CardContent>
