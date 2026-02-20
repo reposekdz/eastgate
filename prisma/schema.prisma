@@ -266,13 +266,15 @@ model Staff {
   id             String   @id @default(cuid())
   name           String
   email          String   @unique
+  password       String?  // Hashed password for secure authentication
   phone          String?
-  role           String
+  role           String   // SUPER_ADMIN, MANAGER, RECEPTIONIST, WAITER, KITCHEN, STAFF
   department     String
   shift          String?
   status         String   @default("active")
   avatar         String?
   branchId       String
+  lastLogin      DateTime? @map("last_login")
   joinDate       DateTime @map("join_date") @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
