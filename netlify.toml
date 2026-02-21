@@ -2,5 +2,18 @@
   command = "npm run build"
   publish = ".next"
 
+[build.environment]
+  NODE_VERSION = "22"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[context.production.environment]
+  DATABASE_URL = "mysql://upeffgvxoktewpxl:NxOlOUAWOSUoZdfqMhV@b5ngutgfplowkr2nod3t-mysql.services.clever-cloud.com:20942/b5ngutgfplowkr2nod3t"
+  NEXTAUTH_SECRET = "your-super-secret-key-change-this-in-production-minimum-32-characters"
+  NEXTAUTH_URL = "https://your-site.netlify.app"
+
+[context.deploy-preview.environment]
+  DATABASE_URL = "mysql://upeffgvxoktewpxl:NxOlOUAWOSUoZdfqMhV@b5ngutgfplowkr2nod3t-mysql.services.clever-cloud.com:20942/b5ngutgfplowkr2nod3t"
+  NEXTAUTH_SECRET = "your-super-secret-key-change-this-in-production-minimum-32-characters"
+  NEXTAUTH_URL = "https://your-site.netlify.app"
