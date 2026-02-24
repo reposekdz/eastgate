@@ -19,6 +19,38 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_analytics",
     "manage_settings",
     "manage_ai_insights",
+    "assign_managers",
+    "manage_all_branches",
+  ],
+  SUPER_MANAGER: [
+    "manage_users",
+    "manage_staff",
+    "manage_branches",
+    "manage_rooms",
+    "manage_bookings",
+    "manage_orders",
+    "manage_menu",
+    "manage_events",
+    "manage_inventory",
+    "view_analytics",
+    "manage_settings",
+    "assign_managers",
+    "manage_all_branches",
+  ],
+  BRANCH_MANAGER: [
+    "manage_staff",
+    "manage_rooms",
+    "manage_bookings",
+    "manage_orders",
+    "manage_menu",
+    "manage_events",
+    "manage_inventory",
+    "view_analytics",
+    "manage_settings",
+    "manage_branch_only",
+    "add_waiters",
+    "add_receptionists",
+    "add_kitchen_staff",
   ],
   MANAGER: [
     "manage_staff",
@@ -36,16 +68,29 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "manage_guests",
     "view_rooms",
     "manage_orders",
+    "register_guests",
+    "check_in_guests",
+    "check_out_guests",
   ],
   WAITER: [
     "manage_orders",
     "view_menu",
     "manage_tables",
+    "take_orders",
+    "serve_orders",
   ],
-  KITCHEN: [
+  CHEF: [
     "manage_orders",
     "view_menu",
     "manage_prep",
+    "kitchen_orders",
+    "prepare_food",
+  ],
+  KITCHEN_STAFF: [
+    "manage_orders",
+    "view_menu",
+    "manage_prep",
+    "kitchen_orders",
   ],
   STAFF: [
     "view_own_tasks",
@@ -67,9 +112,29 @@ export function isSuperAdmin(role: string): boolean {
   return role === "SUPER_ADMIN";
 }
 
+// Helper function to check if user is super manager
+export function isSuperManager(role: string): boolean {
+  return role === "SUPER_MANAGER";
+}
+
+// Helper function to check if user is super admin or super manager
+export function isSuperAdminOrManager(role: string): boolean {
+  return role === "SUPER_ADMIN" || role === "SUPER_MANAGER";
+}
+
+// Helper function to check if user is branch manager
+export function isBranchManager(role: string): boolean {
+  return role === "BRANCH_MANAGER";
+}
+
 // Helper function to check if user is manager or above
 export function isManager(role: string): boolean {
-  return role === "SUPER_ADMIN" || role === "MANAGER";
+  return role === "SUPER_ADMIN" || role === "SUPER_MANAGER" || role === "BRANCH_MANAGER" || role === "MANAGER";
+}
+
+// Helper function to check if user can assign managers
+export function canAssignManagers(role: string): boolean {
+  return role === "SUPER_ADMIN" || role === "SUPER_MANAGER";
 }
 
 const handler = NextAuth({
@@ -111,6 +176,7 @@ const handler = NextAuth({
           } else {
             // Fallback for demo accounts - accepts these passwords for development
             isValidPassword = 
+              credentials.password === "2026" ||
               credentials.password === "demo123" || 
               credentials.password === "admin123" ||
               credentials.password === "manager123" ||

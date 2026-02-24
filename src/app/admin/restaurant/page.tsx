@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency } from "@/lib/format";
@@ -18,6 +23,9 @@ import {
   Plus,
   User,
   BedDouble,
+  Loader2,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 const orderStatusConfig: Record<OrderStatus, { label: string; color: string; bg: string; icon: typeof Clock }> = {
@@ -34,6 +42,23 @@ export default function RestaurantPage() {
   const getMenuItems = useBranchStore((s) => s.getMenuItems);
   const [activeTab, setActiveTab] = useState("orders");
 
+  // Menu item management
+  const [showMenuDialog, setShowMenuDialog] = useState(false);
+  const [menuFormData, setMenuFormData] = useState({
+    name: "",
+    category: "main",
+    price: "",
+    description: "",
+    available: true,
+  });
+  const [savingMenu, setSavingMenu] = useState(false);
+
+  // Check if user can manage menu (manager or super admin)
+  const canManageMenu = user?.role === "super_admin" || 
+                        user?.role === "super_manager" ||
+                        user?.role === "branch_manager" ||
+                        user?.role === "branch_admin";
+
   const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
   const role = user?.role ?? "guest";
   const restaurantOrders = getOrders(branchId, role);
@@ -41,6 +66,40 @@ export default function RestaurantPage() {
   const menuCategories = [...new Set(menuItems.map((item) => item.category))];
   const activeOrders = restaurantOrders.filter((o) => o.status !== "served" && o.status !== "cancelled");
   const todayRevenue = restaurantOrders.reduce((sum, o) => sum + o.total, 0);
+
+  // Handler for creating menu item
+  const handleCreateMenuItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingMenu(true);
+
+    try {
+      const res = await fetch("/api/menu", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: menuFormData.name,
+          category: menuFormData.category,
+          price: parseFloat(menuFormData.price),
+          description: menuFormData.description,
+          available: menuFormData.available,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setShowMenuDialog(false);
+        setMenuFormData({ name: "", category: "main", price: "", description: "", available: true });
+        // Refresh menu items
+        window.location.reload();
+      } else {
+        alert(data.error || "Failed to create menu item");
+      }
+    } catch (error) {
+      console.error("Failed to create menu item:", error);
+    } finally {
+      setSavingMenu(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -166,6 +225,17 @@ export default function RestaurantPage() {
 
         {/* Menu */}
         <TabsContent value="menu" className="mt-4">
+          {/* Add Menu Item Button */}
+          {canManageMenu && (
+            <div className="mb-4">
+              <Button 
+                className="bg-emerald hover:bg-emerald-dark text-white rounded-[6px] gap-2 text-sm"
+                onClick={() => setShowMenuDialog(true)}
+              >
+                <Plus className="h-4 w-4" /> Add Menu Item
+              </Button>
+            </div>
+          )}
           <div className="space-y-6">
             {menuCategories.map((category) => (
               <div key={category}>
@@ -256,6 +326,79 @@ export default function RestaurantPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Add Menu Item Dialog */}
+      <Dialog open={showMenuDialog} onOpenChange={setShowMenuDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Menu Item</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateMenuItem}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Item Name</Label>
+                <Input
+                  id="name"
+                  value={menuFormData.name}
+                  onChange={(e) => setMenuFormData({ ...menuFormData, name: e.target.value })}
+                  placeholder="e.g., Grilled Salmon"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={menuFormData.category}
+                  onValueChange={(value) => setMenuFormData({ ...menuFormData, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="appetizer">Appetizer</SelectItem>
+                    <SelectItem value="main">Main Course</SelectItem>
+                    <SelectItem value="dessert">Dessert</SelectItem>
+                    <SelectItem value="beverage">Beverage</SelectItem>
+                    <SelectItem value="snack">Snack</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="price">Price (RWF)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={menuFormData.price}
+                  onChange={(e) => setMenuFormData({ ...menuFormData, price: e.target.value })}
+                  placeholder="e.g., 15000"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={menuFormData.description}
+                  onChange={(e) => setMenuFormData({ ...menuFormData, description: e.target.value })}
+                  placeholder="Describe the dish..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowMenuDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-emerald hover:bg-emerald-dark" disabled={savingMenu}>
+                {savingMenu ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                Create Item
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

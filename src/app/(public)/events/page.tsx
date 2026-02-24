@@ -11,6 +11,7 @@ import {
 } from "@/components/animations/MotionWrapper";
 import { eventsContent } from "@/lib/kw-data";
 import { images } from "@/lib/data";
+import { useI18n } from "@/lib/i18n/context";
 import {
   Heart,
   Briefcase,
@@ -31,6 +32,8 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export default function EventsPage() {
+  const { t } = useI18n();
+  
   return (
     <>
       {/* Hero */}
@@ -48,7 +51,7 @@ export default function EventsPage() {
             transition={{ delay: 0.2 }}
             className="body-sm uppercase tracking-[0.25em] text-gold-light mb-3 font-medium"
           >
-            {eventsContent.sectionLabel}
+            {t("events", "sectionLabel")}
           </motion.p>
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
@@ -56,8 +59,8 @@ export default function EventsPage() {
             transition={{ delay: 0.4 }}
             className="text-3xl sm:text-4xl md:heading-xl text-white font-heading font-bold mb-4"
           >
-            {eventsContent.title}{" "}
-            <span className="italic text-gold-light">{eventsContent.titleAccent}</span>
+            {t("events", "title")}{" "}
+            <span className="italic text-gold-light">{t("events", "titleAccent")}</span>
           </motion.h1>
           <motion.div
             initial={{ scaleX: 0 }}
@@ -71,7 +74,7 @@ export default function EventsPage() {
             transition={{ delay: 0.8 }}
             className="body-md sm:body-lg text-white/70 max-w-2xl"
           >
-            {eventsContent.description}
+            {t("events", "description")}
           </motion.p>
         </div>
       </section>

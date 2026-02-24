@@ -10,14 +10,24 @@ import {
   StaggerContainer,
   StaggerItem,
 } from "@/components/animations/MotionWrapper";
-import { spaContent } from "@/lib/kw-data";
 import { images } from "@/lib/data";
 import { Leaf, Clock, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n/context";
 
 export const dynamic = 'force-dynamic';
 
 export default function SpaPage() {
+  const { t } = useI18n();
+  
+  // Spa services data
+  const spaServices = [
+    { name: "Signature Massage", description: "Full body relaxation massage with aromatic oils", duration: "90 min", price: "RWF 120,000" },
+    { name: "Facial Treatment", description: "Deep cleansing and rejuvenating facial therapy", duration: "60 min", price: "RWF 85,000" },
+    { name: "Body Scrub", description: "Exfoliating treatment with natural ingredients", duration: "75 min", price: "RWF 95,000" },
+    { name: "Manicure & Pedicure", description: "Complete nail care and beautification", duration: "60 min", price: "RWF 45,000" },
+  ];
+  
   return (
     <>
       {/* Hero */}
@@ -35,7 +45,7 @@ export default function SpaPage() {
             transition={{ delay: 0.2 }}
             className="body-sm uppercase tracking-[0.25em] text-gold-light mb-3 font-medium"
           >
-            {spaContent.sectionLabel}
+            {t("spa", "sectionLabel")}
           </motion.p>
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
@@ -43,8 +53,8 @@ export default function SpaPage() {
             transition={{ delay: 0.4 }}
             className="text-3xl sm:text-4xl md:heading-xl text-white font-heading font-bold mb-4"
           >
-            {spaContent.title}{" "}
-            <span className="italic text-gold-light">{spaContent.titleAccent}</span>
+            {t("spa", "title")}
+            <span className="italic text-gold-light"> {t("spa", "titleAccent")}</span>
           </motion.h1>
           <motion.div
             initial={{ scaleX: 0 }}
@@ -58,7 +68,7 @@ export default function SpaPage() {
             transition={{ delay: 0.8 }}
             className="body-md sm:body-lg text-white/70 max-w-2xl"
           >
-            {spaContent.description}
+            {t("spa", "description")}
           </motion.p>
         </div>
       </section>
@@ -69,18 +79,18 @@ export default function SpaPage() {
           <FadeInUp>
             <div className="text-center mb-12 sm:mb-16">
               <p className="body-sm uppercase tracking-[0.25em] text-gold-dark mb-3 font-medium">
-                Serivisi Zacu
+                {t("spa", "servicesTitle")}
               </p>
               <h2 className="text-2xl sm:heading-lg text-charcoal mb-4 font-heading font-bold">
-                Imiti y'Ubuzima
+                {t("spa", "servicesSubtitle")}
               </h2>
               <div className="mx-auto h-[2px] w-16 bg-gold" />
             </div>
           </FadeInUp>
 
           <StaggerContainer className="grid gap-6 sm:gap-8 sm:grid-cols-2">
-            {spaContent.services.map((service: { name: string; description: string; duration: string; price: string }) => (
-              <StaggerItem key={service.name}>
+            {spaServices.map((service, index) => (
+              <StaggerItem key={index}>
                 <Card className="group bg-white hover:shadow-xl transition-all duration-500 hover:-translate-y-1 h-full">
                   <CardContent className="p-6 sm:p-8">
                     <div className="flex items-start justify-between gap-4 mb-4">
@@ -131,22 +141,22 @@ export default function SpaPage() {
             <SlideIn direction="right">
               <div>
                 <p className="body-sm uppercase tracking-[0.25em] text-gold mb-3 font-medium">
-                  Uburambe Bwihariye
+                  {t("spa", "splitTitle")}
                 </p>
                 <h2 className="heading-md sm:heading-lg text-white mb-6 font-heading">
-                  Ahantu h'Amahoro{" "}
-                  <span className="italic text-gold-light">n'Ubwiza</span>
+                  {t("spa", "splitSubtitle")}
+                  <span className="italic text-gold-light"> {t("spa", "splitAccent")}</span>
                 </h2>
                 <div className="h-[2px] w-12 bg-gold mb-6" />
                 <p className="body-md sm:body-lg text-white/70 mb-8">
-                  Spa yacu ni ahantu hihariye aho ushobora gusiga ibibazo byose bya buri munsi. Ibikoresho byacu bw'umwimerere hamwe n'abahanga bacu bazagufasha gusubiza imbaraga n'amahoro.
+                  {t("spa", "splitDescription")}
                 </p>
                 <Button
                   asChild
                   className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 py-5 rounded-[2px] uppercase tracking-wider text-sm"
                 >
                   <Link href="/contact" className="flex items-center gap-2">
-                    {spaContent.ctaText}
+                    {t("spa", "ctaButton")}
                     <ArrowRight size={16} />
                   </Link>
                 </Button>

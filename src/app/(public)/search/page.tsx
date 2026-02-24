@@ -35,8 +35,12 @@ import {
   Waves,
   ChevronRight,
   Package,
+  LayoutGrid,
+  List,
+  ImageIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { images } from "@/lib/data";
 
 // Types
 interface Room {
@@ -48,6 +52,7 @@ interface Room {
   floor: number;
   description?: string;
   amenities?: string[];
+  imageUrl?: string;
 }
 
 interface MenuItem {
@@ -60,6 +65,7 @@ interface MenuItem {
   preparationTime?: number;
   dietary?: string[];
   rating?: number;
+  imageUrl?: string;
 }
 
 interface Event {
@@ -80,6 +86,7 @@ interface Service {
   duration?: number;
   type?: string;
   category?: string;
+  imageUrl?: string;
 }
 
 interface Branch {
@@ -165,6 +172,7 @@ function SearchContent() {
   const [activeTab, setActiveTab] = useState("all");
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Debounced search
   useEffect(() => {
@@ -207,6 +215,14 @@ function SearchContent() {
     
     try {
       const response = await fetch(`/api/public/search?q=${encodeURIComponent(searchTerm)}`);
+      
+      // Check if response is OK before parsing JSON
+      if (!response.ok) {
+        console.error("Search API error:", response.status, response.statusText);
+        setIsSearching(false);
+        return;
+      }
+      
       const data = await response.json();
       setResults(data);
       setLastUpdate(new Date(data.timestamp));
@@ -222,6 +238,14 @@ function SearchContent() {
     setIsRefreshing(true);
     try {
       const response = await fetch(`/api/public/search?q=${encodeURIComponent(query)}`);
+      
+      // Check if response is OK before parsing JSON
+      if (!response.ok) {
+        console.error("Refresh API error:", response.status, response.statusText);
+        setIsRefreshing(false);
+        return;
+      }
+      
       const data = await response.json();
       setResults(data);
       setLastUpdate(new Date(data.timestamp));
@@ -342,6 +366,21 @@ function SearchContent() {
               
               {searched && (
                 <div className="flex gap-2">
+                  {/* View Toggle */}
+                  <div className="flex border rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setViewMode("grid")}
+                      className={`p-2 ${viewMode === "grid" ? "bg-emerald-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                    >
+                      <LayoutGrid className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("list")}
+                      className={`p-2 ${viewMode === "list" ? "bg-emerald-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -419,9 +458,9 @@ function SearchContent() {
                         total={results.rooms.length}
                         viewAllLink="/rooms"
                       >
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "grid grid-cols-1 gap-3"}>
                           {results.rooms.slice(0, 6).map((room) => (
-                            <RoomCard key={room.id} room={room} />
+                            <RoomCard key={room.id} room={room} viewMode={viewMode} />
                           ))}
                         </div>
                       </ResultsSection>
@@ -435,9 +474,9 @@ function SearchContent() {
                         total={results.menuItems.length}
                         viewAllLink="/menu"
                       >
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "grid grid-cols-1 gap-3"}>
                           {results.menuItems.slice(0, 6).map((item) => (
-                            <MenuCard key={item.id} item={item} />
+                            <MenuCard key={item.id} item={item} viewMode={viewMode} />
                           ))}
                         </div>
                       </ResultsSection>
@@ -480,18 +519,18 @@ function SearchContent() {
 
               {/* Rooms Tab */}
               <TabsContent value="rooms" className="mt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "grid grid-cols-1 gap-3"}>
                   {results.rooms.map((room) => (
-                    <RoomCard key={room.id} room={room} />
+                    <RoomCard key={room.id} room={room} viewMode={viewMode} />
                   ))}
                 </div>
               </TabsContent>
 
               {/* Menu Tab */}
               <TabsContent value="menu" className="mt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "grid grid-cols-1 gap-3"}>
                   {results.menuItems.map((item) => (
-                    <MenuCard key={item.id} item={item} />
+                    <MenuCard key={item.id} item={item} viewMode={viewMode} />
                   ))}
                 </div>
               </TabsContent>
@@ -561,73 +600,153 @@ function ResultsSection({
 }
 
 // Room Card Component
-function RoomCard({ room }: { room: Room }) {
-  return (
-    <Card className="hover:shadow-lg transition-shadow overflow-hidden">
-      <div className="h-32 bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-        <BedDouble className="w-12 h-12 text-white/80" />
-      </div>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-2">
+function RoomCard({ room, viewMode = "grid" }: { room: Room; viewMode?: "grid" | "list" }) {
+  const roomImage = room.imageUrl || images.hero;
+  
+  if (viewMode === "list") {
+    return (
+      <Card className="hover:shadow-lg transition-shadow overflow-hidden flex">
+        <div className="w-48 h-32 flex-shrink-0">
+          <img src={roomImage} alt={`Room ${room.number}`} className="w-full h-full object-cover" />
+        </div>
+        <CardContent className="p-4 flex-1 flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-slate-900">Room {room.number}</h3>
             <Badge className={`mt-1 ${roomTypeColors[room.type] || 'bg-slate-100'}`}>
               {room.type.replace('_', ' ')}
             </Badge>
+            {room.description && (
+              <p className="text-sm text-slate-600 line-clamp-1 mt-2">{room.description}</p>
+            )}
           </div>
           <div className="text-right">
-            <p className="text-lg font-bold text-emerald-600">${room.price}</p>
+            <p className="text-xl font-bold text-emerald-600">${room.price}</p>
             <p className="text-xs text-slate-500">per night</p>
+            <Link href={`/book?room=${room.number}`}>
+              <Button size="sm" className="mt-2 bg-emerald-600 hover:bg-emerald-700">
+                Book Now
+              </Button>
+            </Link>
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Card className="hover:shadow-lg transition-shadow overflow-hidden group">
+      <div className="relative h-48 overflow-hidden">
+        <img 
+          src={roomImage} 
+          alt={`Room ${room.number}`} 
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="absolute top-3 right-3">
+          <Badge className={`${room.status === 'available' ? 'bg-emerald-500' : 'bg-red-500'} text-white`}>
+            {room.status || 'Available'}
+          </Badge>
         </div>
+        <div className="absolute bottom-3 left-3 text-white">
+          <p className="text-xs opacity-80">Room {room.number}</p>
+          <h3 className="font-semibold text-lg">{room.type.replace('_', ' ')}</h3>
+        </div>
+      </div>
+      <CardContent className="p-4">
         {room.description && (
           <p className="text-sm text-slate-600 line-clamp-2 mb-3">{room.description}</p>
         )}
-        <Link href={`/book?room=${room.number}`}>
-          <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
-            Book Now
-          </Button>
-        </Link>
+        <div className="flex items-center justify-between">
+          <span className="text-xl font-bold text-emerald-600">${room.price}<span className="text-sm text-slate-500 font-normal">/night</span></span>
+          <Link href={`/book?room=${room.number}`}>
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+              Book Now
+            </Button>
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
 // Menu Card Component
-function MenuCard({ item }: { item: MenuItem }) {
-  return (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1">
+function MenuCard({ item, viewMode = "grid" }: { item: MenuItem; viewMode?: "grid" | "list" }) {
+  const itemImage = item.imageUrl || images.hero;
+  
+  if (viewMode === "list") {
+    return (
+      <Card className="hover:shadow-lg transition-shadow flex">
+        <div className="w-32 h-32 flex-shrink-0">
+          <img src={itemImage} alt={item.name} className="w-full h-full object-cover" />
+        </div>
+        <CardContent className="p-4 flex-1 flex items-center justify-between">
+          <div>
+            <Badge className={`mb-2 ${categoryColors[item.category] || 'bg-slate-100'}`}>
+              {item.category}
+            </Badge>
             <h3 className="font-semibold text-slate-900">{item.name}</h3>
-            {item.nameKinyarwanda && (
-              <p className="text-xs text-slate-500">{item.nameKinyarwanda}</p>
+            {item.description && (
+              <p className="text-sm text-slate-600 line-clamp-1">{item.description}</p>
             )}
           </div>
-          <Badge className={`ml-2 ${categoryColors[item.category] || 'bg-slate-100'}`}>
+          <div className="text-right">
+            <span className="text-xl font-bold text-emerald-600">${item.price}</span>
+            <div className="flex items-center gap-2 mt-2">
+              {item.rating && (
+                <span className="flex items-center gap-1 text-sm">
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  {item.rating.toFixed(1)}
+                </span>
+              )}
+              {item.preparationTime && (
+                <span className="flex items-center gap-1 text-xs text-slate-500">
+                  <Clock className="w-3 h-3" />
+                  {item.preparationTime} min
+                </span>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Card className="hover:shadow-lg transition-shadow overflow-hidden group">
+      <div className="relative h-40 overflow-hidden">
+        <img 
+          src={itemImage} 
+          alt={item.name} 
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="absolute top-3 right-3">
+          <Badge className={`${categoryColors[item.category] || 'bg-slate-100'} text-white`}>
             {item.category}
           </Badge>
         </div>
+        {item.rating && (
+          <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-white/90 px-2 py-1 rounded-full">
+            <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+            <span className="text-xs font-semibold">{item.rating.toFixed(1)}</span>
+          </div>
+        )}
+      </div>
+      <CardContent className="p-4">
+        <h3 className="font-semibold text-slate-900 mb-1">{item.name}</h3>
         {item.description && (
-          <p className="text-sm text-slate-600 line-clamp-2 mb-3">{item.description}</p>
+          <p className="text-sm text-slate-600 line-clamp-2 mb-2">{item.description}</p>
         )}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            {item.rating && (
-              <>
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span className="text-sm font-medium">{item.rating.toFixed(1)}</span>
-              </>
-            )}
+          <div className="flex items-center gap-1 text-xs text-slate-500">
             {item.preparationTime && (
-              <span className="flex items-center gap-1 text-xs text-slate-500 ml-2">
+              <>
                 <Clock className="w-3 h-3" />
                 {item.preparationTime} min
-              </span>
+              </>
             )}
           </div>
-          <span className="font-bold text-emerald-600">${item.price}</span>
+          <span className="font-bold text-emerald-600 text-lg">${item.price}</span>
         </div>
       </CardContent>
     </Card>

@@ -1,7 +1,16 @@
+"use client";
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { UserRole } from "../types/enums";
 import { useAppDataStore } from "./app-data-store";
+
+// Import NextAuth signIn
+declare global {
+  interface Window {
+    signIn: (provider: string, options?: any) => Promise<any>;
+  }
+}
 
 export interface User {
   id: string;
@@ -30,17 +39,15 @@ interface AuthState {
   /** Staff created by super_admin/super_manager; persisted */
   dynamicStaff: DynamicStaffMember[];
   login: (email: string, password: string, branchId: string) => Promise<boolean>;
-  registerGuestAccount: (data: {
+  logout: () => void;
+  updateUser: (data: Partial<User>) => void;
+  registerGuest: (data: {
     name: string;
     email: string;
-    phone: string;
+    phone?: string;
     password: string;
     nationality?: string;
-  }) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
-  hasRole: (roles: UserRole[]) => boolean;
-  hasAccess: (requiredRoles: UserRole[]) => boolean;
-  /** Super Admin / Super Manager: add staff to a branch with initial credentials (they must change on first login) */
+  }) => Promise<boolean>;
   addStaff: (data: {
     name: string;
     email: string;
@@ -49,230 +56,10 @@ interface AuthState {
     branchId: string;
     branchName: string;
     phone?: string;
-  }) => { success: boolean; error?: string };
-  /** Update staff credentials (used by change-credentials page and by super to reset) */
-  updateStaffCredentials: (userId: string, newEmail: string, newPassword: string) => { success: boolean; error?: string };
-  /** Mark that current user has completed credential change */
-  setCredentialsChanged: (userId: string) => void;
-  /** Get all staff (static + dynamic) for a branch or all branches (for super) */
-  getAllStaff: (branchId: string | "all", includeStatic: boolean) => Array<{ user: User; isDynamic: boolean; mustChangeCredentials?: boolean }>;
-  /** Remove a dynamic staff member (only dynamic; used by branch manager or super) */
-  removeStaff: (userId: string) => { success: boolean; error?: string };
+  }) => Promise<{ success: boolean; error?: string }>;
+  removeStaff: (email: string) => void;
+  setRequiresCredentialsChange: (value: boolean) => void;
 }
-
-// Static staff credentials — given by the manager
-// Staff CANNOT register; they use these predefined credentials.
-const staffUsers: (User & { password: string })[] = [
-  // ═══ Super Admin / Manager ═══
-  {
-    id: "u-000",
-    name: "EastGate Admin",
-    email: "eastgate@gmail.com",
-    password: "2026",
-    role: "super_admin",
-    branchId: "all",
-    branchName: "All Branches",
-    avatar: "https://i.pravatar.cc/40?u=eastgate-admin",
-  },
-  {
-    id: "u-001",
-    name: "Manager Chief",
-    email: "manager@eastgate.rw",
-    password: "manager123",
-    role: "super_manager",
-    branchId: "all",
-    branchName: "All Branches",
-    avatar: "https://i.pravatar.cc/40?u=manager",
-  },
-  {
-    id: "u-002",
-    name: "Admin Superuser",
-    email: "admin@eastgate.rw",
-    password: "admin123",
-    role: "super_admin",
-    branchId: "all",
-    branchName: "All Branches",
-    avatar: "https://i.pravatar.cc/40?u=admin",
-  },
-
-  // ═══ Kigali Main Branch (br-001) ═══
-  {
-    id: "u-004",
-    name: "Jean-Pierre Habimana",
-    email: "jp@eastgate.rw",
-    password: "jp123",
-    role: "branch_manager",
-    branchId: "br-001",
-    branchName: "Kigali Main",
-    avatar: "https://i.pravatar.cc/40?u=jp-habimana",
-  },
-  {
-    id: "u-005",
-    name: "Grace Uwase",
-    email: "grace@eastgate.rw",
-    password: "grace123",
-    role: "receptionist",
-    branchId: "br-001",
-    branchName: "Kigali Main",
-    avatar: "https://i.pravatar.cc/40?u=grace-uwase",
-  },
-  {
-    id: "u-006",
-    name: "Patrick Bizimana",
-    email: "patrick@eastgate.rw",
-    password: "patrick123",
-    role: "waiter",
-    branchId: "br-001",
-    branchName: "Kigali Main",
-    avatar: "https://i.pravatar.cc/40?u=patrick-b",
-  },
-  {
-    id: "u-007",
-    name: "Aimée Kamikazi",
-    email: "aimee@eastgate.rw",
-    password: "aimee123",
-    role: "accountant",
-    branchId: "br-001",
-    branchName: "Kigali Main",
-    avatar: "https://i.pravatar.cc/40?u=aimee-k",
-  },
-  {
-    id: "u-007k",
-    name: "Kitchen Kigali",
-    email: "kitchen@eastgate.rw",
-    password: "kitchen123",
-    role: "kitchen_staff",
-    branchId: "br-001",
-    branchName: "Kigali Main",
-    avatar: "https://i.pravatar.cc/40?u=kitchen-k",
-  },
-
-  // ═══ Ngoma Branch (br-002) ═══
-  {
-    id: "u-008",
-    name: "Diane Uwimana",
-    email: "diane@eastgate.rw",
-    password: "diane123",
-    role: "branch_manager",
-    branchId: "br-002",
-    branchName: "Ngoma Branch",
-    avatar: "https://i.pravatar.cc/40?u=diane-uwimana",
-  },
-  {
-    id: "u-009",
-    name: "Eric Ndikumana",
-    email: "eric.n@eastgate.rw",
-    password: "eric123",
-    role: "receptionist",
-    branchId: "br-002",
-    branchName: "Ngoma Branch",
-    avatar: "https://i.pravatar.cc/40?u=eric-n",
-  },
-  {
-    id: "u-010",
-    name: "Joseph Habiyaremye",
-    email: "joseph@eastgate.rw",
-    password: "joseph123",
-    role: "waiter",
-    branchId: "br-002",
-    branchName: "Ngoma Branch",
-    avatar: "https://i.pravatar.cc/40?u=joseph-h",
-  },
-  {
-    id: "u-010k",
-    name: "Kitchen Ngoma",
-    email: "kitchen.ngoma@eastgate.rw",
-    password: "kitchen123",
-    role: "kitchen_staff",
-    branchId: "br-002",
-    branchName: "Ngoma Branch",
-    avatar: "https://i.pravatar.cc/40?u=kitchen-n",
-  },
-
-  // ═══ Kirehe Branch (br-003) ═══
-  {
-    id: "u-011",
-    name: "Patrick Niyonsaba",
-    email: "patrick.n@eastgate.rw",
-    password: "patrick.n123",
-    role: "branch_manager",
-    branchId: "br-003",
-    branchName: "Kirehe Branch",
-    avatar: "https://i.pravatar.cc/40?u=patrick-n",
-  },
-  {
-    id: "u-012",
-    name: "Esperance Mukamana",
-    email: "esperance@eastgate.rw",
-    password: "esperance123",
-    role: "receptionist",
-    branchId: "br-003",
-    branchName: "Kirehe Branch",
-    avatar: "https://i.pravatar.cc/40?u=esperance-m",
-  },
-  {
-    id: "u-013",
-    name: "Angelique Uwera",
-    email: "angelique@eastgate.rw",
-    password: "angelique123",
-    role: "waiter",
-    branchId: "br-003",
-    branchName: "Kirehe Branch",
-    avatar: "https://i.pravatar.cc/40?u=angelique-u",
-  },
-  {
-    id: "u-013k",
-    name: "Kitchen Kirehe",
-    email: "kitchen.kirehe@eastgate.rw",
-    password: "kitchen123",
-    role: "kitchen_staff",
-    branchId: "br-003",
-    branchName: "Kirehe Branch",
-    avatar: "https://i.pravatar.cc/40?u=kitchen-kr",
-  },
-
-  // ═══ Gatsibo Branch (br-004) ═══
-  {
-    id: "u-014",
-    name: "Emmanuel Mugisha",
-    email: "emmanuel.m@eastgate.rw",
-    password: "emmanuel123",
-    role: "branch_manager",
-    branchId: "br-004",
-    branchName: "Gatsibo Branch",
-    avatar: "https://i.pravatar.cc/40?u=emmanuel-m",
-  },
-  {
-    id: "u-015",
-    name: "Sylvie Uwamahoro",
-    email: "sylvie@eastgate.rw",
-    password: "sylvie123",
-    role: "receptionist",
-    branchId: "br-004",
-    branchName: "Gatsibo Branch",
-    avatar: "https://i.pravatar.cc/40?u=sylvie-u",
-  },
-  {
-    id: "u-016",
-    name: "Chantal Uwase",
-    email: "chantal@eastgate.rw",
-    password: "chantal123",
-    role: "waiter",
-    branchId: "br-004",
-    branchName: "Gatsibo Branch",
-    avatar: "https://i.pravatar.cc/40?u=chantal-u",
-  },
-  {
-    id: "u-016k",
-    name: "Kitchen Gatsibo",
-    email: "kitchen.gatsibo@eastgate.rw",
-    password: "kitchen123",
-    role: "kitchen_staff",
-    branchId: "br-004",
-    branchName: "Gatsibo Branch",
-    avatar: "https://i.pravatar.cc/40?u=kitchen-g",
-  },
-];
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -285,31 +72,38 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (email: string, password: string, branchId: string) => {
         try {
-          const res = await fetch("/api/auth/login", {
+          // Use NextAuth credentials provider
+          const response = await fetch("/api/auth/callback/credentials", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, branchId }),
+            body: JSON.stringify({ email, password }),
           });
-          const data = await res.json();
-          if (data.success && data.user) {
-            set({
-              user: data.user,
-              isAuthenticated: true,
-              requiresCredentialsChange: data.requiresCredentialsChange || false,
-            });
-            await fetch("/api/realtime/activity", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: data.user.id,
-                branchId: data.user.branchId,
-                action: "login",
-                entity: "auth",
-                entityId: data.user.id,
-                details: { email, timestamp: new Date().toISOString() },
-              }),
-            });
-            return true;
+
+          if (response.ok) {
+            // Get session after successful login
+            const sessionRes = await fetch("/api/auth/session");
+            const session = await sessionRes.json();
+
+            if (session?.user) {
+              const userData: User = {
+                id: session.user.id,
+                name: session.user.name,
+                email: session.user.email,
+                role: session.user.role,
+                branchId: session.user.branchId || branchId,
+                branchName: session.user.branchId 
+                  ? useAppDataStore.getState().branches.find(b => b.id === session.user.branchId)?.name || "Branch"
+                  : "All Branches",
+                avatar: session.user.image || `https://i.pravatar.cc/40?u=${session.user.email}`,
+              };
+
+              set({
+                user: userData,
+                isAuthenticated: true,
+                requiresCredentialsChange: false,
+              });
+              return true;
+            }
           }
           return false;
         } catch (error) {
@@ -318,7 +112,24 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      registerGuestAccount: async (data) => {
+      logout: () => {
+        fetch("/api/auth/signout", { method: "POST" }).finally(() => {
+          set({
+            user: null,
+            isAuthenticated: false,
+            requiresCredentialsChange: false,
+          });
+        });
+      },
+
+      updateUser: (data) => {
+        const currentUser = get().user;
+        if (currentUser) {
+          set({ user: { ...currentUser, ...data } });
+        }
+      },
+
+      registerGuest: async (data) => {
         try {
           const res = await fetch("/api/guests/register", {
             method: "POST",
@@ -331,195 +142,71 @@ export const useAuthStore = create<AuthState>()(
               id: result.guest.id,
               name: result.guest.name,
               email: result.guest.email,
-              phone: result.guest.phone,
               role: "guest",
               branchId: "all",
               branchName: "Guest",
-              nationality: result.guest.nationality,
               avatar: `https://i.pravatar.cc/40?u=${result.guest.email}`,
+              phone: result.guest.phone,
+              nationality: result.guest.nationality,
             };
-            set({ user: userData, isAuthenticated: true });
-            return { success: true };
+            set((state) => ({
+              registeredGuests: [...state.registeredGuests, { ...userData, password: data.password }],
+            }));
+            return true;
           }
-          return { success: false, error: result.error || "Registration failed" };
-        } catch (error: any) {
-          return { success: false, error: error.message };
-        }
-      },
-
-      logout: async () => {
-        const user = get().user;
-        if (user) {
-          await fetch("/api/realtime/activity", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: user.id,
-              branchId: user.branchId,
-              action: "logout",
-              entity: "auth",
-              entityId: user.id,
-              details: { timestamp: new Date().toISOString() },
-            }),
-          }).catch(() => {});
-        }
-        set({ user: null, isAuthenticated: false, requiresCredentialsChange: false });
-        if (typeof window !== 'undefined') {
-          document.cookie = "eastgate-auth=; path=/; max-age=0; SameSite=Lax";
+          return false;
+        } catch (error) {
+          console.error("Register error:", error);
+          return false;
         }
       },
 
       addStaff: async (data) => {
-        const state = get();
-        const currentUser = state.user;
-        
-        if (currentUser?.role === "branch_manager" && currentUser.branchId !== data.branchId) {
-          return { success: false, error: "You can only add staff to your assigned branch." };
-        }
-        
-        if (currentUser?.role === "branch_manager") {
-          const restrictedRoles: UserRole[] = ["super_admin", "super_manager", "branch_manager", "accountant", "event_manager"];
-          if (restrictedRoles.includes(data.role)) {
-            return { success: false, error: "You don't have permission to add this role." };
-          }
-        }
-        
         try {
           const res = await fetch("/api/staff", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...data, createdBy: currentUser?.id }),
+            body: JSON.stringify(data),
           });
           const result = await res.json();
           if (result.success) {
-            await fetch("/api/realtime/activity", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: currentUser?.id,
-                branchId: data.branchId,
-                action: "create_staff",
-                entity: "staff",
-                entityId: result.staff.id,
-                details: { name: data.name, role: data.role },
-              }),
-            });
+            set((state) => ({
+              dynamicStaff: [
+                ...state.dynamicStaff,
+                {
+                  ...data,
+                  id: result.staff.id,
+                  mustChangeCredentials: true,
+                } as DynamicStaffMember,
+              ],
+            }));
             return { success: true };
           }
           return { success: false, error: result.error };
-        } catch (error: any) {
-          return { success: false, error: error.message };
+        } catch (error) {
+          console.error("Add staff error:", error);
+          return { success: false, error: "Failed to add staff" };
         }
       },
 
-      updateStaffCredentials: (userId, newEmail, newPassword) => {
-        const state = get();
-        const idx = state.dynamicStaff.findIndex((u) => u.id === userId);
-        if (idx === -1) return { success: false, error: "User not found." };
-        const others = state.dynamicStaff.filter((u) => u.id !== userId);
-        const exists = others.some((u) => u.email.toLowerCase() === newEmail.toLowerCase()) ||
-          staffUsers.some((u) => u.email.toLowerCase() === newEmail.toLowerCase());
-        if (exists) return { success: false, error: "This email is already in use." };
-        const next = state.dynamicStaff.map((u) =>
-          u.id === userId ? { ...u, email: newEmail, password: newPassword, mustChangeCredentials: false } : u
-        );
-        set({ dynamicStaff: next });
-        const { user } = state;
-        if (user?.id === userId) {
-          set({ user: { ...user, email: newEmail }, requiresCredentialsChange: false });
-        }
-        return { success: true };
-      },
-
-      setCredentialsChanged: (userId) => {
-        set((s) => ({
-          dynamicStaff: s.dynamicStaff.map((u) =>
-            u.id === userId ? { ...u, mustChangeCredentials: false } : u
-          ),
-          requiresCredentialsChange: s.user?.id === userId ? false : s.requiresCredentialsChange,
+      removeStaff: (email) => {
+        set((state) => ({
+          dynamicStaff: state.dynamicStaff.filter((s) => s.email !== email),
         }));
       },
 
-      getAllStaff: (branchId, includeStatic) => {
-        const state = get();
-        const result: Array<{ user: User; isDynamic: boolean; mustChangeCredentials?: boolean }> = [];
-        if (includeStatic) {
-          const staticList = branchId === "all" ? staffUsers : staffUsers.filter((u) => u.branchId === branchId || u.branchId === "all");
-          staticList.forEach((u) => {
-            const { password: _p, ...user } = u;
-            result.push({ user, isDynamic: false });
-          });
-        }
-        const dyn = branchId === "all" ? state.dynamicStaff : state.dynamicStaff.filter((u) => u.branchId === branchId);
-        dyn.forEach((u) => {
-          const { password: _p, mustChangeCredentials, ...user } = u;
-          result.push({ user, isDynamic: true, mustChangeCredentials });
-        });
-        return result;
-      },
-
-      removeStaff: (userId) => {
-        const state = get();
-        const currentUser = state.user;
-        if (currentUser?.id === userId) return { success: false, error: "Cannot remove your own account." };
-        
-        const staffToRemove = state.dynamicStaff.find((u) => u.id === userId);
-        if (!staffToRemove) return { success: false, error: "User not found or cannot be removed." };
-        
-        // Branch managers can only remove staff from their own branch
-        if (currentUser?.role === "branch_manager" && staffToRemove.branchId !== currentUser.branchId) {
-          return { success: false, error: "You can only remove staff from your assigned branch." };
-        }
-        
-        set((s) => ({ dynamicStaff: s.dynamicStaff.filter((u) => u.id !== userId) }));
-        return { success: true };
-      },
-
-      hasRole: (roles: UserRole[]) => {
-        const { user } = get();
-        if (!user) return false;
-        return roles.includes(user.role);
-      },
-
-      hasAccess: (requiredRoles: UserRole[]) => {
-        const { user } = get();
-        if (!user) return false;
-        if (user.role === "super_admin" || user.role === "super_manager") {
-          return true;
-        }
-        return requiredRoles.includes(user.role);
+      setRequiresCredentialsChange: (value) => {
+        set({ requiresCredentialsChange: value });
       },
     }),
     {
-      name: "eastgate-auth-storage",
+      name: "eastgate-auth",
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
-        registeredGuests: state.registeredGuests,
+        requiresCredentialsChange: state.requiresCredentialsChange,
         dynamicStaff: state.dynamicStaff,
       }),
     }
   )
 );
-
-// Export staff credentials list for display in login page hints (all static users)
-export const getStaffCredentials = () =>
-  staffUsers.map(({ name, email, password, role, branchName }) => ({
-    name,
-    email,
-    password,
-    role,
-    branchName,
-  }));
-
-/** Demo login: only Super Admin and Super Manager. All other roles are added by Super Manager for branches. */
-export const getDemoStaffCredentials = () =>
-  staffUsers
-    .filter((u) => u.role === "super_admin" || u.role === "super_manager")
-    .map(({ name, email, password, role, branchName }) => ({
-      name,
-      email,
-      password,
-      role,
-      branchName,
-    }));

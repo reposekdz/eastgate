@@ -11,11 +11,13 @@ import {
   StaggerItem,
 } from "@/components/animations/MotionWrapper";
 import { diningContent } from "@/lib/kw-data";
+import { useI18n } from "@/lib/i18n/context";
 import { images } from "@/lib/data";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function DiningPage() {
+  const { t } = useI18n();
   const categories = [...new Set(diningContent.menuHighlights.map((m) => m.category))];
 
   return (
@@ -43,8 +45,8 @@ export default function DiningPage() {
             transition={{ delay: 0.4 }}
             className="text-3xl sm:text-4xl md:heading-xl text-white font-heading font-bold mb-4"
           >
-            {diningContent.title}{" "}
-            <span className="italic text-gold-light">{diningContent.titleAccent}</span>
+            {t("dining", "title")}{" "}
+            <span className="italic text-gold-light">{t("dining", "titleAccent")}</span>
           </motion.h1>
           <motion.div
             initial={{ scaleX: 0 }}
@@ -62,21 +64,21 @@ export default function DiningPage() {
             <SlideIn direction="left">
               <div>
                 <p className="body-sm uppercase tracking-[0.25em] text-gold-dark mb-3 font-medium">
-                  {diningContent.sectionLabel}
+                  {t("dining", "sectionLabel")}
                 </p>
                 <h2 className="heading-md sm:heading-lg text-charcoal mb-6 font-heading">
-                  Ibiryo Byiza{" "}
-                  <span className="italic text-emerald">by&apos;u Rwanda</span>
+                  {t("dining", "menuHighlightsTitle")}{" "}
+                  <span className="italic text-emerald">{t("dining", "titleAccent")}</span>
                 </h2>
                 <div className="h-[2px] w-12 bg-gold mb-6" />
                 <p className="body-md sm:body-lg text-text-muted-custom mb-8">
-                  {diningContent.description}
+                  {t("dining", "description")}
                 </p>
                 <Button
                   asChild
                   className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-8 py-5 rounded-[2px] uppercase tracking-wider text-sm transition-all duration-300"
                 >
-                  <Link href="/book">{diningContent.ctaText}</Link>
+                  <Link href="/book">{t("dining", "ctaButton")}</Link>
                 </Button>
               </div>
             </SlideIn>

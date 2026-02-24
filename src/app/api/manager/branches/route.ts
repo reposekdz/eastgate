@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
-import { isSuperAdmin } from "@/lib/auth";
+import { isSuperAdmin, isSuperAdminOrManager } from "@/lib/auth";
 
 // GET - Fetch all branches
 export async function GET(req: NextRequest) {
@@ -131,13 +131,13 @@ export async function PUT(req: NextRequest) {
 
     const userRole = session.user.role as string;
 
-    // Only super admin can update branches
-    if (!isSuperAdmin(userRole)) {
+    // Only super admin or super manager can update branches
+    if (!isSuperAdmin(userRole) && !isSuperAdminOrManager(userRole)) {
       return NextResponse.json({ error: "Forbidden - Only super admins can update branches" }, { status: 403 });
     }
 
     const body = await req.json();
-    const { id, name, location, address, phone, email, isActive } = body;
+    const { id, name, location, address, phone, email, isActive, managerId } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Branch ID is required" }, { status: 400 });
@@ -170,6 +170,21 @@ export async function PUT(req: NextRequest) {
     }
     if (isActive !== undefined) {
       await prisma.$executeRaw`UPDATE branches SET is_active = ${isActive}, updated_at = NOW() WHERE id = ${id}`;
+    }
+    if (managerId !== undefined) {
+      // Verify the staff member exists and has manager role
+      const staffMember = await prisma.$queryRaw`
+        SELECT id, role FROM staff WHERE id = ${managerId} LIMIT 1
+      ` as any[];
+      
+      if (staffMember.length > 0) {
+        const validRoles = ["BRANCH_MANAGER", "MANAGER", "SUPER_MANAGER"];
+        if (validRoles.includes(staffMember[0].role)) {
+          await prisma.$executeRaw`UPDATE branches SET manager_id = ${managerId}, updated_at = NOW() WHERE id = ${id}`;
+        } else {
+          return NextResponse.json({ error: "指定的员工必须具有经理角色" }, { status: 400 });
+        }
+      }
     }
 
     return NextResponse.json({

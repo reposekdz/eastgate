@@ -8,9 +8,11 @@ import {
 } from "@/components/animations/MotionWrapper";
 import { galleryContent } from "@/lib/kw-data";
 import { images } from "@/lib/data";
+import { useI18n } from "@/lib/i18n/context";
 import { X, ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 
 export default function GalleryPage() {
+  const { t } = useI18n();
   const [activeCategory, setActiveCategory] = useState("byose");
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState(0);
@@ -18,7 +20,7 @@ export default function GalleryPage() {
   const filteredImages =
     activeCategory === "byose"
       ? galleryContent.images
-      : galleryContent.images.filter((img) => img.category === activeCategory);
+      : galleryContent.images.filter((img: any) => img.category === activeCategory);
 
   const openLightbox = (idx: number) => {
     setLightboxIdx(idx);
@@ -51,7 +53,7 @@ export default function GalleryPage() {
             transition={{ delay: 0.2 }}
             className="body-sm uppercase tracking-[0.25em] text-gold-light mb-3 font-medium"
           >
-            {galleryContent.sectionLabel}
+            {t("gallery", "sectionLabel")}
           </motion.p>
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
@@ -59,8 +61,8 @@ export default function GalleryPage() {
             transition={{ delay: 0.4 }}
             className="text-3xl sm:text-4xl md:heading-xl text-white font-heading font-bold mb-4"
           >
-            {galleryContent.title}{" "}
-            <span className="italic text-gold">{galleryContent.titleAccent}</span>
+            {t("gallery", "title")}{" "}
+            <span className="italic text-gold">{t("gallery", "titleAccent") || "EastGate"}</span>
           </motion.h1>
           <motion.div
             initial={{ scaleX: 0 }}
@@ -74,7 +76,7 @@ export default function GalleryPage() {
             transition={{ delay: 0.8 }}
             className="body-md text-white/70 max-w-xl"
           >
-            {galleryContent.description}
+            {t("gallery", "description")}
           </motion.p>
         </div>
       </section>

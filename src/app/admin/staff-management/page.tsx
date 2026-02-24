@@ -114,6 +114,17 @@ export default function StaffManagementPage() {
   const [addBranchId, setAddBranchId] = useState("br-001");
   const [addLoading, setAddLoading] = useState(false);
 
+  // Auto-generate password for staff
+  const generatePassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
+    let password = "";
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setAddPassword(password);
+    toast.success("Password auto-generated!");
+  };
+
   const filteredStaff = staffList.filter((staff) => {
     const matchesSearch =
       staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -202,7 +213,12 @@ export default function StaffManagementPage() {
                   <Input type="email" placeholder="john@eastgate.rw" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Initial Password (min 6 chars)</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Initial Password (min 6 chars)</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={generatePassword} className="text-xs h-7">
+                      <Key className="w-3 h-3 mr-1" /> Generate
+                    </Button>
+                  </div>
                   <Input type="password" placeholder="••••••••" value={addPassword} onChange={(e) => setAddPassword(e.target.value)} minLength={6} />
                 </div>
                 <div className="space-y-2">

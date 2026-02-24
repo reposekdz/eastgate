@@ -6,21 +6,61 @@ const prisma = new PrismaClient();
 async function main() {
     console.log("🌱 Starting database seed...\n");
 
-    // Create default branch
-    const branch = await prisma.branch.upsert({
-        where: { id: "main-branch" },
-        update: {},
-        create: {
-            id: "main-branch",
-            name: "Eastgate Hotel Main",
+    // Create default branches
+    const branches = [
+        {
+            id: "kigali-main",
+            name: "Kigali Main",
             location: "Kigali, Rwanda",
             address: "KG 123 Street, Kigali",
             phone: "+250 788 123 456",
-            email: "info@eastgate.com",
-            isActive: true,
+            email: "kigali@eastgates.com",
         },
-    });
-    console.log("✅ Created default branch:", branch.name);
+        {
+            id: "ngoma",
+            name: "Ngoma",
+            location: "Ngoma District, Rwanda",
+            address: "Main Road, Ngoma",
+            phone: "+250 788 234 567",
+            email: "ngoma@eastgates.com",
+        },
+        {
+            id: "kirehe",
+            name: "Kirehe",
+            location: "Kirehe District, Rwanda",
+            address: "Market Street, Kirehe",
+            phone: "+250 788 345 678",
+            email: "kirehe@eastgates.com",
+        },
+        {
+            id: "gatsibo",
+            name: "Gatsibo",
+            location: "Gatsibo District, Rwanda",
+            address: "Town Center, Gatsibo",
+            phone: "+250 788 456 789",
+            email: "gatsibo@eastgates.com",
+        },
+    ];
+
+    for (const b of branches) {
+        await prisma.branch.upsert({
+            where: { id: b.id },
+            update: {},
+            create: {
+                id: b.id,
+                name: b.name,
+                location: b.location,
+                address: b.address,
+                phone: b.phone,
+                email: b.email,
+                isActive: true,
+            },
+        });
+        console.log("✅ Created branch:", b.name);
+    }
+
+    // Use Kigali Main as default branch for backward compatibility
+    const branch = branches[0];
 
     // Create rooms
     const roomTypes = [
@@ -107,49 +147,124 @@ async function main() {
     // Create staff with proper hashed passwords
     const staffMembers = [
         {
-            email: "superadmin@eastgate.com",
+            email: "admin@eastgates.com",
             name: "Super Admin",
             phone: "+250 788 000 001",
             role: "SUPER_ADMIN",
             department: "Management",
             shift: "Morning",
-            password: "superadmin123",
+            password: "2026",
+            branchId: "kigali-main",
         },
         {
-            email: "manager@eastgate.com",
-            name: "Branch Manager",
+            email: "manager@eastgates.com",
+            name: "Super Manager",
             phone: "+250 788 000 002",
-            role: "MANAGER",
+            role: "SUPER_MANAGER",
             department: "Management",
             shift: "Morning",
-            password: "manager123",
+            password: "2026",
+            branchId: "kigali-main",
         },
         {
-            email: "reception@eastgate.com",
-            name: "Receptionist",
-            phone: "+250 788 000 003",
+            email: "manager.kigali@eastgates.com",
+            name: "Kigali Branch Manager",
+            phone: "+250 788 100 001",
+            role: "BRANCH_MANAGER",
+            department: "Management",
+            shift: "Morning",
+            password: "2026",
+            branchId: "kigali-main",
+        },
+        {
+            email: "manager.ngoma@eastgates.com",
+            name: "Ngoma Branch Manager",
+            phone: "+250 788 100 002",
+            role: "BRANCH_MANAGER",
+            department: "Management",
+            shift: "Morning",
+            password: "2026",
+            branchId: "ngoma",
+        },
+        {
+            email: "manager.kirehe@eastgates.com",
+            name: "Kirehe Branch Manager",
+            phone: "+250 788 100 003",
+            role: "BRANCH_MANAGER",
+            department: "Management",
+            shift: "Morning",
+            password: "2026",
+            branchId: "kirehe",
+        },
+        {
+            email: "manager.gatsibo@eastgates.com",
+            name: "Gatsibo Branch Manager",
+            phone: "+250 788 100 004",
+            role: "BRANCH_MANAGER",
+            department: "Management",
+            shift: "Morning",
+            password: "2026",
+            branchId: "gatsibo",
+        },
+        {
+            email: "reception.kigali@eastgates.com",
+            name: "Kigali Receptionist",
+            phone: "+250 788 200 001",
             role: "RECEPTIONIST",
             department: "Front Desk",
             shift: "Morning",
-            password: "reception123",
+            password: "2026",
+            branchId: "kigali-main",
         },
         {
-            email: "waiter@eastgate.com",
-            name: "Waiter",
-            phone: "+250 788 000 004",
+            email: "reception.ngoma@eastgates.com",
+            name: "Ngoma Receptionist",
+            phone: "+250 788 200 002",
+            role: "RECEPTIONIST",
+            department: "Front Desk",
+            shift: "Evening",
+            password: "2026",
+            branchId: "ngoma",
+        },
+        {
+            email: "waiter.kigali@eastgates.com",
+            name: "Kigali Waiter",
+            phone: "+250 788 300 001",
             role: "WAITER",
             department: "Restaurant",
             shift: "Evening",
-            password: "waiter123",
+            password: "2026",
+            branchId: "kigali-main",
         },
         {
-            email: "kitchen@eastgate.com",
-            name: "Kitchen Staff",
-            phone: "+250 788 000 005",
-            role: "KITCHEN",
+            email: "waiter.ngoma@eastgates.com",
+            name: "Ngoma Waiter",
+            phone: "+250 788 300 002",
+            role: "WAITER",
+            department: "Restaurant",
+            shift: "Evening",
+            password: "2026",
+            branchId: "ngoma",
+        },
+        {
+            email: "chef.kigali@eastgates.com",
+            name: "Kigali Chef",
+            phone: "+250 788 400 001",
+            role: "CHEF",
             department: "Kitchen",
             shift: "Morning",
-            password: "kitchen123",
+            password: "2026",
+            branchId: "kigali-main",
+        },
+        {
+            email: "chef.ngoma@eastgates.com",
+            name: "Ngoma Chef",
+            phone: "+250 788 400 002",
+            role: "CHEF",
+            department: "Kitchen",
+            shift: "Morning",
+            password: "2026",
+            branchId: "ngoma",
         },
     ];
 
@@ -167,20 +282,31 @@ async function main() {
                 shift: staff.shift,
                 status: "active",
                 password: hashedPassword,
-                branchId: branch.id,
+                branchId: staff.branchId || branch.id,
             },
         });
         console.log("✅ Created staff:", staff.email);
     }
 
     console.log("\n🎉 Seed completed successfully!");
-    console.log("\n📋 Login credentials:");
+    console.log("\n📋 Login credentials (password: 2026 for all):");
     console.log("========================================");
-    console.log("Super Admin:   superadmin@eastgate.com / superadmin123");
-    console.log("Manager:      manager@eastgate.com / manager123");
-    console.log("Receptionist:  reception@eastgate.com / reception123");
-    console.log("Waiter:       waiter@eastgate.com / waiter123");
-    console.log("Kitchen:      kitchen@eastgate.com / kitchen123");
+    console.log("Super Admin:   admin@eastgates.com");
+    console.log("Super Manager: manager@eastgates.com");
+    console.log("----------------------------------------");
+    console.log("Branch Managers:");
+    console.log("  Kigali:    manager.kigali@eastgates.com");
+    console.log("  Ngoma:     manager.ngoma@eastgates.com");
+    console.log("  Kirehe:    manager.kirehe@eastgates.com");
+    console.log("  Gatsibo:   manager.gatsibo@eastgates.com");
+    console.log("----------------------------------------");
+    console.log("Staff:");
+    console.log("  Reception: reception.kigali@eastgates.com");
+    console.log("            reception.ngoma@eastgates.com");
+    console.log("  Waiter:    waiter.kigali@eastgates.com");
+    console.log("            waiter.ngoma@eastgates.com");
+    console.log("  Chef:      chef.kigali@eastgates.com");
+    console.log("            chef.ngoma@eastgates.com");
     console.log("========================================");
 
     // Create sample messages from guests

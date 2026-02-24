@@ -211,6 +211,15 @@ export default function AdminSearchPage() {
         }
 
         const response = await fetch(`/api/admin/search?${params}`);
+        
+        // Check if response is OK before parsing JSON
+        if (!response.ok) {
+          console.error("Search API error:", response.status, response.statusText);
+          setServerResults([]);
+          setIsLoading(false);
+          return;
+        }
+        
         const data = await response.json();
         
         if (data.results) {

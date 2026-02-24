@@ -65,25 +65,19 @@ function LoginPageContent() {
 
       if (success) {
         toast.success(t("auth", "loginSuccess"));
-        const { user, requiresCredentialsChange } = useAuthStore.getState();
+        const { user } = useAuthStore.getState();
 
-        if (requiresCredentialsChange) {
-          router.push("/change-credentials");
-          return;
-        }
         if (redirectPath) {
           router.push(redirectPath);
-        } else if (user?.role === "guest") {
-          router.push("/");
-        } else if (user?.role === "super_admin" || user?.role === "super_manager" || user?.role === "accountant" || user?.role === "event_manager") {
+        } else if (user?.role === "SUPER_ADMIN" || user?.role === "SUPER_MANAGER") {
           router.push("/admin");
-        } else if (user?.role === "branch_manager" || user?.role === "branch_admin") {
-          router.push(user.role === "branch_admin" ? "/admin" : "/manager");
-        } else if (user?.role === "receptionist") {
+        } else if (user?.role === "BRANCH_MANAGER") {
+          router.push("/manager");
+        } else if (user?.role === "RECEPTIONIST") {
           router.push("/receptionist");
-        } else if (user?.role === "kitchen_staff") {
+        } else if (user?.role === "KITCHEN_STAFF" || user?.role === "CHEF") {
           router.push("/kitchen");
-        } else if (user?.role === "waiter" || user?.role === "restaurant_staff") {
+        } else if (user?.role === "WAITER") {
           router.push("/waiter");
         } else {
           router.push("/admin");

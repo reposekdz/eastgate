@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || "eastgate-secret-key-change-in-production";
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,25 +30,57 @@ export async function POST(req: NextRequest) {
 
     const user = staff[0];
 
-    // For demo: accept demo123, admin123, or email prefix as password
-    const isValid = password === "demo123" || 
-                   password === "admin123" || 
-                   password === email.split('@')[0];
-
-    if (!isValid) {
+    // Check if user is active
+    if (user.status !== "active") {
       return NextResponse.json(
-        { success: false, error: "Invalid credentials" },
+        { success: false, error: "Account is not active. Please contact administrator." },
         { status: 401 }
       );
     }
 
-    // Create simple token (in production use proper JWT)
-    const token = Buffer.from(JSON.stringify({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      branchId: user.branch_id || user.branchId,
-    })).toString('base64');
+    // Verify password using bcrypt
+    let isValidPassword = false;
+    
+    if (user.password && typeof user.password === 'string' && user.password.startsWith('$2')) {
+      // Use bcrypt to compare passwords (if it's a hashed password)
+      isValidPassword = await bcrypt.compare(password, user.password);
+    } else {
+      // Fallback for demo accounts - accepts these passwords for development
+      isValidPassword = 
+        password === "demo123" || 
+        password === "admin123" ||
+        password === "manager123" ||
+        password === email.split('@')[0];
+    }
+
+    if (!isValidPassword) {
+      return NextResponse.json(
+        { success: false, error: "Invalid password" },
+        { status: 401 }
+      );
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        branchId: user.branch_id || user.branchId,
+        department: user.department,
+      },
+      JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    // Update last login
+    try {
+      await prisma.$executeRaw`
+        UPDATE staff SET last_login = NOW(), updated_at = NOW() WHERE id = ${user.id}
+      `;
+    } catch (e) {
+      // Ignore update errors
+    }
 
     return NextResponse.json({
       success: true,
@@ -55,6 +91,7 @@ export async function POST(req: NextRequest) {
         role: user.role,
         branchId: user.branch_id || user.branchId,
         avatar: user.avatar,
+        department: user.department,
       },
       token,
     });

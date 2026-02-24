@@ -7,246 +7,11 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
-model Room {
-  id          String   @id @default(cuid())
-  number      String
-  floor       Int
-  type        String   @map("room_type")
-  status      String   @default("available")
-  price       Float
-  description String?  @db.Text
-  imageUrl    String?
-  branchId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("rooms")
-}
-
-model Booking {
-  id              String   @id @default(cuid())
-  guestName       String
-  guestEmail      String
-  guestPhone      String?
-  guestAvatar     String?
-  roomId          String
-  roomNumber      String
-  roomType        String
-  checkIn         DateTime
-  checkOut        DateTime
-  adults          Int      @default(1)
-  children        Int      @default(0)
-  status          String   @default("pending")
-  totalAmount     Float    @map("total_amount")
-  paymentMethod   String?  @map("payment_method")
-  specialRequests String?  @map("special_requests") @db.Text
-  addOns          Json?
-  branchId        String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@map("bookings")
-}
-
-model Payment {
-  id            String   @id @default(cuid())
-  bookingId     String?  @map("booking_id")
-  orderId       String?  @map("order_id")
-  amount        Float
-  status        String   @default("pending")
-  paymentMethod String?  @map("payment_method")
-  transactionId String?  @map("transaction_id")
-  branchId      String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@map("payments")
-}
-
-model Order {
-  id            String   @id @default(cuid())
-  tableNumber   Int      @map("table_number")
-  guestName     String?  @map("guest_name")
-  items         Json
-  status        String   @default("pending")
-  total         Float
-  roomCharge    Boolean  @default(false) @map("room_charge")
-  notes         String?  @db.Text
-  performedBy   String?  @map("performed_by")
-  branchId      String
-  roomId        String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@map("orders")
-}
-
-model MenuItem {
-  id          String   @id @default(cuid())
-  name        String
-  category    String
-  price       Float
-  description String?  @db.Text
-  imageUrl    String?  @map("image_url")
-  available   Boolean  @default(true)
-  popular     Boolean  @default(false)
-  vegetarian  Boolean  @default(false)
-  spicy       Boolean  @default(false)
-  branchId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("menu_items")
-}
-
-model Event {
-  id          String   @id @default(cuid())
-  name        String
-  type        String
-  date        DateTime
-  startTime   String   @map("start_time")
-  endTime     String   @map("end_time")
-  hall        String
-  capacity    Int
-  attendees   Int      @default(0)
-  status      String   @default("upcoming")
-  totalAmount Float    @map("total_amount") @default(0)
-  organizer   String
-  description String?  @db.Text
-  branchId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("events")
-}
-
-model Service {
-  id          String   @id @default(cuid())
-  name        String
-  type        String
-  price       Float
-  duration    Int
-  description String?  @db.Text
-  imageUrl    String?  @map("image_url")
-  available   Boolean  @default(true)
-  branchId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("services")
-}
-
-model Inventory {
-  id           String   @id @default(cuid())
-  name         String
-  category     String
-  quantity     Int
-  unitPrice    Float    @map("unit_price")
-  reorderLevel Int      @map("reorder_level")
-  supplier     String?
-  branchId     String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@map("inventory")
-}
-
-model Expense {
-  id          String   @id @default(cuid())
-  category    String
-  amount      Float
-  description String?  @db.Text
-  date        DateTime
-  branchId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("expenses")
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  title     String
-  message   String   @db.Text
-  type      String
-  read      Boolean  @default(false)
-  userId    String?
-  branchId  String
-  createdAt DateTime @default(now())
-
-  @@map("notifications")
-}
-
-model ActivityLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  branchId  String
-  action    String
-  entity    String?
-  entityId  String?  @map("entity_id")
-  details   Json?
-  createdAt DateTime @default(now())
-
-  @@map("activity_logs")
-}
-
-model Message {
-  id          String   @id @default(cuid())
-  sender      String   // "guest" or "staff"
-  senderName  String   @map("sender_name")
-  senderEmail String?  @map("sender_email")
-  senderPhone String?  @map("sender_phone")
-  senderAvatar String? @map("sender_avatar")
-  message     String   @db.Text
-  recipientId String?  @map("recipient_id")
-  branchId    String
-  read        Boolean  @default(false)
-  starred     Boolean  @default(false)
-  archived    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("messages")
-}
-
-model Contact {
-  id          String   @id @default(cuid())
-  name        String
-  email       String
-  phone       String?
-  subject     String?
-  message     String   @db.Text
-  department  String?
-  status      String   @default("pending") // pending, responded, resolved
-  ipAddress   String?  @map("ip_address")
-  userAgent   String?  @map("user_agent")
-  branchId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("contacts")
-}
-
-model PageContent {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  title       String
-  subtitle    String?
-  content     String   @db.Text
-  imageUrl    String?  @map("image_url")
-  gallery     Json?
-  metaTitle   String?  @map("meta_title")
-  metaDescription String? @map("meta_description")
-  published   Boolean  @default(true)
-  branchId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("page_contents")
-}
+// ============================================
+// BRANCH & LOCATION MANAGEMENT
+// ============================================
 
 model Branch {
   id        String   @id @default(cuid())
@@ -256,47 +21,575 @@ model Branch {
   phone     String?
   email     String?
   isActive  Boolean  @default(true)
+  managerId String? // Assigned manager ID
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relations
+  rooms         Room[]
+  bookings      Booking[]
+  orders        Order[]
+  menuItems     MenuItem[]
+  events        Event[]
+  services      Service[]
+  inventory     Inventory[]
+  expenses      Expense[]
+  notifications Notification[]
+  messages      Message[]
+  contacts      Contact[]
+  pageContents  PageContent[]
+  staff         Staff[]
+  guests        Guest[]
+  payments      Payment[]
+  tables        RestaurantTable[]
+  reviews       Review[]
+  invoices      Invoice[]
+  taxes         Tax[]
+  priceRules    PriceRule[]
+  activityLogs  ActivityLog[]
 
   @@map("branches")
 }
 
+// ============================================
+// STAFF & USER MANAGEMENT
+// ============================================
+
 model Staff {
-  id             String   @id @default(cuid())
-  name           String
-  email          String   @unique
-  password       String?  // Hashed password for secure authentication
-  phone          String?
-  role           String   // SUPER_ADMIN, MANAGER, RECEPTIONIST, WAITER, KITCHEN, STAFF
-  department     String
-  shift          String?
-  status         String   @default("active")
-  avatar         String?
-  branchId       String
-  lastLogin      DateTime? @map("last_login")
-  joinDate       DateTime @map("join_date") @default(now())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  name               String
+  email              String    @unique
+  password           String? // Hashed password for secure authentication
+  phone              String?
+  role               String // SUPER_ADMIN, SUPER_MANAGER, BRANCH_MANAGER, MANAGER, RECEPTIONIST, WAITER, CHEF, KITCHEN_STAFF
+  department         String
+  shift              String?
+  status             String    @default("active")
+  avatar             String?
+  branchId           String
+  lastLogin          DateTime?
+  joinDate           DateTime  @default(now())
+  mustChangePassword Boolean   @default(false) @map("must_change_password")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  activityLogs  ActivityLog[]
+  ordersCreated Order[]       @relation("OrderCreator")
 
   @@map("staff")
 }
 
 model Guest {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String
-  email         String   @unique
+  email         String    @unique
   phone         String?
   avatar        String?
   nationality   String?
-  loyaltyTier   String?  @map("loyalty_tier")
-  loyaltyPoints Int      @map("loyalty_points") @default(0)
-  totalStays    Int      @map("total_stays") @default(0)
-  totalSpent    Float    @map("total_spent") @default(0)
+  idType        String?   @map("id_type") // passport, national_id
+  idNumber      String?   @map("id_number")
+  loyaltyTier   String?   @map("loyalty_tier") // bronze, silver, gold, platinum
+  loyaltyPoints Int       @default(0) @map("loyalty_points")
+  totalStays    Int       @default(0) @map("total_stays")
+  totalSpent    Float     @default(0) @map("total_spent")
   lastVisit     DateTime? @map("last_visit")
+  branchId      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  branch   Branch    @relation(fields: [branchId], references: [id])
+  bookings Booking[]
+  orders   Order[]
+  reviews  Review[]
+
+  @@map("guests")
+}
+
+// ============================================
+// ROOM & ACCOMMODATION
+// ============================================
+
+model Room {
+  id           String   @id @default(cuid())
+  number       String
+  floor        Int
+  type         String   @map("room_type") // standard, deluxe, suite, family
+  status       String   @default("available") // available, occupied, maintenance, cleaning
+  price        Float
+  description  String?  @db.Text
+  imageUrl     String?
+  maxOccupancy Int      @default(2) @map("max_occupancy")
+  bedType      String?  @map("bed_type") // single, double, twin
+  size         Int? // square meters
+  branchId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  bookings      Booking[]
+  orders        Order[]
+  roomAmenities RoomAmenity[]
+  reviews       Review[]
+
+  @@map("rooms")
+}
+
+model RoomAmenity {
+  id      String @id @default(cuid())
+  roomId  String @map("room_id")
+  amenity String // wifi, ac, tv, minibar, safe, etc.
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("room_amenities")
+}
+
+// ============================================
+// BOOKING & RESERVATION
+// ============================================
+
+model Booking {
+  id              String    @id @default(cuid())
+  bookingRef      String?   @unique @map("booking_ref") // e.g., "EG-2026-001234"
+  guestName       String
+  guestEmail      String
+  guestPhone      String?
+  guestAvatar     String?
+  roomId          String
+  room            Room      @relation(fields: [roomId], references: [id])
+  roomNumber      String
+  roomType        String
+  checkIn         DateTime
+  checkOut        DateTime
+  adults          Int       @default(1)
+  children        Int       @default(0)
+  status          String    @default("pending") // pending, confirmed, checked_in, checked_out, cancelled
+  totalAmount     Float     @map("total_amount")
+  paidAmount      Float     @default(0) @map("paid_amount")
+  paymentMethod   String?   @map("payment_method")
+  specialRequests String?   @map("special_requests") @db.Text
+  addOns          Json?
+  checkedInAt     DateTime? @map("checked_in_at")
+  checkedOutAt    DateTime? @map("checked_out_at")
+  branchId        String
+  guestId         String?   @map("guest_id")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  branch   Branch    @relation(fields: [branchId], references: [id])
+  guest    Guest?    @relation(fields: [guestId], references: [id])
+  payments Payment[]
+  invoice  Invoice?
+
+  @@map("bookings")
+}
+
+// ============================================
+// PAYMENT & INVOICING
+// ============================================
+
+model Payment {
+  id            String   @id @default(cuid())
+  bookingId     String?  @map("booking_id")
+  orderId       String?  @map("order_id")
+  amount        Float
+  currency      String   @default("RWF")
+  status        String   @default("pending") // pending, completed, failed, refunded
+  paymentMethod String?  @map("payment_method") // card, mobile_money, cash, bank_transfer
+  transactionId String?  @map("transaction_id")
+  gateway       String? // stripe, flutterwave, paypal
+  gatewayRef    String?  @map("gateway_ref")
+  notes         String?  @db.Text
   branchId      String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  @@map("guests")
+  // Relations
+  booking Booking? @relation(fields: [bookingId], references: [id])
+  branch  Branch   @relation(fields: [branchId], references: [id])
+
+  @@map("payments")
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  invoiceNumber String    @unique @map("invoice_number") // e.g., "INV-2026-0001"
+  bookingId     String    @unique @map("booking_id")
+  guestName     String
+  guestEmail    String
+  items         Json // detailed line items
+  subtotal      Float
+  taxAmount     Float     @map("tax_amount")
+  discount      Float     @default(0)
+  total         Float
+  status        String    @default("pending") // pending, paid, overdue, cancelled
+  dueDate       DateTime? @map("due_date")
+  paidAt        DateTime? @map("paid_at")
+  branchId      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id])
+  branch  Branch  @relation(fields: [branchId], references: [id])
+
+  @@map("invoices")
+}
+
+model Tax {
+  id        String   @id @default(cuid())
+  name      String // VAT, Tourism Levy, etc.
+  rate      Float // percentage
+  type      String // percentage, fixed
+  isActive  Boolean  @default(true) @map("is_active")
+  branchId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("taxes")
+}
+
+model PriceRule {
+  id         String    @id @default(cuid())
+  name       String // Weekend Surge, Holiday Premium, etc.
+  type       String // percentage, fixed
+  value      Float
+  startDate  DateTime? @map("start_date")
+  endDate    DateTime? @map("end_date")
+  daysOfWeek Json? // [0,6] for weekends
+  roomType   String?   @map("room_type")
+  isActive   Boolean   @default(true) @map("is_active")
+  branchId   String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("price_rules")
+}
+
+// ============================================
+// RESTAURANT & DINING
+// ============================================
+
+model Order {
+  id          String   @id @default(cuid())
+  orderNumber String?  @unique @map("order_number") // e.g., "ORD-001"
+  tableNumber Int?     @map("table_number")
+  guestName   String?  @map("guest_name")
+  items       Json
+  status      String   @default("pending") // pending, preparing, ready, served, cancelled
+  total       Float
+  roomCharge  Boolean  @default(false) @map("room_charge")
+  notes       String?  @db.Text
+  performedBy String?  @map("performed_by")
+  branchId    String
+  roomId      String?  @map("room_id")
+  guestId     String?  @map("guest_id")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+  room   Room?  @relation(fields: [roomId], references: [id])
+  guest  Guest? @relation(fields: [guestId], references: [id])
+  staff  Staff? @relation("OrderCreator", fields: [performedBy], references: [id])
+
+  @@map("orders")
+}
+
+model RestaurantTable {
+  id        String   @id @default(cuid())
+  number    Int
+  capacity  Int      @default(4)
+  status    String   @default("available") // available, occupied, reserved
+  positionX Int?     @map("position_x") // for floor plan
+  positionY Int?     @map("position_y")
+  branchId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("restaurant_tables")
+}
+
+model MenuItem {
+  id            String   @id @default(cuid())
+  name          String
+  nameFr        String?  @map("name_fr")
+  nameSw        String?  @map("name_sw")
+  category      String
+  price         Float
+  description   String?  @db.Text
+  descriptionFr String?  @map("description_fr")
+  descriptionSw String?  @map("description_sw")
+  imageUrl      String?  @map("image_url")
+  available     Boolean  @default(true)
+  popular       Boolean  @default(false)
+  vegetarian    Boolean  @default(false)
+  vegan         Boolean  @default(false)
+  spicy         Boolean  @default(false)
+  glutenFree    Boolean  @default(false) @map("gluten_free")
+  halal         Boolean  @default(false)
+  prepTime      Int?     @map("prep_time") // minutes
+  branchId      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("menu_items")
+}
+
+// ============================================
+// EVENTS & CONFERENCES
+// ============================================
+
+model Event {
+  id               String   @id @default(cuid())
+  name             String
+  type             String // wedding, conference, meeting, party
+  date             DateTime
+  startTime        String   @map("start_time")
+  endTime          String   @map("end_time")
+  hall             String // venue name
+  capacity         Int
+  attendees        Int      @default(0)
+  status           String   @default("upcoming") // upcoming, ongoing, completed, cancelled
+  totalAmount      Float    @default(0) @map("total_amount")
+  paidAmount       Float    @default(0) @map("paid_amount")
+  organizer        String
+  organizerContact String?  @map("organizer_contact")
+  organizerEmail   String?  @map("organizer_email")
+  description      String?  @db.Text
+  branchId         String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("events")
+}
+
+// ============================================
+// SPA & WELLNESS
+// ============================================
+
+model Service {
+  id            String   @id @default(cuid())
+  name          String
+  nameFr        String?  @map("name_fr")
+  nameSw        String?  @map("name_sw")
+  type          String // massage, facial, treatment
+  price         Float
+  duration      Int // minutes
+  description   String?  @db.Text
+  descriptionFr String?  @map("description_fr")
+  descriptionSw String?  @map("description_sw")
+  imageUrl      String?  @map("image_url")
+  available     Boolean  @default(true)
+  branchId      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("services")
+}
+
+// ============================================
+// INVENTORY & STOCK
+// ============================================
+
+model Inventory {
+  id              String    @id @default(cuid())
+  name            String
+  sku             String?   @unique
+  category        String // food, beverage, housekeeping, maintenance
+  quantity        Int
+  unit            String // pieces, kg, liters
+  unitPrice       Float     @map("unit_price")
+  reorderLevel    Int       @map("reorder_level")
+  supplier        String?
+  supplierContact String?   @map("supplier_contact")
+  expiryDate      DateTime? @map("expiry_date")
+  branchId        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("inventory")
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  category    String // salaries, utilities, supplies, maintenance, marketing
+  amount      Float
+  description String?  @db.Text
+  vendor      String?
+  receipt     String?  @map("receipt_url")
+  date        DateTime
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("expenses")
+}
+
+// ============================================
+// COMMUNICATION & MESSAGING
+// ============================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String   @db.Text
+  type      String // info, warning, success, error
+  read      Boolean  @default(false)
+  userId    String?
+  branchId  String
+  createdAt DateTime @default(now())
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  branchId  String
+  action    String // create, update, delete, login, logout
+  entity    String? // staff, booking, room, etc.
+  entityId  String?  @map("entity_id")
+  details   Json?
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now())
+
+  // Relations
+  staff  Staff? @relation(fields: [userId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("activity_logs")
+}
+
+model Message {
+  id           String   @id @default(cuid())
+  sender       String // "guest" or "staff"
+  senderName   String   @map("sender_name")
+  senderEmail  String?  @map("sender_email")
+  senderPhone  String?  @map("sender_phone")
+  senderAvatar String?  @map("sender_avatar")
+  message      String   @db.Text
+  recipientId  String?  @map("recipient_id")
+  branchId     String
+  read         Boolean  @default(false)
+  starred      Boolean  @default(false)
+  archived     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("messages")
+}
+
+model Contact {
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  phone      String?
+  subject    String?
+  message    String   @db.Text
+  department String? // sales, support, reservations
+  status     String   @default("pending") // pending, responded, resolved
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  branchId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("contacts")
+}
+
+// ============================================
+// CONTENT MANAGEMENT
+// ============================================
+
+model PageContent {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  titleFr         String?  @map("title_fr")
+  titleSw         String?  @map("title_sw")
+  subtitle        String?
+  subtitleFr      String?  @map("subtitle_fr")
+  subtitleSw      String?  @map("subtitle_sw")
+  content         String   @db.Text
+  contentFr       String?  @map("content_fr")
+  contentSw       String?  @map("content_sw")
+  imageUrl        String?  @map("image_url")
+  gallery         Json?
+  metaTitle       String?  @map("meta_title")
+  metaDescription String?  @map("meta_description")
+  published       Boolean  @default(true)
+  branchId        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("page_contents")
+}
+
+// ============================================
+// REVIEWS & RATINGS
+// ============================================
+
+model Review {
+  id          String   @id @default(cuid())
+  type        String // room, restaurant, service, overall
+  rating      Int // 1-5 stars
+  title       String?
+  comment     String?  @db.Text
+  guestName   String
+  guestEmail  String?
+  branchId    String
+  roomId      String?  @map("room_id")
+  guestId     String?  @map("guest_id")
+  isPublished Boolean  @default(false) @map("is_published")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  branch Branch @relation(fields: [branchId], references: [id])
+  room   Room?  @relation(fields: [roomId], references: [id])
+  guest  Guest? @relation(fields: [guestId], references: [id])
+
+  @@map("reviews")
 }

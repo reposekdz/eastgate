@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedPrefixes = ["/admin", "/manager", "/receptionist", "/waiter", "/kitchen", "/dashboard", "/profile"];
+const protectedPrefixes = ["/admin", "/manager", "/receptionist", "/waiter", "/kitchen", "/dashboard", "/profile", "/super-admin", "/branch"];
 
 export function middleware(req: NextRequest) {
   const { nextUrl } = req;
@@ -34,12 +34,14 @@ export function middleware(req: NextRequest) {
 
   const role = session.role;
   const routePermissions: Record<string, string[]> = {
-    "/admin": ["super_admin", "super_manager"],
-    "/manager": ["super_admin", "super_manager", "branch_manager"],
-    "/receptionist": ["super_admin", "super_manager", "branch_manager", "receptionist"],
-    "/waiter": ["super_admin", "super_manager", "branch_manager", "waiter", "restaurant_staff"],
-    "/kitchen": ["super_admin", "super_manager", "branch_manager", "chef", "kitchen_staff"],
-    "/dashboard": ["super_admin", "super_manager", "branch_manager", "receptionist", "waiter", "chef", "kitchen_staff", "accountant", "event_manager"],
+    "/admin": ["SUPER_ADMIN", "SUPER_MANAGER"],
+    "/manager": ["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER"],
+    "/super-admin": ["SUPER_ADMIN", "SUPER_MANAGER"],
+    "/branch": ["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER"],
+    "/receptionist": ["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER", "RECEPTIONIST"],
+    "/waiter": ["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER", "WAITER", "STAFF"],
+    "/kitchen": ["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER", "CHEF", "KITCHEN_STAFF"],
+    "/dashboard": ["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER", "RECEPTIONIST", "WAITER", "CHEF", "KITCHEN_STAFF", "STAFF"],
   };
 
   const matchedPrefix = protectedPrefixes.find((p) => nextUrl.pathname.startsWith(p));
@@ -58,3 +60,6 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
+
+
+

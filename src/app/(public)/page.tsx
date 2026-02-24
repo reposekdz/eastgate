@@ -36,6 +36,18 @@ import Link from "next/link";
 import StarRating from "@/components/StarRating";
 import FAQSection from "@/components/FAQSection";
 
+// Room type from API
+interface Room {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  branchId: number;
+  status: string;
+  amenities?: string;
+}
+
 
 // ─── Animated Counter Component ──────────────────────────
 function AnimatedCounter({ target, suffix = "" }: { target: string; suffix?: string }) {
@@ -125,6 +137,39 @@ function ServiceCard({
 
 export default function HomePage() {
   const { t } = useI18n();
+  
+  // State for rooms from API
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  
+  // Fetch rooms from API on mount
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        // Fetch all rooms (not just available) for homepage showcase
+        const res = await fetch("/api/public/rooms?status=");
+        if (res.ok) {
+          const data = await res.json();
+          // Map API response to our format
+          const mappedRooms = (data.rooms || []).map((room: any) => ({
+            id: room.id,
+            name: `Room ${room.number} - ${room.type}`,
+            description: room.description || "Comfortable and elegant room",
+            price: room.price,
+            image: room.imageUrl || "/eastgatelogo.png",
+            branchId: room.branchId,
+            status: room.status,
+          }));
+          setRooms(mappedRooms);
+        }
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+      } finally {
+        setLoadingRooms(false);
+      }
+    };
+    fetchRooms();
+  }, []);
 
   // Services data with translations (locale-aware via t())
   const services = [
@@ -348,32 +393,47 @@ export default function HomePage() {
           </FadeInUp>
 
           <StaggerContainer className="grid gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {roomsContent.rooms.map((room) => (
-              <StaggerItem key={room.id}>
-                <div className="group overflow-hidden bg-white rounded-[4px] shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
-                  <div className="relative h-56 sm:h-72 overflow-hidden">
-                    <img
-                      src={room.image}
-                      alt={room.alt}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-charcoal/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    {/* Quick book overlay */}
-                    <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
-                      <Button
-                        asChild
-                        size="sm"
-                        className="bg-gold hover:bg-gold-dark text-charcoal font-semibold rounded-[2px] uppercase tracking-wider text-xs w-full"
-                      >
-                        <Link href="/book">{t("homepage", "bookARoom")}</Link>
-                      </Button>
+            {loadingRooms ? (
+              // Loading skeleton
+              Array.from({ length: 6 }).map((_, i) => (
+                <StaggerItem key={i}>
+                  <div className="bg-white rounded-[4px] shadow-sm overflow-hidden animate-pulse">
+                    <div className="h-56 sm:h-72 bg-gray-200" />
+                    <div className="p-5 sm:p-7">
+                      <div className="h-6 bg-gray-200 rounded mb-2" />
+                      <div className="h-4 bg-gray-200 rounded mb-4" />
+                      <div className="h-4 w-24 bg-gray-200 rounded" />
                     </div>
                   </div>
-                  <div className="p-5 sm:p-7">
-                    <h3 className="heading-sm text-charcoal mb-2">{room.name}</h3>
-                    <p className="body-sm sm:body-md text-text-muted-custom mb-4 line-clamp-2">
-                      {room.description}
-                    </p>
+                </StaggerItem>
+              ))
+            ) : rooms.length > 0 ? (
+              rooms.map((room: Room) => (
+                <StaggerItem key={room.id}>
+                  <div className="group overflow-hidden bg-white rounded-[4px] shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+                    <div className="relative h-56 sm:h-72 overflow-hidden">
+                      <img
+                        src={room.image || "/eastgatelogo.png"}
+                        alt={room.name}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-charcoal/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      {/* Quick book overlay */}
+                      <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+                        <Button
+                          asChild
+                          size="sm"
+                          className="bg-gold hover:bg-gold-dark text-charcoal font-semibold rounded-[2px] uppercase tracking-wider text-xs w-full"
+                        >
+                          <Link href="/book">{t("homepage", "bookARoom")}</Link>
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="p-5 sm:p-7">
+                      <h3 className="heading-sm text-charcoal mb-2">{room.name}</h3>
+                      <p className="body-sm sm:body-md text-text-muted-custom mb-4 line-clamp-2">
+                        {room.description}
+                      </p>
                     <div className="flex items-center justify-between">
                       <span className="body-md font-semibold text-emerald">{room.price}</span>
                       <Button
@@ -390,7 +450,52 @@ export default function HomePage() {
                   </div>
                 </div>
               </StaggerItem>
-            ))}
+              ))
+            ) : (
+              // Fallback to static data if no API data
+              roomsContent.rooms.map((room: typeof roomsContent.rooms[0]) => (
+                <StaggerItem key={room.id}>
+                  <div className="group overflow-hidden bg-white rounded-[4px] shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+                    <div className="relative h-56 sm:h-72 overflow-hidden">
+                      <img
+                        src={room.image}
+                        alt={room.alt}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-charcoal/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+                        <Button
+                          asChild
+                          size="sm"
+                          className="bg-gold hover:bg-gold-dark text-charcoal font-semibold rounded-[2px] uppercase tracking-wider text-xs w-full"
+                        >
+                          <Link href="/book">{t("homepage", "bookARoom")}</Link>
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="p-5 sm:p-7">
+                      <h3 className="heading-sm text-charcoal mb-2">{room.name}</h3>
+                      <p className="body-sm sm:body-md text-text-muted-custom mb-4 line-clamp-2">
+                        {room.description}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="body-md font-semibold text-emerald">{room.price}</span>
+                        <Button
+                          variant="ghost"
+                          className="text-gold-dark hover:text-gold hover:bg-transparent p-0 uppercase tracking-wide text-xs font-semibold group/btn"
+                          asChild
+                        >
+                          <Link href="/rooms" className="flex items-center gap-1">
+                            {t("homepageExtras", "learnMore")}
+                            <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-1" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </StaggerItem>
+              ))
+            )}
           </StaggerContainer>
 
           <FadeInUp delay={0.3}>

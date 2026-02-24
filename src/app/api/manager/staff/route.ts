@@ -91,8 +91,33 @@ export async function POST(req: NextRequest) {
     const { name, email, phone, role, department, shift, status, branchId, password } = body;
 
     // Validate required fields
-    if (!name || !email || !role) {
-      return NextResponse.json({ error: "Name, email, and role are required" }, { status: 400 });
+    if (!name || !email || !role || !password) {
+      return NextResponse.json({ error: "Name, email, role, and password are required" }, { status: 400 });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+    }
+
+    // Branch managers can only create certain roles
+    const userRoleStr = userRole as string;
+    if (userRoleStr === "BRANCH_MANAGER" || userRoleStr === "MANAGER") {
+      const allowedRoles = ["WAITER", "RECEPTIONIST", "CHEF", "KITCHEN_STAFF", "STAFF"];
+      if (!allowedRoles.includes(role)) {
+        return NextResponse.json({ 
+          error: `Branch managers can only create: ${allowedRoles.join(", ")}. Use the branches API to assign branch managers.` 
+        }, { status: 403 });
+      }
+    }
+
+    // Super managers can also create BRANCH_MANAGER roles
+    if (role === "BRANCH_MANAGER" || role === "MANAGER") {
+      if (!isSuperAdmin(userRoleStr) && userRoleStr !== "SUPER_MANAGER") {
+        return NextResponse.json({ 
+          error: "Only Super Admin or Super Manager can create manager roles" 
+        }, { status: 403 });
+      }
     }
 
     // Check if email already exists
@@ -104,11 +129,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email already exists" }, { status: 400 });
     }
 
-    // Hash password if provided
-    let hashedPassword = null;
-    if (password) {
-      hashedPassword = await bcrypt.hash(password, 10);
-    }
+    // Hash password - always required
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Determine branch ID
     const finalBranchId = branchId || userBranchId;
