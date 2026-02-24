@@ -253,31 +253,43 @@ export default function ReceptionistDashboard() {
   // Unique floors
   const floors = [...new Set(branchRooms.map((r) => r.floor))].sort();
 
-  const handleRegister = () => {
-    if (!regName || !regEmail || !regPhone || !regIdNumber || !regRoom || !regCheckOut) {
+  const handleRegister = async () => {
+    if (!regName || !regPhone || !regIdNumber || !regRoom || !regCheckOut) {
       toast.error(t("receptionist", "fillAllFields"));
       return;
     }
 
-    const id = registerGuest({
-      fullName: regName,
-      email: regEmail,
-      phone: regPhone,
-      nationality: regNationality || "Rwanda",
-      idType: regIdType,
-      idNumber: regIdNumber,
-      roomNumber: regRoom,
-      branchId: userBranchId,
-      checkInDate: regCheckIn,
-      checkOutDate: regCheckOut,
-      numberOfGuests: parseInt(regGuests) || 1,
-      specialRequests: regRequests || undefined,
-      status: "checked_in",
-    });
-
-    toast.success(`${t("receptionist", "guestRegisteredSuccess")} ID: ${id}`);
-    resetRegForm();
-    setShowRegisterDialog(false);
+    try {
+      const roomData = branchRooms.find(r => r.number === regRoom);
+      const res = await fetch("/api/receptionist/register-guest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: regName,
+          email: regEmail || null,
+          phone: regPhone,
+          idNumber: regIdNumber,
+          nationality: regNationality || "Rwanda",
+          roomId: roomData?.id,
+          checkIn: regCheckIn,
+          checkOut: regCheckOut,
+          numberOfGuests: parseInt(regGuests) || 1,
+          specialRequests: regRequests || null,
+          branchId: userBranchId,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`${t("receptionist", "guestRegisteredSuccess")}`);
+        resetRegForm();
+        setShowRegisterDialog(false);
+        window.location.reload();
+      } else {
+        toast.error(data.error || "Failed to register guest");
+      }
+    } catch (error) {
+      toast.error("Failed to register guest");
+    }
   };
 
   const resetRegForm = () => {

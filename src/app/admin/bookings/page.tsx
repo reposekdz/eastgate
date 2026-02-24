@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -29,11 +29,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatDate, getRoomTypeLabel } from "@/lib/format";
 import BookingStatusBadge from "@/components/admin/shared/BookingStatusBadge";
 import type { BookingStatus } from "@/lib/types/enums";
-import type { Booking } from "@/lib/types/schema";
 import {
   Search,
   Plus,
@@ -51,10 +49,9 @@ import {
   CheckSquare,
   Mail,
   Phone,
-  Trash2,
-  RefreshCw,
-  UserPlus,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const statusFilters: { label: string; value: string; color: string }[] = [
   { label: "All", value: "all", color: "bg-slate-100" },
@@ -67,17 +64,41 @@ const statusFilters: { label: string; value: string; color: string }[] = [
 
 export default function BookingsPage() {
   const { user } = useAuthStore();
-  const getBookings = useBranchStore((s) => s.getBookings);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
-  const [showFilters, setShowFilters] = useState(false);
 
-  const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
-  const role = user?.role ?? "guest";
-  const bookings = getBookings(branchId, role);
+  const isSuperUser = user?.role === "SUPER_ADMIN" || user?.role === "SUPER_MANAGER";
+  const branchId = isSuperUser ? undefined : user?.branchId;
+
+  // Fetch bookings from API
+  useEffect(() => {
+    async function fetchBookings() {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams();
+        if (branchId) params.append("branchId", branchId);
+        
+        const res = await fetch(`/api/bookings?${params}`);
+        const data = await res.json();
+        
+        if (data.success) {
+          setBookings(data.bookings || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch bookings:", error);
+        toast.error("Failed to load bookings");
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchBookings();
+  }, [branchId]);
 
   // Filter and sort bookings
   const filtered = useMemo(() => {
@@ -124,6 +145,14 @@ export default function BookingsPage() {
     console.log(`Bulk action: ${action} on bookings:`, selectedBookings);
     setSelectedBookings([]);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

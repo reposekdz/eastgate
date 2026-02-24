@@ -1,111 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { PrismaClient } from "@prisma/client";
 
-/**
- * API to automatically release rooms when booking checkOut date has passed
- * This can be called by a cron job or manually to ensure rooms are properly released
- */
+const prisma = new PrismaClient();
+
+// POST - Release expired bookings
 export async function POST(req: NextRequest) {
   try {
     const now = new Date();
-    
-    // Find all bookings where:
-    // 1. Status is checked_in
-    // 2. CheckOut date has passed
+
+    // Find all bookings that have passed checkout date but still marked as checked_in or confirmed
     const expiredBookings = await prisma.booking.findMany({
       where: {
-        status: "checked_in",
-        checkOut: {
-          lt: now,
-        },
+        checkOut: { lt: now },
+        status: { in: ["confirmed", "checked_in"] },
       },
+      select: { id: true, roomId: true },
     });
 
     if (expiredBookings.length === 0) {
       return NextResponse.json({
         success: true,
         message: "No expired bookings found",
-        releasedCount: 0,
+        released: 0,
       });
     }
 
-    // Release each room and update booking status
-    const results = await Promise.all(
-      expiredBookings.map(async (booking) => {
-        // Update booking to checked_out
-        await prisma.booking.update({
-          where: { id: booking.id },
-          data: { status: "checked_out" },
-        });
-
-        // Release the room
-        await prisma.room.update({
-          where: { id: booking.roomId },
-          data: { status: "available" },
-        });
-
-        return {
-          bookingId: booking.id,
-          roomId: booking.roomId,
-          roomNumber: booking.roomNumber,
-          guestName: booking.guestName,
-        };
-      })
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: `Released ${results.length} room(s)`,
-      releasedCount: results.length,
-      releasedRooms: results,
-    });
-  } catch (error) {
-    console.error("Error releasing expired bookings:", error);
-    return NextResponse.json(
-      { error: "Failed to release expired bookings" },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * GET - Check which bookings are expired (for monitoring)
- */
-export async function GET(req: NextRequest) {
-  try {
-    const now = new Date();
-
-    const expiredBookings = await prisma.booking.findMany({
+    // Update bookings to checked_out
+    await prisma.booking.updateMany({
       where: {
-        status: "checked_in",
-        checkOut: {
-          lt: now,
-        },
+        id: { in: expiredBookings.map((b) => b.id) },
       },
-      select: {
-        id: true,
-        roomId: true,
-        roomNumber: true,
-        roomType: true,
-        guestName: true,
-        guestEmail: true,
-        checkIn: true,
-        checkOut: true,
-        totalAmount: true,
-        branchId: true,
-      },
+      data: { status: "checked_out", checkedOutAt: now },
+    });
+
+    // Update rooms to available
+    const roomIds = [...new Set(expiredBookings.map((b) => b.roomId))];
+    await prisma.room.updateMany({
+      where: { id: { in: roomIds } },
+      data: { status: "available" },
     });
 
     return NextResponse.json({
       success: true,
-      expiredCount: expiredBookings.length,
-      expiredBookings,
+      message: `Released ${expiredBookings.length} expired bookings`,
+      released: expiredBookings.length,
     });
   } catch (error) {
-    console.error("Error checking expired bookings:", error);
+    console.error("Release expired bookings error:", error);
     return NextResponse.json(
-      { error: "Failed to check expired bookings" },
+      { success: false, error: "Failed to release expired bookings" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

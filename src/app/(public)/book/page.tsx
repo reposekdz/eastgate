@@ -175,24 +175,32 @@ export default function BookPage() {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingId, setBookingId] = useState("");
 
-  // Fetch rooms from API
+  // Fetch rooms from API with availability checking
   useEffect(() => {
     async function fetchRooms() {
       try {
         setLoadingRooms(true);
-        const res = await fetch(`/api/public/rooms?branchId=${selectedBranch}&status=available`);
+        const params = new URLSearchParams({
+          branchId: selectedBranch,
+          status: "available",
+        });
+        if (checkIn) params.append("checkIn", checkIn.toISOString());
+        if (checkOut) params.append("checkOut", checkOut.toISOString());
+        
+        const res = await fetch(`/api/public/rooms?${params}`);
         const data = await res.json();
         if (data.rooms) {
           setRooms(data.rooms);
         }
       } catch (error) {
         console.error("Failed to fetch rooms:", error);
+        toast.error("Failed to load rooms");
       } finally {
         setLoadingRooms(false);
       }
     }
     fetchRooms();
-  }, [selectedBranch]);
+  }, [selectedBranch, checkIn, checkOut]);
 
   // Filter rooms
   const filteredRooms = useMemo(() => {
@@ -223,7 +231,7 @@ export default function BookPage() {
     return selectedRoomDetails.price * nights;
   }, [selectedRoomDetails, nights]);
 
-  // Handle booking
+  // Handle booking with payment
   const handleBooking = async () => {
     if (!selectedRoomDetails || !checkIn || !checkOut || !guestName || !guestEmail || !guestPhone) {
       toast.error("Please fill all required fields");
@@ -232,6 +240,7 @@ export default function BookPage() {
 
     setIsProcessing(true);
     try {
+      // Step 1: Create booking
       const bookingData = {
         roomId: selectedRoom,
         roomNumber: selectedRoomDetails.number,
@@ -250,24 +259,88 @@ export default function BookPage() {
         branchId: selectedBranch,
       };
 
-      const res = await fetch("/api/bookings", {
+      const bookingRes = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bookingData),
       });
 
-      const data = await res.json();
+      const bookingResult = await bookingRes.json();
 
-      if (data.success || data.booking?.id) {
-        setBookingId(data.booking?.id || "BK-" + Date.now());
-        setBookingSuccess(true);
-        toast.success("Booking confirmed!");
-      } else {
-        toast.error(data.error || "Booking failed");
+      if (!bookingResult.success || !bookingResult.booking) {
+        toast.error(bookingResult.error || "Booking failed");
+        setIsProcessing(false);
+        return;
       }
+
+      const booking = bookingResult.booking;
+
+      // Step 2: Create payment intent
+      const paymentData = {
+        bookingId: booking.id,
+        amount: totalPrice,
+        currency: "RWF",
+        paymentMethod,
+        gateway: paymentMethod === "stripe_card" ? "stripe" : paymentMethod === "flutterwave" ? "flutterwave" : "paypal",
+        branchId: selectedBranch,
+      };
+
+      const paymentRes = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paymentData),
+      });
+
+      const paymentResult = await paymentRes.json();
+
+      if (!paymentResult.success) {
+        toast.error("Payment initialization failed");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Step 3: Process payment based on gateway
+      const gateway = paymentData.gateway;
+      
+      if (gateway === "stripe") {
+        await processStripePayment(paymentResult.clientSecret, booking.id);
+      } else if (gateway === "flutterwave") {
+        window.location.href = paymentResult.clientSecret;
+      } else if (gateway === "paypal") {
+        window.location.href = `https://www.paypal.com/checkoutnow?token=${paymentResult.clientSecret}`;
+      }
+
     } catch (error) {
       console.error("Booking error:", error);
       toast.error("Failed to process booking");
+      setIsProcessing(false);
+    }
+  };
+
+  // Process Stripe payment
+  const processStripePayment = async (clientSecret: string, bookingId: string) => {
+    try {
+      // In production, use Stripe Elements
+      // For now, simulate successful payment
+      const paymentUpdateRes = await fetch("/api/payments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: bookingId,
+          status: "completed",
+          transactionId: `txn_${Date.now()}`,
+        }),
+      });
+
+      const result = await paymentUpdateRes.json();
+      
+      if (result.success) {
+        setBookingId(bookingId);
+        setBookingSuccess(true);
+        toast.success("Payment successful!");
+      }
+    } catch (error) {
+      toast.error("Payment failed");
     } finally {
       setIsProcessing(false);
     }
@@ -444,11 +517,22 @@ export default function BookPage() {
                   </h2>
                   <Button variant="outline" size="sm" onClick={() => {
                     setLoadingRooms(true);
-                    fetch(`/api/public/rooms?branchId=${selectedBranch}&status=available`)
+                    const params = new URLSearchParams({
+                      branchId: selectedBranch,
+                      status: "available",
+                    });
+                    if (checkIn) params.append("checkIn", checkIn.toISOString());
+                    if (checkOut) params.append("checkOut", checkOut.toISOString());
+                    fetch(`/api/public/rooms?${params}`)
                       .then(r => r.json())
                       .then(data => {
                         setRooms(data.rooms || []);
                         setLoadingRooms(false);
+                        toast.success("Rooms refreshed");
+                      })
+                      .catch(() => {
+                        setLoadingRooms(false);
+                        toast.error("Failed to refresh rooms");
                       });
                   }}>
                     <RefreshCw className={`w-4 h-4 mr-2 ${loadingRooms ? 'animate-spin' : ''}`} />

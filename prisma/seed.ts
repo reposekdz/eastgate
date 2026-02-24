@@ -144,127 +144,27 @@ async function main() {
     }
     console.log("✅ Created menu items:", menuItems.length);
 
-    // Create staff with proper hashed passwords
+    // Create staff with proper hashed passwords - ONLY SUPER_ADMIN and SUPER_MANAGER by default
     const staffMembers = [
         {
-            email: "admin@eastgates.com",
+            email: "admin@eastgatehotel.rw",
             name: "Super Admin",
             phone: "+250 788 000 001",
             role: "SUPER_ADMIN",
             department: "Management",
             shift: "Morning",
-            password: "2026",
+            password: "admin123",
             branchId: "kigali-main",
         },
         {
-            email: "manager@eastgates.com",
+            email: "manager@eastgatehotel.rw",
             name: "Super Manager",
             phone: "+250 788 000 002",
             role: "SUPER_MANAGER",
             department: "Management",
             shift: "Morning",
-            password: "2026",
+            password: "manager123",
             branchId: "kigali-main",
-        },
-        {
-            email: "manager.kigali@eastgates.com",
-            name: "Kigali Branch Manager",
-            phone: "+250 788 100 001",
-            role: "BRANCH_MANAGER",
-            department: "Management",
-            shift: "Morning",
-            password: "2026",
-            branchId: "kigali-main",
-        },
-        {
-            email: "manager.ngoma@eastgates.com",
-            name: "Ngoma Branch Manager",
-            phone: "+250 788 100 002",
-            role: "BRANCH_MANAGER",
-            department: "Management",
-            shift: "Morning",
-            password: "2026",
-            branchId: "ngoma",
-        },
-        {
-            email: "manager.kirehe@eastgates.com",
-            name: "Kirehe Branch Manager",
-            phone: "+250 788 100 003",
-            role: "BRANCH_MANAGER",
-            department: "Management",
-            shift: "Morning",
-            password: "2026",
-            branchId: "kirehe",
-        },
-        {
-            email: "manager.gatsibo@eastgates.com",
-            name: "Gatsibo Branch Manager",
-            phone: "+250 788 100 004",
-            role: "BRANCH_MANAGER",
-            department: "Management",
-            shift: "Morning",
-            password: "2026",
-            branchId: "gatsibo",
-        },
-        {
-            email: "reception.kigali@eastgates.com",
-            name: "Kigali Receptionist",
-            phone: "+250 788 200 001",
-            role: "RECEPTIONIST",
-            department: "Front Desk",
-            shift: "Morning",
-            password: "2026",
-            branchId: "kigali-main",
-        },
-        {
-            email: "reception.ngoma@eastgates.com",
-            name: "Ngoma Receptionist",
-            phone: "+250 788 200 002",
-            role: "RECEPTIONIST",
-            department: "Front Desk",
-            shift: "Evening",
-            password: "2026",
-            branchId: "ngoma",
-        },
-        {
-            email: "waiter.kigali@eastgates.com",
-            name: "Kigali Waiter",
-            phone: "+250 788 300 001",
-            role: "WAITER",
-            department: "Restaurant",
-            shift: "Evening",
-            password: "2026",
-            branchId: "kigali-main",
-        },
-        {
-            email: "waiter.ngoma@eastgates.com",
-            name: "Ngoma Waiter",
-            phone: "+250 788 300 002",
-            role: "WAITER",
-            department: "Restaurant",
-            shift: "Evening",
-            password: "2026",
-            branchId: "ngoma",
-        },
-        {
-            email: "chef.kigali@eastgates.com",
-            name: "Kigali Chef",
-            phone: "+250 788 400 001",
-            role: "CHEF",
-            department: "Kitchen",
-            shift: "Morning",
-            password: "2026",
-            branchId: "kigali-main",
-        },
-        {
-            email: "chef.ngoma@eastgates.com",
-            name: "Ngoma Chef",
-            phone: "+250 788 400 002",
-            role: "CHEF",
-            department: "Kitchen",
-            shift: "Morning",
-            password: "2026",
-            branchId: "ngoma",
         },
     ];
 
@@ -293,20 +193,11 @@ async function main() {
     console.log("========================================");
     console.log("Super Admin:   admin@eastgates.com");
     console.log("Super Manager: manager@eastgates.com");
-    console.log("----------------------------------------");
-    console.log("Branch Managers:");
-    console.log("  Kigali:    manager.kigali@eastgates.com");
-    console.log("  Ngoma:     manager.ngoma@eastgates.com");
-    console.log("  Kirehe:    manager.kirehe@eastgates.com");
-    console.log("  Gatsibo:   manager.gatsibo@eastgates.com");
-    console.log("----------------------------------------");
-    console.log("Staff:");
-    console.log("  Reception: reception.kigali@eastgates.com");
-    console.log("            reception.ngoma@eastgates.com");
-    console.log("  Waiter:    waiter.kigali@eastgates.com");
-    console.log("            waiter.ngoma@eastgates.com");
-    console.log("  Chef:      chef.kigali@eastgates.com");
-    console.log("            chef.ngoma@eastgates.com");
+    console.log("========================================");
+    console.log("NOTE: Other staff will be added by admins:");
+    console.log("  - SUPER_ADMIN creates BRANCH_MANAGER");
+    console.log("  - SUPER_MANAGER creates BRANCH_MANAGER");
+    console.log("  - BRANCH_MANAGER adds waiters, receptionists, chefs");
     console.log("========================================");
 
     // Create sample messages from guests

@@ -1,12 +1,12 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
 }
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 // ============================================
@@ -14,18 +14,32 @@ datasource db {
 // ============================================
 
 model Branch {
-  id        String   @id @default(cuid())
-  name      String
-  location  String?
-  address   String?
-  phone     String?
-  email     String?
-  isActive  Boolean  @default(true)
-  managerId String? // Assigned manager ID
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(100)
+  slug        String   @unique @db.VarChar(100)
+  location    String?  @db.VarChar(255)
+  address     String?  @db.Text
+  city        String?  @db.VarChar(100)
+  country     String   @default("Rwanda") @db.VarChar(100)
+  phone       String?  @db.VarChar(20)
+  email       String?  @db.VarChar(100)
+  website     String?  @db.VarChar(255)
+  timezone    String   @default("Africa/Kigali") @db.VarChar(50)
+  currency    String   @default("RWF") @db.VarChar(3)
+  isActive    Boolean  @default(true)
+  isFeatured  Boolean  @default(false)
+  managerId   String?  @db.VarChar(50)
+  latitude    Float?
+  longitude   Float?
+  rating      Float    @default(0) @db.Float
+  totalRooms  Int      @default(0)
+  imageUrl    String?  @db.Text
+  description String?  @db.Text
+  amenities   Json?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Relations
   rooms         Room[]
   bookings      Booking[]
   orders        Order[]
@@ -47,7 +61,12 @@ model Branch {
   taxes         Tax[]
   priceRules    PriceRule[]
   activityLogs  ActivityLog[]
+  promotions    Promotion[]
+  analytics     Analytics[]
 
+  @@index([slug])
+  @@index([isActive])
+  @@index([city])
   @@map("branches")
 }
 
@@ -57,54 +76,79 @@ model Branch {
 
 model Staff {
   id                 String    @id @default(cuid())
-  name               String
-  email              String    @unique
-  password           String? // Hashed password for secure authentication
-  phone              String?
-  role               String // SUPER_ADMIN, SUPER_MANAGER, BRANCH_MANAGER, MANAGER, RECEPTIONIST, WAITER, CHEF, KITCHEN_STAFF
-  department         String
-  shift              String?
-  status             String    @default("active")
-  avatar             String?
-  branchId           String
+  name               String    @db.VarChar(100)
+  email              String    @unique @db.VarChar(100)
+  password           String?   @db.VarChar(255)
+  phone              String?   @db.VarChar(20)
+  role               String    @db.VarChar(50)
+  department         String    @db.VarChar(50)
+  shift              String?   @db.VarChar(20)
+  status             String    @default("active") @db.VarChar(20)
+  avatar             String?   @db.Text
+  branchId           String    @db.VarChar(50)
+  salary             Float?    @db.Float
+  hireDate           DateTime  @default(now())
   lastLogin          DateTime?
-  joinDate           DateTime  @default(now())
-  mustChangePassword Boolean   @default(false) @map("must_change_password")
+  loginCount         Int       @default(0)
+  mustChangePassword Boolean   @default(false)
+  twoFactorEnabled   Boolean   @default(false)
+  permissions        Json?
+  preferences        Json?
+  metadata           Json?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  // Relations
-  branch        Branch        @relation(fields: [branchId], references: [id])
+  branch        Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
   activityLogs  ActivityLog[]
   ordersCreated Order[]       @relation("OrderCreator")
+  assignments   Assignment[]
 
+  @@index([email])
+  @@index([branchId])
+  @@index([role])
+  @@index([status])
   @@map("staff")
 }
 
 model Guest {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  phone         String?
-  avatar        String?
-  nationality   String?
-  idType        String?   @map("id_type") // passport, national_id
-  idNumber      String?   @map("id_number")
-  loyaltyTier   String?   @map("loyalty_tier") // bronze, silver, gold, platinum
-  loyaltyPoints Int       @default(0) @map("loyalty_points")
-  totalStays    Int       @default(0) @map("total_stays")
-  totalSpent    Float     @default(0) @map("total_spent")
-  lastVisit     DateTime? @map("last_visit")
-  branchId      String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String    @db.VarChar(100)
+  email           String    @unique @db.VarChar(100)
+  phone           String?   @db.VarChar(20)
+  avatar          String?   @db.Text
+  nationality     String?   @db.VarChar(50)
+  idType          String?   @db.VarChar(20)
+  idNumber        String?   @db.VarChar(50)
+  dateOfBirth     DateTime?
+  gender          String?   @db.VarChar(10)
+  address         String?   @db.Text
+  city            String?   @db.VarChar(100)
+  country         String?   @db.VarChar(100)
+  postalCode      String?   @db.VarChar(20)
+  loyaltyTier     String    @default("bronze") @db.VarChar(20)
+  loyaltyPoints   Int       @default(0)
+  totalStays      Int       @default(0)
+  totalSpent      Float     @default(0) @db.Float
+  avgRating       Float     @default(0) @db.Float
+  lastVisit       DateTime?
+  preferences     Json?
+  specialRequests String?   @db.Text
+  isVip           Boolean   @default(false)
+  isBlacklisted   Boolean   @default(false)
+  notes           String?   @db.Text
+  branchId        String    @db.VarChar(50)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  // Relations
-  branch   Branch    @relation(fields: [branchId], references: [id])
+  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
   bookings Booking[]
   orders   Order[]
   reviews  Review[]
 
+  @@index([email])
+  @@index([branchId])
+  @@index([loyaltyTier])
+  @@index([isVip])
   @@map("guests")
 }
 
@@ -113,38 +157,59 @@ model Guest {
 // ============================================
 
 model Room {
-  id           String   @id @default(cuid())
-  number       String
-  floor        Int
-  type         String   @map("room_type") // standard, deluxe, suite, family
-  status       String   @default("available") // available, occupied, maintenance, cleaning
-  price        Float
-  description  String?  @db.Text
-  imageUrl     String?
-  maxOccupancy Int      @default(2) @map("max_occupancy")
-  bedType      String?  @map("bed_type") // single, double, twin
-  size         Int? // square meters
-  branchId     String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  number          String   @db.VarChar(20)
+  floor           Int
+  type            String   @db.VarChar(50)
+  status          String   @default("available") @db.VarChar(20)
+  price           Float    @db.Float
+  weekendPrice    Float?   @db.Float
+  description     String?  @db.Text
+  imageUrl        String?  @db.Text
+  images          Json?
+  maxOccupancy    Int      @default(2)
+  bedType         String?  @db.VarChar(20)
+  bedCount        Int      @default(1)
+  size            Int?
+  view            String?  @db.VarChar(50)
+  hasBalcony      Boolean  @default(false)
+  hasKitchen      Boolean  @default(false)
+  smokingAllowed  Boolean  @default(false)
+  petFriendly     Boolean  @default(false)
+  accessible      Boolean  @default(false)
+  rating          Float    @default(0) @db.Float
+  totalBookings   Int      @default(0)
+  lastCleaned     DateTime?
+  lastMaintenance DateTime?
+  features        Json?
+  branchId        String   @db.VarChar(50)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  // Relations
-  branch        Branch        @relation(fields: [branchId], references: [id])
+  branch        Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
   bookings      Booking[]
   orders        Order[]
   roomAmenities RoomAmenity[]
   reviews       Review[]
 
+  @@unique([number, branchId])
+  @@index([branchId])
+  @@index([status])
+  @@index([type])
+  @@index([price])
   @@map("rooms")
 }
 
 model RoomAmenity {
-  id      String @id @default(cuid())
-  roomId  String @map("room_id")
-  amenity String // wifi, ac, tv, minibar, safe, etc.
+  id       String  @id @default(cuid())
+  roomId   String  @db.VarChar(50)
+  amenity  String  @db.VarChar(100)
+  icon     String? @db.VarChar(50)
+  category String? @db.VarChar(50)
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
+  @@index([roomId])
   @@map("room_amenities")
 }
 
@@ -154,38 +219,55 @@ model RoomAmenity {
 
 model Booking {
   id              String    @id @default(cuid())
-  bookingRef      String?   @unique @map("booking_ref") // e.g., "EG-2026-001234"
-  guestName       String
-  guestEmail      String
-  guestPhone      String?
-  guestAvatar     String?
-  roomId          String
-  room            Room      @relation(fields: [roomId], references: [id])
-  roomNumber      String
-  roomType        String
+  bookingRef      String    @unique @db.VarChar(50)
+  guestName       String    @db.VarChar(100)
+  guestEmail      String    @db.VarChar(100)
+  guestPhone      String?   @db.VarChar(20)
+  guestAvatar     String?   @db.Text
+  roomId          String    @db.VarChar(50)
+  roomNumber      String    @db.VarChar(20)
+  roomType        String    @db.VarChar(50)
   checkIn         DateTime
   checkOut        DateTime
+  nights          Int       @default(1)
   adults          Int       @default(1)
   children        Int       @default(0)
-  status          String    @default("pending") // pending, confirmed, checked_in, checked_out, cancelled
-  totalAmount     Float     @map("total_amount")
-  paidAmount      Float     @default(0) @map("paid_amount")
-  paymentMethod   String?   @map("payment_method")
-  specialRequests String?   @map("special_requests") @db.Text
+  infants         Int       @default(0)
+  status          String    @default("pending") @db.VarChar(20)
+  source          String    @default("website") @db.VarChar(50)
+  totalAmount     Float     @db.Float
+  paidAmount      Float     @default(0) @db.Float
+  discountAmount  Float     @default(0) @db.Float
+  taxAmount       Float     @default(0) @db.Float
+  paymentMethod   String?   @db.VarChar(50)
+  paymentStatus   String    @default("pending") @db.VarChar(20)
+  specialRequests String?   @db.Text
   addOns          Json?
-  checkedInAt     DateTime? @map("checked_in_at")
-  checkedOutAt    DateTime? @map("checked_out_at")
-  branchId        String
-  guestId         String?   @map("guest_id")
+  checkedInAt     DateTime?
+  checkedOutAt    DateTime?
+  cancelledAt     DateTime?
+  cancellationReason String? @db.Text
+  rating          Float?    @db.Float
+  reviewText      String?   @db.Text
+  branchId        String    @db.VarChar(50)
+  guestId         String?   @db.VarChar(50)
+  promotionId     String?   @db.VarChar(50)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  // Relations
-  branch   Branch    @relation(fields: [branchId], references: [id])
-  guest    Guest?    @relation(fields: [guestId], references: [id])
-  payments Payment[]
-  invoice  Invoice?
+  room      Room       @relation(fields: [roomId], references: [id])
+  branch    Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  guest     Guest?     @relation(fields: [guestId], references: [id])
+  promotion Promotion? @relation(fields: [promotionId], references: [id])
+  payments  Payment[]
+  invoice   Invoice?
 
+  @@index([bookingRef])
+  @@index([branchId])
+  @@index([guestId])
+  @@index([status])
+  @@index([checkIn])
+  @@index([checkOut])
   @@map("bookings")
 }
 
@@ -326,30 +408,50 @@ model RestaurantTable {
 
 model MenuItem {
   id            String   @id @default(cuid())
-  name          String
-  nameFr        String?  @map("name_fr")
-  nameSw        String?  @map("name_sw")
-  category      String
-  price         Float
+  name          String   @db.VarChar(200)
+  nameFr        String?  @db.VarChar(200)
+  nameSw        String?  @db.VarChar(200)
+  slug          String   @db.VarChar(200)
+  category      String   @db.VarChar(50)
+  subcategory   String?  @db.VarChar(50)
+  price         Float    @db.Float
+  costPrice     Float?   @db.Float
   description   String?  @db.Text
-  descriptionFr String?  @map("description_fr")
-  descriptionSw String?  @map("description_sw")
-  imageUrl      String?  @map("image_url")
+  descriptionFr String?  @db.Text
+  descriptionSw String?  @db.Text
+  imageUrl      String?  @db.Text
+  images        Json?
   available     Boolean  @default(true)
   popular       Boolean  @default(false)
+  featured      Boolean  @default(false)
   vegetarian    Boolean  @default(false)
   vegan         Boolean  @default(false)
   spicy         Boolean  @default(false)
-  glutenFree    Boolean  @default(false) @map("gluten_free")
+  spicyLevel    Int      @default(0)
+  glutenFree    Boolean  @default(false)
   halal         Boolean  @default(false)
-  prepTime      Int?     @map("prep_time") // minutes
-  branchId      String
+  organic       Boolean  @default(false)
+  calories      Int?
+  protein       Float?   @db.Float
+  carbs         Float?   @db.Float
+  fat           Float?   @db.Float
+  allergens     Json?
+  ingredients   Json?
+  prepTime      Int?     @default(15)
+  servingSize   String?  @db.VarChar(50)
+  rating        Float    @default(0) @db.Float
+  totalOrders   Int      @default(0)
+  tags          Json?
+  branchId      String   @db.VarChar(50)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // Relations
-  branch Branch @relation(fields: [branchId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
+  @@index([branchId])
+  @@index([category])
+  @@index([available])
+  @@index([popular])
   @@map("menu_items")
 }
 
@@ -573,23 +675,122 @@ model PageContent {
 
 model Review {
   id          String   @id @default(cuid())
-  type        String // room, restaurant, service, overall
-  rating      Int // 1-5 stars
-  title       String?
+  type        String   @db.VarChar(20)
+  rating      Int
+  title       String?  @db.VarChar(200)
   comment     String?  @db.Text
-  guestName   String
-  guestEmail  String?
-  branchId    String
-  roomId      String?  @map("room_id")
-  guestId     String?  @map("guest_id")
-  isPublished Boolean  @default(false) @map("is_published")
+  pros        String?  @db.Text
+  cons        String?  @db.Text
+  guestName   String   @db.VarChar(100)
+  guestEmail  String?  @db.VarChar(100)
+  guestAvatar String?  @db.Text
+  images      Json?
+  helpful     Int      @default(0)
+  notHelpful  Int      @default(0)
+  verified    Boolean  @default(false)
+  response    String?  @db.Text
+  respondedAt DateTime?
+  branchId    String   @db.VarChar(50)
+  roomId      String?  @db.VarChar(50)
+  guestId     String?  @db.VarChar(50)
+  isPublished Boolean  @default(false)
+  isFeatured  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relations
-  branch Branch @relation(fields: [branchId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
   room   Room?  @relation(fields: [roomId], references: [id])
   guest  Guest? @relation(fields: [guestId], references: [id])
 
+  @@index([branchId])
+  @@index([type])
+  @@index([rating])
+  @@index([isPublished])
   @@map("reviews")
+}
+
+// ============================================
+// PROMOTIONS & MARKETING
+// ============================================
+
+model Promotion {
+  id          String    @id @default(cuid())
+  code        String    @unique @db.VarChar(50)
+  name        String    @db.VarChar(200)
+  description String?   @db.Text
+  type        String    @db.VarChar(20)
+  value       Float     @db.Float
+  minAmount   Float?    @db.Float
+  maxDiscount Float?    @db.Float
+  startDate   DateTime
+  endDate     DateTime
+  usageLimit  Int?
+  usageCount  Int       @default(0)
+  isActive    Boolean   @default(true)
+  conditions  Json?
+  branchId    String    @db.VarChar(50)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([code])
+  @@index([branchId])
+  @@index([isActive])
+  @@map("promotions")
+}
+
+// ============================================
+// ANALYTICS & REPORTING
+// ============================================
+
+model Analytics {
+  id                String   @id @default(cuid())
+  date              DateTime @db.Date
+  branchId          String   @db.VarChar(50)
+  totalRevenue      Float    @default(0) @db.Float
+  totalBookings     Int      @default(0)
+  totalGuests       Int      @default(0)
+  occupancyRate     Float    @default(0) @db.Float
+  avgRoomPrice      Float    @default(0) @db.Float
+  totalOrders       Int      @default(0)
+  restaurantRevenue Float    @default(0) @db.Float
+  newGuests         Int      @default(0)
+  returningGuests   Int      @default(0)
+  cancellations     Int      @default(0)
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([date, branchId])
+  @@index([branchId])
+  @@index([date])
+  @@map("analytics")
+}
+
+// ============================================
+// TASK & ASSIGNMENT MANAGEMENT
+// ============================================
+
+model Assignment {
+  id          String    @id @default(cuid())
+  staffId     String    @db.VarChar(50)
+  type        String    @db.VarChar(50)
+  entityId    String    @db.VarChar(50)
+  status      String    @default("pending") @db.VarChar(20)
+  priority    String    @default("medium") @db.VarChar(20)
+  dueDate     DateTime?
+  completedAt DateTime?
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+  @@index([status])
+  @@map("assignments")
 }

@@ -58,7 +58,9 @@ export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     );
   }
 
-  if (user && !allowedRoles.includes(user.role) && user.role !== "super_admin" && user.role !== "super_manager") {
+  const hasAccess = user && (allowedRoles.includes(user.role) || user.role === "super_admin" || user.role === "super_manager");
+  
+  if (user && !hasAccess) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-pearl/30 gap-4">
         <div className="h-16 w-16 bg-destructive/10 rounded-2xl flex items-center justify-center">

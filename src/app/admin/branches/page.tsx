@@ -17,9 +17,9 @@ import {
 import Link from "next/link";
 
 export default function BranchesPage() {
-  const { user, getAllStaff, hasAccess } = useAuthStore();
+  const { user } = useAuthStore();
   const { getBranches, getBookings, getOrders } = useBranchStore();
-  const isSuper = hasAccess(["super_admin", "super_manager"]);
+  const isSuper = user?.role === "SUPER_ADMIN" || user?.role === "SUPER_MANAGER";
   const branchId = user?.branchId ?? "all";
   const role = user?.role ?? "guest";
   const branches = getBranches(role, branchId);
@@ -55,7 +55,7 @@ export default function BranchesPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         {branches.map((branch) => {
-          const staffList = isSuper || branchId === branch.id ? getAllStaff(branch.id, true) : [];
+          const staffList = [];
           const bookings = getBookings(branch.id, user?.role ?? "guest");
           const orders = getOrders(branch.id, user?.role ?? "guest");
           const revenue = bookings

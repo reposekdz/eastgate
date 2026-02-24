@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatTime, getOrderStatusLabel } from "@/lib/format";
 import {
   UtensilsCrossed,
@@ -32,58 +31,90 @@ import {
   AlertCircle,
   ChefHat,
   Zap,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
 export default function WaiterOrdersPage() {
   const { user } = useAuthStore();
-  const { getOrders, updateOrderStatus } = useBranchStore();
-  const branchId = user?.branchId || "br-001";
-  const userRole = user?.role || "waiter";
-  const orders = getOrders(branchId, userRole);
-
+  const branchId = user?.branchId || "";
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("active");
 
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch(`/api/orders?branchId=${branchId}&paymentStatus=paid`);
+      const data = await res.json();
+      if (data.success) {
+        setOrders(data.orders || []);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 30000);
+    return () => clearInterval(interval);
+  }, [branchId]);
+
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    try {
+      const res = await fetch("/api/orders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: orderId, status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Order updated to ${newStatus}`);
+        fetchOrders();
+      } else {
+        toast.error(data.error || "Failed to update order");
+      }
+    } catch (error) {
+      toast.error("Failed to update order");
+    }
+  };
+
   const activeOrders = orders.filter((o) => o.status !== "served");
   const servedOrders = orders.filter((o) => o.status === "served");
-
-  const displayedOrders =
-    activeTab === "active" ? activeOrders : servedOrders;
-
+  const displayedOrders = activeTab === "active" ? activeOrders : servedOrders;
   const filteredOrders = displayedOrders.filter((o) => {
     return (
       o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (o.guestName &&
-        o.guestName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      o.tableNumber.toString().includes(searchTerm)
+      (o.guestName && o.guestName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (o.tableNumber && o.tableNumber.toString().includes(searchTerm))
     );
   });
 
-  const handleStatusChange = (orderId: string, newStatus: string) => {
-    updateOrderStatus(orderId, newStatus);
-    toast.success(`Order ${orderId} → ${newStatus}`);
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
-        return "bg-orange-100 text-orange-700";
-      case "preparing":
-        return "bg-blue-100 text-blue-700";
-      case "ready":
-        return "bg-emerald-100 text-emerald-700";
-      case "served":
-        return "bg-gray-100 text-gray-700";
-      default:
-        return "bg-gray-100 text-gray-700";
+      case "pending": return "bg-orange-100 text-orange-700";
+      case "preparing": return "bg-blue-100 text-blue-700";
+      case "ready": return "bg-emerald-100 text-emerald-700";
+      case "served": return "bg-gray-100 text-gray-700";
+      default: return "bg-gray-100 text-gray-700";
     }
   };
 
   const pendingCount = orders.filter((o) => o.status === "pending").length;
   const preparingCount = orders.filter((o) => o.status === "preparing").length;
   const readyCount = orders.filter((o) => o.status === "ready").length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -228,9 +259,9 @@ export default function WaiterOrdersPage() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm max-w-48">
-                        {order.items.map((item, idx) => (
+                        {order.items?.map((item: any, idx: number) => (
                           <span key={idx}>
-                            {item.quantity}x {item.name}
+                            {item.quantity}x {item.menuItem?.name || item.name}
                             {idx < order.items.length - 1 ? ", " : ""}
                           </span>
                         ))}

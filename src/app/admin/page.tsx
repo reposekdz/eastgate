@@ -19,8 +19,8 @@ import Link from "next/link";
 export default function AdminDashboard() {
   const { t, isRw } = useI18n();
   const { user } = useAuthStore();
-  const isSuperAdmin = user?.role === "super_admin";
-  const isBranchAdmin = user?.role === "branch_admin";
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const isBranchAdmin = user?.role === "BRANCH_MANAGER" || user?.role === "MANAGER";
   const [tab, setTab] = useState("overview");
 
   return (

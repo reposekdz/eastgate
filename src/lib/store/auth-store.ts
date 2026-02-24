@@ -72,38 +72,38 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (email: string, password: string, branchId: string) => {
         try {
-          // Use NextAuth credentials provider
-          const response = await fetch("/api/auth/callback/credentials", {
+          const response = await fetch("/api/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ email, password, branchId }),
+            credentials: "include",
           });
 
-          if (response.ok) {
-            // Get session after successful login
-            const sessionRes = await fetch("/api/auth/session");
-            const session = await sessionRes.json();
+          const result = await response.json();
 
-            if (session?.user) {
-              const userData: User = {
-                id: session.user.id,
-                name: session.user.name,
-                email: session.user.email,
-                role: session.user.role,
-                branchId: session.user.branchId || branchId,
-                branchName: session.user.branchId 
-                  ? useAppDataStore.getState().branches.find(b => b.id === session.user.branchId)?.name || "Branch"
-                  : "All Branches",
-                avatar: session.user.image || `https://i.pravatar.cc/40?u=${session.user.email}`,
-              };
+          if (result.success && result.user) {
+            const userData: User = {
+              id: result.user.id,
+              name: result.user.name,
+              email: result.user.email,
+              role: result.user.role,
+              branchId: result.user.branchId,
+              branchName: result.user.branchName,
+              avatar: result.user.avatar,
+              phone: result.user.phone,
+            };
 
-              set({
-                user: userData,
-                isAuthenticated: true,
-                requiresCredentialsChange: false,
-              });
-              return true;
-            }
+            set({
+              user: userData,
+              isAuthenticated: true,
+              requiresCredentialsChange: result.user.mustChangePassword || false,
+            });
+
+            // Set secure cookie with proper encoding
+            const authData = { isAuthenticated: true, role: userData.role, user: userData };
+            document.cookie = `eastgate-auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400; SameSite=Lax`;
+            
+            return true;
           }
           return false;
         } catch (error) {
@@ -113,13 +113,13 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        fetch("/api/auth/signout", { method: "POST" }).finally(() => {
-          set({
-            user: null,
-            isAuthenticated: false,
-            requiresCredentialsChange: false,
-          });
+        set({
+          user: null,
+          isAuthenticated: false,
+          requiresCredentialsChange: false,
         });
+        // Clear cookie
+        document.cookie = "eastgate-auth=; path=/; max-age=0";
       },
 
       updateUser: (data) => {

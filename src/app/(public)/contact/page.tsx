@@ -68,7 +68,7 @@ export default function ContactPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/public/contact", {
+      const res = await fetch("/api/contacts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -76,7 +76,9 @@ export default function ContactPage() {
           email: formData.email,
           phone: formData.phone,
           subject: formData.subject,
-          message: formData.message
+          message: formData.message,
+          department: "general",
+          branchId: "br-001"
         })
       });
       const data = await res.json();

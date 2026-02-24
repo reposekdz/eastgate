@@ -1,7 +1,7 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
-import LiveChatWidget from "@/components/chat/LiveChatWidget";
+import LiveChatWidget from "@/components/chat/LiveChatWidget-Real";
 import { Toaster } from "@/components/ui/sonner";
 import { CurrencyProvider } from "@/components/shared/CurrencySelector";
 import { I18nProvider } from "@/lib/i18n/context";

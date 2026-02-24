@@ -17,35 +17,38 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Get messages for this guest
-    const messages = await prisma.$queryRaw`
-      SELECT * FROM messages 
-      WHERE sender_email = ${email} OR recipient_id = ${email}
-      ORDER BY created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    ` as any;
+    // Get messages for this guest using Prisma
+    const messages = await prisma.message.findMany({
+      where: {
+        OR: [
+          { senderEmail: email },
+          { recipientId: email }
+        ],
+        branchId
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset
+    });
 
-    // Get unique conversation threads
-    const conversations = await prisma.$queryRaw`
-      SELECT 
-        CASE 
-          WHEN sender_email = ${email} THEN recipient_id 
-          ELSE sender_email 
-        END as conversation_with,
-        MAX(created_at) as last_message_time,
-        COUNT(*) as message_count,
-        MAX(message) as last_message
-      FROM messages 
-      WHERE sender_email = ${email} OR recipient_id = ${email}
-      GROUP BY conversation_with
-      ORDER BY last_message_time DESC
-      LIMIT 20
-    ` as any;
+    // Get conversation summary
+    const conversationSummary = await prisma.message.groupBy({
+      by: ['senderEmail'],
+      where: {
+        OR: [
+          { senderEmail: email },
+          { recipientId: email }
+        ],
+        branchId
+      },
+      _count: { id: true },
+      _max: { createdAt: true }
+    });
 
     return NextResponse.json({
       success: true,
       messages,
-      conversations,
+      conversationSummary,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
@@ -78,32 +81,26 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Insert the new message
-    const messageId = `MSG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    
-    await prisma.$executeRaw`
-      INSERT INTO messages (id, sender, sender_name, sender_email, sender_phone, message, recipient_id, branch_id, read, starred, archived, created_at, updated_at)
-      VALUES (
-        ${messageId},
-        'guest',
-        ${senderName},
-        ${senderEmail},
-        ${senderPhone || null},
-        ${message},
-        ${recipientId || 'reception'},
-        ${branchId},
-        0,
-        0,
-        0,
-        NOW(),
-        NOW()
-      )
-    `;
+    // Create the new message using Prisma
+    const newMessage = await prisma.message.create({
+      data: {
+        sender: "guest",
+        senderName,
+        senderEmail,
+        senderPhone: senderPhone || null,
+        message,
+        recipientId: recipientId || "reception",
+        branchId,
+        read: false,
+        starred: false,
+        archived: false
+      }
+    });
 
     return NextResponse.json({
       success: true,
       message: "Message sent successfully",
-      messageId,
+      messageId: newMessage.id,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
@@ -120,7 +117,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email } = body;
+    const { email, branchId = "br-001" } = body;
 
     if (!email) {
       return NextResponse.json({
@@ -129,13 +126,20 @@ export async function PUT(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Mark messages as read
-    await prisma.$executeRaw`
-      UPDATE messages 
-      SET read = 1, updated_at = NOW()
-      WHERE (sender_email = ${email} OR recipient_id = ${email})
-        AND read = 0
-    `;
+    // Mark messages as read using Prisma
+    await prisma.message.updateMany({
+      where: {
+        OR: [
+          { senderEmail: email },
+          { recipientId: email }
+        ],
+        branchId,
+        read: false
+      },
+      data: {
+        read: true
+      }
+    });
 
     return NextResponse.json({
       success: true,

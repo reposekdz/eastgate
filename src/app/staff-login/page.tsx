@@ -33,53 +33,40 @@ export default function StaffLoginPage() {
     }
 
     if (!password.trim()) {
-      toast.error("Please enter your access code");
+      toast.error("Please enter your password");
       return;
     }
 
     setLoading(true);
 
     try {
-      const success = await login(email, password, "all");
+      const success = await login(email, password, "kigali-main");
 
       if (success) {
-        toast.success("Login successful! Redirecting...");
-
         const { user } = useAuthStore.getState();
 
         if (user) {
-          switch (user.role) {
-            case "SUPER_ADMIN":
-            case "super_admin":
-              router.push("/admin");
-              break;
-            case "SUPER_MANAGER":
-            case "super_manager":
-            case "BRANCH_MANAGER":
-            case "branch_manager":
-              router.push("/manager");
-              break;
-            case "RECEPTIONIST":
-            case "receptionist":
-              router.push("/receptionist");
-              break;
-            case "WAITER":
-            case "waiter":
-              router.push("/waiter");
-              break;
-            case "KITCHEN":
-            case "kitchen":
-              router.push("/kitchen");
-              break;
-            default:
-              router.push("/");
+          const role = user.role.toUpperCase();
+          
+          if (role === "SUPER_ADMIN" || role === "SUPER_MANAGER") {
+            router.push("/admin");
+          } else if (role === "BRANCH_MANAGER") {
+            router.push("/manager");
+          } else if (role === "RECEPTIONIST") {
+            router.push("/receptionist");
+          } else if (role === "WAITER") {
+            router.push("/waiter");
+          } else if (role === "KITCHEN_STAFF" || role === "CHEF") {
+            router.push("/kitchen");
+          } else {
+            router.push("/");
           }
         }
       } else {
-        toast.error("Invalid credentials or account not active");
+        toast.error("Invalid email or password");
       }
     } catch (error) {
-      toast.error("An error occurred during login");
+      toast.error("Login failed. Please try again.");
       console.error(error);
     } finally {
       setLoading(false);
@@ -240,30 +227,6 @@ export default function StaffLoginPage() {
                   </form>
                 </CardContent>
               </Card>
-
-              {/* Demo Credentials */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                className="mt-6 p-4 rounded-lg bg-white/5 border border-white/10"
-              >
-                <p className="text-white/60 text-xs text-center mb-3">Demo Credentials</p>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between text-white/80">
-                    <span>Super Admin:</span>
-                    <span className="font-mono text-emerald">admin@eastgate.rw / admin123</span>
-                  </div>
-                  <div className="flex justify-between text-white/80">
-                    <span>Manager:</span>
-                    <span className="font-mono text-emerald">manager@eastgate.rw / manager123</span>
-                  </div>
-                  <div className="flex justify-between text-white/80">
-                    <span>Staff:</span>
-                    <span className="font-mono text-emerald">staff@eastgate.rw / demo123</span>
-                  </div>
-                </div>
-              </motion.div>
             </motion.div>
           </div>
         </div>

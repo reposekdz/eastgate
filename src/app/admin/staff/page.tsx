@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -18,6 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -28,11 +35,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { useBranchStore } from "@/lib/store/branch-store";
-import { getRoleLabel, getDepartmentLabel, formatDate } from "@/lib/format";
-import type { StaffMember } from "@/lib/types/schema";
+import { formatDate } from "@/lib/format";
 import {
   Search,
   Plus,
@@ -45,8 +51,11 @@ import {
   Building2,
   Shield,
   Lock,
+  Loader2,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import StaffProfileSheet from "@/components/admin/staff/StaffProfileSheet";
 
 const statusStyles: Record<string, string> = {
   active: "bg-status-available/10 text-status-available border-status-available/20",
@@ -56,14 +65,106 @@ const statusStyles: Record<string, string> = {
 
 export default function StaffPage() {
   const { user } = useAuthStore();
-  const getStaff = useBranchStore((s) => s.getStaff);
+  const [staff, setStaff] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deptFilter, setDeptFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<any | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [newStaff, setNewStaff] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    role: "",
+    department: "",
+    shift: "Morning",
+    branchId: "",
+  });
 
-  const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
-  const role = user?.role ?? "guest";
-  const staff = getStaff(branchId, role);
+  const isSuperUser = (user?.role as string) === "SUPER_ADMIN" || (user?.role as string) === "SUPER_MANAGER";
+
+  useEffect(() => {
+    fetchStaff();
+    fetchBranches();
+  }, []);
+
+  const fetchStaff = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (!isSuperUser && user?.branchId) {
+        params.append("branchId", user.branchId);
+      }
+      const res = await fetch(`/api/staff?${params}`);
+      const data = await res.json();
+      if (data.success) {
+        setStaff(data.staff || []);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch staff");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const res = await fetch("/api/staff");
+      const data = await res.json();
+      if (data.success && data.branches) {
+        setBranches(data.branches);
+      }
+    } catch (error) {
+      console.error("Failed to fetch branches");
+    }
+  };
+
+  const handleAddStaff = async () => {
+    if (!newStaff.name || !newStaff.email || !newStaff.password || !newStaff.role || !newStaff.branchId) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    setAddLoading(true);
+    try {
+      const res = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newStaff),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Staff member added successfully");
+        setShowAddDialog(false);
+        setNewStaff({ name: "", email: "", phone: "", password: "", role: "", department: "", shift: "Morning", branchId: "" });
+        fetchStaff();
+      } else {
+        toast.error(data.error || "Failed to add staff");
+      }
+    } catch (error) {
+      toast.error("Failed to add staff");
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleDeleteStaff = async (staffId: string, staffName: string) => {
+    if (!confirm(`Delete ${staffName}? This action cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/staff/${staffId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`${staffName} deleted successfully`);
+        fetchStaff();
+      } else {
+        toast.error(data.error || "Failed to delete staff");
+      }
+    } catch (error) {
+      toast.error("Failed to delete staff");
+    }
+  };
 
   const filtered = staff.filter((s) => {
     if (deptFilter !== "all" && s.department !== deptFilter) return false;
@@ -72,6 +173,14 @@ export default function StaffPage() {
   });
 
   const activeCount = staff.filter((s) => s.status === "active").length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -83,7 +192,7 @@ export default function StaffPage() {
             Manage team members, roles, and schedules
           </p>
         </div>
-        <Button className="bg-emerald hover:bg-emerald-dark text-white rounded-[6px] gap-2 text-sm">
+        <Button onClick={() => setShowAddDialog(true)} className="bg-emerald hover:bg-emerald-dark text-white rounded-[6px] gap-2 text-sm">
           <Plus className="h-4 w-4" /> Add Staff
         </Button>
       </div>
@@ -177,7 +286,7 @@ export default function StaffPage() {
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={member.avatar} alt={member.name} />
                         <AvatarFallback className="text-[10px] bg-emerald/10 text-emerald">
-                          {member.name.split(" ").map((n) => n[0]).join("")}
+                          {member.name.split(" ").map((n: string) => n[0]).join("")}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -186,17 +295,32 @@ export default function StaffPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-sm text-slate-custom">{getRoleLabel(member.role)}</TableCell>
+                  <TableCell className="hidden md:table-cell text-sm text-slate-custom">{member.role}</TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <Badge variant="outline" className="text-[10px] rounded-[4px] font-medium">
-                      {getDepartmentLabel(member.department)}
+                      {member.department}
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell text-sm text-slate-custom">{member.shift}</TableCell>
                   <TableCell className="text-right">
-                    <Badge variant="outline" className={`text-[10px] font-semibold uppercase tracking-wider rounded-[4px] ${statusStyles[member.status]}`}>
-                      {member.status === "on_leave" ? "On Leave" : member.status === "off_duty" ? "Off Duty" : "Active"}
-                    </Badge>
+                    <div className="flex items-center justify-end gap-2">
+                      <Badge variant="outline" className={`text-[10px] font-semibold uppercase tracking-wider rounded-[4px] ${statusStyles[member.status]}`}>
+                        {member.status === "on_leave" ? "On Leave" : member.status === "off_duty" ? "Off Duty" : "Active"}
+                      </Badge>
+                      {(isSuperUser || user?.role === "BRANCH_MANAGER") && member.role !== "SUPER_ADMIN" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteStaff(member.id, member.name);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -206,99 +330,91 @@ export default function StaffPage() {
       </Card>
 
       {/* Staff Detail Sheet */}
-      <Sheet open={!!selectedStaff} onOpenChange={() => setSelectedStaff(null)}>
-        <SheetContent className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>Staff Profile</SheetTitle>
-            <SheetDescription>Employee details and assignment</SheetDescription>
-          </SheetHeader>
-          {selectedStaff && (
-            <div className="space-y-5 mt-4 px-1">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-14 w-14">
-                  <AvatarImage src={selectedStaff.avatar} alt={selectedStaff.name} />
-                  <AvatarFallback className="bg-emerald/10 text-emerald text-lg">
-                    {selectedStaff.name.split(" ").map((n) => n[0]).join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-lg font-semibold text-charcoal">{selectedStaff.name}</p>
-                  <Badge variant="outline" className={`text-[10px] rounded-[4px] ${statusStyles[selectedStaff.status]}`}>
-                    {selectedStaff.status === "on_leave" ? "On Leave" : selectedStaff.status === "off_duty" ? "Off Duty" : "Active"}
-                  </Badge>
-                </div>
-              </div>
+      <StaffProfileSheet
+        staff={selectedStaff}
+        open={!!selectedStaff}
+        onClose={() => setSelectedStaff(null)}
+        onUpdate={fetchStaff}
+      />
 
-              <Separator />
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm">
-                  <Shield className="h-4 w-4 text-text-muted-custom shrink-0" />
-                  <span className="text-text-muted-custom">Role:</span>
-                  <span className="text-charcoal font-medium">{getRoleLabel(selectedStaff.role)}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Building2 className="h-4 w-4 text-text-muted-custom shrink-0" />
-                  <span className="text-text-muted-custom">Dept:</span>
-                  <span className="text-charcoal font-medium">{getDepartmentLabel(selectedStaff.department)}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Mail className="h-4 w-4 text-text-muted-custom shrink-0" />
-                  <span className="text-slate-custom">{selectedStaff.email}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Phone className="h-4 w-4 text-text-muted-custom shrink-0" />
-                  <span className="text-slate-custom">{selectedStaff.phone}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Clock className="h-4 w-4 text-text-muted-custom shrink-0" />
-                  <span className="text-text-muted-custom">Shift:</span>
-                  <span className="text-charcoal font-medium">{selectedStaff.shift}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <Calendar className="h-4 w-4 text-text-muted-custom shrink-0" />
-                  <span className="text-text-muted-custom">Joined:</span>
-                  <span className="text-charcoal font-medium">{formatDate(selectedStaff.joinDate)}</span>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1 rounded-[6px] text-sm">Edit Profile</Button>
-                  <Button className="flex-1 bg-emerald hover:bg-emerald-dark text-white rounded-[6px] text-sm">Assign Shift</Button>
-                </div>
-                <Button
-                  variant="destructive"
-                  className="w-full rounded-[6px] text-sm gap-2"
-                  onClick={async () => {
-                    const ok = confirm("Are you sure you want to force this user to change their password on next login?");
-                    if (!ok) return;
-
-                    try {
-                      const res = await fetch("/api/admin/staff/force-password-reset", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ userId: selectedStaff.id }),
-                      });
-                      if (res.ok) {
-                        toast.success("Security flag set! User will be forced to change password.");
-                      } else {
-                        toast.error("Failed to set security flag.");
-                      }
-                    } catch (e) {
-                      toast.error("An error occurred.");
-                    }
-                  }}
-                >
-                  <Lock className="h-4 w-4" /> Force Password Reset
-                </Button>
-              </div>
+      {/* Add Staff Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Staff Member</DialogTitle>
+            <DialogDescription>Create credentials for new staff member</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Full Name *</Label>
+              <Input value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })} placeholder="John Doe" />
             </div>
-          )}
-        </SheetContent>
-      </Sheet>
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input type="email" value={newStaff.email} onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })} placeholder="john@eastgatehotel.rw" />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input value={newStaff.phone} onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })} placeholder="+250 788 123 456" />
+            </div>
+            <div className="space-y-2">
+              <Label>Password *</Label>
+              <Input type="password" value={newStaff.password} onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })} placeholder="Minimum 6 characters" />
+            </div>
+            <div className="space-y-2">
+              <Label>Role *</Label>
+              <Select value={newStaff.role} onValueChange={(v) => setNewStaff({ ...newStaff, role: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isSuperUser && <SelectItem value="BRANCH_MANAGER">Branch Manager</SelectItem>}
+                  <SelectItem value="RECEPTIONIST">Receptionist</SelectItem>
+                  <SelectItem value="WAITER">Waiter</SelectItem>
+                  <SelectItem value="CHEF">Chef</SelectItem>
+                  <SelectItem value="KITCHEN_STAFF">Kitchen Staff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Department *</Label>
+              <Input value={newStaff.department} onChange={(e) => setNewStaff({ ...newStaff, department: e.target.value })} placeholder="Front Desk, Kitchen, etc." />
+            </div>
+            <div className="space-y-2">
+              <Label>Branch *</Label>
+              <Select value={newStaff.branchId} onValueChange={(v) => setNewStaff({ ...newStaff, branchId: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Shift</Label>
+              <Select value={newStaff.shift} onValueChange={(v) => setNewStaff({ ...newStaff, shift: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Morning">Morning</SelectItem>
+                  <SelectItem value="Afternoon">Afternoon</SelectItem>
+                  <SelectItem value="Night">Night</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowAddDialog(false)} className="flex-1">Cancel</Button>
+            <Button onClick={handleAddStaff} disabled={addLoading} className="flex-1 bg-emerald hover:bg-emerald-dark text-white">
+              {addLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add Staff"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

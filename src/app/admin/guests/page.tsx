@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -31,10 +31,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatDate } from "@/lib/format";
 import LoyaltyBadge from "@/components/admin/shared/LoyaltyBadge";
-import type { Guest } from "@/lib/types/schema";
 import {
   Search,
   Users,
@@ -46,35 +44,59 @@ import {
   Calendar,
   CreditCard,
   BedDouble,
-  Filter,
   Download,
-  MoreHorizontal,
   Star,
-  Clock,
   XCircle,
-  RefreshCw,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const tierFilters = [
   { label: "All", value: "all" },
   { label: "Platinum", value: "platinum", color: "bg-purple-100" },
   { label: "Gold", value: "gold", color: "bg-yellow-100" },
   { label: "Silver", value: "silver", color: "bg-slate-100" },
-  { label: "Member", value: "member", color: "bg-emerald-100" },
+  { label: "Bronze", value: "bronze", color: "bg-emerald-100" },
 ];
 
 export default function GuestsPage() {
   const { user } = useAuthStore();
-  const getGuests = useBranchStore((s) => s.getGuests);
+  const [guests, setGuests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [tierFilter, setTierFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+  const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
   const [selectedGuests, setSelectedGuests] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<"name" | "spent" | "stays" | "lastVisit">("spent");
 
-  const branchId = user?.role === "super_admin" || user?.role === "super_manager" ? "all" : (user?.branchId ?? "br-001");
-  const role = user?.role ?? "guest";
-  const guests = getGuests(branchId, role);
+  const isSuperUser = user?.role === "SUPER_ADMIN" || user?.role === "SUPER_MANAGER";
+  const branchId = isSuperUser ? undefined : user?.branchId;
+
+  // Fetch guests from API
+  useEffect(() => {
+    async function fetchGuests() {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams();
+        if (branchId) params.append("branchId", branchId);
+        params.append("includeBookings", "true");
+        
+        const res = await fetch(`/api/guests?${params}`);
+        const data = await res.json();
+        
+        if (data.success) {
+          setGuests(data.guests || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch guests:", error);
+        toast.error("Failed to load guests");
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchGuests();
+  }, [branchId]);
 
   // Filter and sort guests
   const filtered = useMemo(() => {
@@ -135,6 +157,14 @@ export default function GuestsPage() {
     console.log(`Bulk action: ${action} on guests:`, selectedGuests);
     setSelectedGuests([]);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

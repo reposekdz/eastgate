@@ -28,8 +28,8 @@ export default function StaffManagementPage() {
   const { user, getAllStaff, addStaff, removeStaff, hasAccess } = useAuthStore();
   const branchId = user?.branchId || "";
   const branchName = user?.branchName || "";
-  const isBranchManager = user?.role === "branch_manager";
-  const isSuperUser = hasAccess(["super_admin", "super_manager"]);
+  const isBranchManager = user?.role === "BRANCH_MANAGER";
+  const isSuperUser = hasAccess(["SUPER_ADMIN", "SUPER_MANAGER"]);
   const canAddBranchWorkers = isBranchManager || isSuperUser;
   const canRemoveStaff = isBranchManager || isSuperUser;
 

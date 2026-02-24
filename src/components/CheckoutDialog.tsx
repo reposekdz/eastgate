@@ -189,9 +189,10 @@ export function CheckoutDialog({
     });
 
     setOrderId(id);
-    clearCart();
-    setStep(3);
-    toast.success("Order placed successfully!");
+    
+    // Redirect to payment processing page
+    const paymentUrl = `/payment/process?method=${paymentMethod}&amount=${grandTotal}&order=${id}`;
+    window.location.href = paymentUrl;
   };
 
   const resetAndClose = () => {
@@ -209,35 +210,33 @@ export function CheckoutDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={step === 3 ? resetAndClose : onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
         {/* Steps indicator */}
-        {step < 3 && (
-          <div className="flex items-center gap-0 px-6 pt-6">
-            {[1, 2].map((s) => (
-              <div key={s} className="flex items-center flex-1">
+        <div className="flex items-center gap-0 px-6 pt-6">
+          {[1, 2].map((s) => (
+            <div key={s} className="flex items-center flex-1">
+              <div
+                className={cn(
+                  "h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+                  s <= step
+                    ? "bg-emerald text-white"
+                    : "bg-pearl text-text-muted-custom"
+                )}
+              >
+                {s}
+              </div>
+              {s < 2 && (
                 <div
                   className={cn(
-                    "h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
-                    s <= step
-                      ? "bg-emerald text-white"
-                      : "bg-pearl text-text-muted-custom"
+                    "h-0.5 flex-1 mx-2",
+                    s < step ? "bg-emerald" : "bg-pearl"
                   )}
-                >
-                  {s}
-                </div>
-                {s < 2 && (
-                  <div
-                    className={cn(
-                      "h-0.5 flex-1 mx-2",
-                      s < step ? "bg-emerald" : "bg-pearl"
-                    )}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+                />
+              )}
+            </div>
+          ))}
+        </div>
 
         <AnimatePresence mode="wait">
           {/* Step 1: Order Details */}
@@ -495,40 +494,6 @@ export function CheckoutDialog({
                   Place Order — {formatCurrency(grandTotal)}
                 </Button>
               </div>
-            </motion.div>
-          )}
-
-          {/* Step 3: Confirmation */}
-          {step === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="px-6 py-10 text-center space-y-4"
-            >
-              <div className="mx-auto h-20 w-20 rounded-full bg-emerald/10 flex items-center justify-center">
-                <CheckCircle className="h-10 w-10 text-emerald" />
-              </div>
-              <div>
-                <h2 className="font-heading text-2xl font-bold text-charcoal mb-1">
-                  Order Confirmed!
-                </h2>
-                <p className="text-text-muted-custom">
-                  Your order <Badge className="bg-emerald text-white">{orderId}</Badge> has been placed
-                </p>
-              </div>
-              <p className="text-sm text-text-muted-custom">
-                Our kitchen team will start preparing your food right away.
-                {orderType === "room_service" && " It will be delivered to your room."}
-                {orderType === "dine_in" && " A waiter will serve you at your table."}
-                {orderType === "takeaway" && " We'll notify you when it's ready to pick up."}
-              </p>
-              <Button
-                className="bg-emerald hover:bg-emerald-dark text-white px-8"
-                onClick={resetAndClose}
-              >
-                Done
-              </Button>
             </motion.div>
           )}
         </AnimatePresence>

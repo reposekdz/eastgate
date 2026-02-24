@@ -89,8 +89,8 @@ export default function RoomManagementPage() {
     const roomData = {
       number: formData.number,
       floor: parseInt(formData.floor),
-      type: formData.type,
-      price: parseInt(formData.price),
+      type: formData.type.toLowerCase(),
+      price: parseFloat(formData.price),
       description: formData.description,
       branchId: branchId,
     };
@@ -99,36 +99,33 @@ export default function RoomManagementPage() {
       let res;
       
       if (editMode && selectedRoom) {
-        // Update existing room
-        res = await fetch(`/api/rooms/${selectedRoom.id}`, {
+        res = await fetch(`/api/rooms`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(roomData),
+          body: JSON.stringify({ ...roomData, id: selectedRoom.id }),
         });
-        
-        if (res.ok) {
-          setRooms(rooms.map(r => r.id === selectedRoom.id ? { ...r, ...roomData } : r));
-          toast.success(`Room ${formData.number} updated successfully!`);
-        }
       } else {
-        // Create new room
         res = await fetch("/api/rooms", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(roomData),
         });
-        
-        if (res.ok) {
-          const newRoom = await res.json();
-          setRooms([...rooms, newRoom]);
-          toast.success(`Room ${formData.number} added successfully!`);
-        }
       }
       
-      setFormData({ number: "", floor: "1", type: "STANDARD", price: "", description: "", view: "City View" });
-      setDialogOpen(false);
-      setEditMode(false);
-      setSelectedRoom(null);
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success(editMode ? "Room updated!" : "Room added!");
+        const updatedRes = await fetch(`/api/rooms?branchId=${branchId}`);
+        const updatedData = await updatedRes.json();
+        if (updatedData.rooms) setRooms(updatedData.rooms);
+        setDialogOpen(false);
+        setEditMode(false);
+        setSelectedRoom(null);
+        setFormData({ number: "", floor: "1", type: "STANDARD", price: "", description: "", view: "City View" });
+      } else {
+        toast.error(data.error || "Failed to save room");
+      }
     } catch (error) {
       toast.error("Failed to save room");
     }
@@ -152,11 +149,14 @@ export default function RoomManagementPage() {
     if (!confirm(`Delete room ${roomNumber}? This action cannot be undone.`)) return;
     
     try {
-      const res = await fetch(`/api/rooms/${roomId}`, { method: "DELETE" });
+      const res = await fetch(`/api/rooms?id=${roomId}`, { method: "DELETE" });
+      const data = await res.json();
       
-      if (res.ok) {
+      if (data.success) {
         setRooms(rooms.filter(r => r.id !== roomId));
         toast.success(`Room ${roomNumber} deleted`);
+      } else {
+        toast.error(data.error || "Failed to delete room");
       }
     } catch (error) {
       toast.error("Failed to delete room");

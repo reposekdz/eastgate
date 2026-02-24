@@ -72,6 +72,12 @@ export default function AdminAuthGuard({
     "branch_admin",
     "accountant",
     "event_manager",
+    "SUPER_ADMIN",
+    "SUPER_MANAGER",
+    "BRANCH_MANAGER",
+    "BRANCH_ADMIN",
+    "ACCOUNTANT",
+    "EVENT_MANAGER",
   ];
   if (user && !allowedRoles.includes(user.role)) {
     return (

@@ -4,287 +4,189 @@ export const dynamic = "force-dynamic";
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useBranchStore } from "@/lib/store/branch-store";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { useI18n } from "@/lib/i18n/context";
-import {
-  Eye,
-  EyeOff,
-  ShieldCheck,
-  Loader2,
-  Lock,
-  Users,
-} from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [branchId, setBranchId] = useState("br-001");
   const [loading, setLoading] = useState(false);
-  const [loginType, setLoginType] = useState<"staff" | "guest">("staff");
-  const [showCredentials, setShowCredentials] = useState(false);
-  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const { login } = useAuthStore();
-  const { t, isRw } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get("redirect");
-  const authError = searchParams.get("error");
-
-  const branches = useBranchStore((s) => s.getBranches("super_admin", "all"));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email || !password) {
-      toast.error(t("auth", "loginFieldsError"));
+      toast.error("Please enter your email and password");
       return;
     }
 
     setLoading(true);
     try {
-      const success = await login(email, password, branchId);
+      console.log("Attempting login...");
+      const success = await login(email, password, "kigali-main");
+      console.log("Login result:", success);
 
       if (success) {
-        toast.success(t("auth", "loginSuccess"));
         const { user } = useAuthStore.getState();
+        console.log("User after login:", user);
 
-        if (redirectPath) {
-          router.push(redirectPath);
-        } else if (user?.role === "SUPER_ADMIN" || user?.role === "SUPER_MANAGER") {
-          router.push("/admin");
-        } else if (user?.role === "BRANCH_MANAGER") {
-          router.push("/manager");
-        } else if (user?.role === "RECEPTIONIST") {
-          router.push("/receptionist");
-        } else if (user?.role === "KITCHEN_STAFF" || user?.role === "CHEF") {
-          router.push("/kitchen");
-        } else if (user?.role === "WAITER") {
-          router.push("/waiter");
+        if (user) {
+          toast.success("Welcome back!");
+          const userRole = user.role.toUpperCase();
+          console.log("User role:", userRole);
+
+          if (redirectPath) {
+            console.log("Redirecting to:", redirectPath);
+            router.push(redirectPath);
+          } else if (userRole === "SUPER_ADMIN" || userRole === "SUPER_MANAGER") {
+            console.log("Redirecting to /admin");
+            router.push("/admin");
+          } else if (userRole === "BRANCH_MANAGER") {
+            console.log("Redirecting to /manager");
+            router.push("/manager");
+          } else if (userRole === "RECEPTIONIST") {
+            console.log("Redirecting to /receptionist");
+            router.push("/receptionist");
+          } else if (userRole === "KITCHEN_STAFF" || userRole === "CHEF") {
+            console.log("Redirecting to /kitchen");
+            router.push("/kitchen");
+          } else if (userRole === "WAITER") {
+            console.log("Redirecting to /waiter");
+            router.push("/waiter");
+          } else {
+            console.log("Redirecting to /admin (default)");
+            router.push("/admin");
+          }
         } else {
-          router.push("/admin");
+          console.error("No user found after successful login");
+          toast.error("Login error: No user data");
         }
       } else {
-        toast.error(t("auth", "loginError"));
+        console.log("Login failed");
+        toast.error("Invalid email or password");
       }
-    } catch {
-      toast.error(t("auth", "genericError"));
+    } catch (error) {
+      console.error("Login exception:", error);
+      toast.error("Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-
-
-  const getRoleBadge = (role: string) => {
-    const colors: Record<string, string> = {
-      super_admin: "bg-red-100 text-red-700",
-      super_manager: "bg-purple-100 text-purple-700",
-      branch_manager: "bg-blue-100 text-blue-700",
-      branch_admin: "bg-indigo-100 text-indigo-700",
-      receptionist: "bg-emerald-100 text-emerald-700",
-      waiter: "bg-orange-100 text-orange-700",
-      accountant: "bg-yellow-100 text-yellow-700",
-    };
-    return colors[role] || "bg-gray-100 text-gray-700";
-  };
-
   return (
-    <div className="w-full max-w-md">
-      {/* Mobile Brand */}
-      <div className="lg:hidden text-center mb-8">
-        <h2 className="heading-sm text-charcoal tracking-wider">
-          East<span className="text-gold">Gate</span>
-        </h2>
-        <p className="text-xs text-text-muted-custom uppercase tracking-widest mt-1">
-          Hotel Rwanda
-        </p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 p-4">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
       </div>
 
-      <Card className="py-0 border-transparent shadow-lg">
-        <CardContent className="p-6 sm:p-8">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <div className="flex justify-center mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-[10px] bg-emerald text-white shadow-lg">
-                <ShieldCheck className="h-6 w-6" />
-              </div>
-            </div>
-            <h1 className="heading-sm text-charcoal">{t("auth", "welcomeBack")}</h1>
-            <p className="body-sm text-text-muted-custom mt-1">
-              {t("auth", "signInSubtitle")}
-            </p>
-            {authError === "insufficient_permissions" && (
-              <p className="text-xs text-destructive mt-2 font-medium bg-destructive/10 rounded-md px-3 py-1.5">
-                {t("auth", "insufficientPermissions")}
-              </p>
-            )}
-            {redirectPath && !authError && (
-              <p className="text-xs text-emerald mt-2 font-medium bg-emerald/10 rounded-md px-3 py-1.5">
-                {t("auth", "pleaseSignIn")}
-              </p>
-            )}
+      <div className="w-full max-w-md relative">
+        {/* Logo & Title */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-500/30 mb-4">
+            <Building2 className="h-8 w-8 text-white" />
           </div>
+          <h1 className="text-3xl font-bold text-white">EastGate Hotel</h1>
+          <p className="text-slate-300 mt-2">Staff Management Portal</p>
+        </div>
 
-          {/* Login Type Tabs */}
-          <Tabs value={loginType} onValueChange={(v: string) => setLoginType(v as "staff" | "guest")} className="mb-5">
-            <TabsList className="grid w-full grid-cols-2 h-10">
-              <TabsTrigger value="staff" className="gap-1.5 text-xs">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Staff Login
-              </TabsTrigger>
-              <TabsTrigger value="guest" className="gap-1.5 text-xs">
-                <Users className="h-3.5 w-3.5" />
-                Guest Login
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
+          <CardContent className="p-8">
+            <h2 className="text-2xl font-bold text-charcoal text-center mb-2">
+              Welcome Back
+            </h2>
+            <p className="text-center text-slate-500 mb-6">
+              Sign in to access your dashboard
+            </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Branch - only for staff */}
-            {loginType === "staff" && (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Email */}
               <div>
-                <label className="text-xs font-semibold text-charcoal uppercase tracking-wider mb-1.5 block">
-                  {t("auth", "branch")}
+                <label className="text-sm font-semibold text-charcoal mb-2 block">
+                  Email Address
                 </label>
-                <Select value={branchId} onValueChange={setBranchId}>
-                  <SelectTrigger className="h-10 text-sm rounded-[6px]">
-                    <SelectValue placeholder={t("auth", "selectBranch")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Input
+                    type="email"
+                    placeholder="your.email@eastgatehotel.rw"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-12 pl-11 bg-slate-50 border-slate-200 rounded-lg text-base focus:border-emerald-500 focus:ring-emerald-500"
+                    autoComplete="email"
+                  />
+                </div>
               </div>
-            )}
 
-            {/* Email */}
-            <div>
-              <label className="text-xs font-semibold text-charcoal uppercase tracking-wider mb-1.5 block">
-                {t("auth", "emailAddress")}
-              </label>
-              <Input
-                type="email"
-                placeholder={loginType === "staff" ? "eastgate@hmail.com" : "you@example.com"}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-10 text-sm rounded-[6px]"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-charcoal uppercase tracking-wider">
-                  {t("auth", "password")}
+              {/* Password */}
+              <div>
+                <label className="text-sm font-semibold text-charcoal mb-2 block">
+                  Password
                 </label>
-                <Link href="#" className="text-xs text-emerald hover:text-emerald-dark font-medium">
-                  {t("auth", "forgotPassword")}
-                </Link>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 pl-11 pr-11 bg-slate-50 border-slate-200 rounded-lg text-base focus:border-emerald-500 focus:ring-emerald-500"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder={loginType === "staff" ? "2026" : t("auth", "enterPassword")}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-10 text-sm rounded-[6px] pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted-custom hover:text-charcoal"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+
+              {/* Submit */}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-all hover:shadow-lg hover:shadow-emerald-500/25 text-base"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </Button>
+            </form>
+
+            {/* Help Text */}
+            <div className="mt-6 pt-6 border-t border-slate-100">
+              <p className="text-center text-sm text-slate-600">
+                Need help accessing your account?
+              </p>
+              <p className="text-center text-sm text-slate-500 mt-1">
+                Contact your system administrator
+              </p>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Remember */}
-            <div className="flex items-center gap-2">
-              <Checkbox id="remember" className="rounded-[4px]" />
-              <label htmlFor="remember" className="text-sm text-slate-custom cursor-pointer">
-                {t("auth", "rememberMe")}
-              </label>
-            </div>
-
-            {/* Submit */}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full h-10 bg-emerald hover:bg-emerald-dark text-white font-semibold rounded-[6px] uppercase tracking-wider text-sm transition-all hover:shadow-[0_0_20px_rgba(11,110,79,0.3)]"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("auth", "signingIn")}
-                </>
-              ) : (
-                t("auth", "signIn")
-              )}
-            </Button>
-          </form>
-
-          <Separator className="my-5" />
-
-
-
-          {/* Staff Notice */}
-          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
-            <Lock className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-700">
-              {loginType === "staff"
-                ? "Staff credentials are assigned by the manager. Contact your branch manager if you don't have access."
-                : "Guest accounts can book rooms, order food, and access loyalty rewards."
-              }
-            </p>
-          </div>
-
-          <p className="text-center text-xs text-text-muted-custom">
-            {loginType === "guest" ? (
-              <>
-                Don&apos;t have an account?{" "}
-                <Link href="/register" className="text-emerald font-semibold hover:text-emerald-dark">
-                  Create Account
-                </Link>
-              </>
-            ) : (
-              <>
-                {t("auth", "guestAccount")}{" "}
-                <Link href="/register" className="text-emerald font-semibold hover:text-emerald-dark">
-                  {t("auth", "createAccount")}
-                </Link>
-              </>
-            )}
-          </p>
-        </CardContent>
-      </Card>
-
-      <p className="text-center text-[11px] text-text-muted-custom/60 mt-6">
-        &copy; 2026 EastGate Hotel Rwanda. {t("auth", "secureEnterprise")}
-      </p>
+        <p className="text-center text-xs text-slate-400 mt-6">
+          © 2026 EastGate Hotel Rwanda. All rights reserved.
+        </p>
+      </div>
     </div>
   );
 }
@@ -292,10 +194,10 @@ function LoginPageContent() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="w-full max-w-md flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900">
         <div className="text-center">
           <div className="h-8 w-8 border-4 border-emerald border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-          <p className="text-sm text-text-muted-custom">Loading...</p>
+          <p className="text-sm text-slate-400">Loading...</p>
         </div>
       </div>
     }>

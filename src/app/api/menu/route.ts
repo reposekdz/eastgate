@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import prisma from "@/lib/prisma";
-import { isSuperAdminOrManager } from "@/lib/auth";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 // GET - Fetch menu items
 export async function GET(req: NextRequest) {
@@ -9,95 +9,44 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
     const available = searchParams.get("available");
-    const userBranchId = req.headers.get("x-branch-id") as string;
+    const branchId = searchParams.get("branchId");
 
     const where: any = {};
-
-    // Filter by branch
-    if (userBranchId) {
-      where.branchId = userBranchId;
-    }
-
-    // Filter by category
-    if (category) {
-      where.category = category;
-    }
-
-    // Filter by availability
-    if (available === "true") {
-      where.available = true;
-    } else if (available === "false") {
-      where.available = false;
-    }
+    if (branchId) where.branchId = branchId;
+    if (category && category !== "all") where.category = category;
+    if (available === "true") where.available = true;
+    else if (available === "false") where.available = false;
 
     const menuItems = await prisma.menuItem.findMany({
       where,
-      orderBy: [
-        { category: "asc" },
-        { name: "asc" },
-      ],
+      orderBy: [{ category: "asc" }, { name: "asc" }],
     });
 
-    // Get categories for filtering
-    const categories = await prisma.menuItem.groupBy({
-      by: ["category"],
-      where: userBranchId ? { branchId: userBranchId } : {},
-    });
-
-    return NextResponse.json({
-      success: true,
-      menuItems,
-      categories: categories.map(c => c.category),
-    });
+    return NextResponse.json({ success: true, menuItems });
   } catch (error) {
     console.error("Menu fetch error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch menu" },
+      { success: false, error: "Failed to fetch menu" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
-// POST - Create menu item (Manager only)
+// POST - Create menu item
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = session.user.role as string;
-
-    if (!isSuperAdminOrManager(userRole)) {
-      return NextResponse.json(
-        { error: "Forbidden - Manager access only" },
-        { status: 403 }
-      );
-    }
-
     const body = await req.json();
-    const {
-      name,
-      category,
-      price,
-      description,
-      imageUrl,
-      available,
-      popular,
-      vegetarian,
-      spicy,
-    } = body;
+    const { name, category, price, description, imageUrl, available, popular, vegetarian, spicy, branchId, prepTime } = body;
 
-    // Validate required fields
-    if (!name || !category || !price) {
+    if (!name || !category || !price || !branchId) {
       return NextResponse.json(
-        { error: "name, category, and price are required" },
+        { success: false, error: "name, category, price, and branchId are required" },
         { status: 400 }
       );
     }
 
-    // Create menu item
     const menuItem = await prisma.menuItem.create({
       data: {
         name,
@@ -109,84 +58,42 @@ export async function POST(req: NextRequest) {
         popular: popular || false,
         vegetarian: vegetarian || false,
         spicy: spicy || false,
-        branchId: session.user.branchId || "",
+        branchId,
+        prepTime: prepTime ? parseInt(prepTime) : null,
       },
     });
 
-    // Log creation
-    await prisma.activityLog.create({
-      data: {
-        userId: session.user.email || undefined,
-        branchId: session.user.branchId || "",
-        action: "menu_item_created",
-        entity: "menu_item",
-        entityId: menuItem.id,
-        details: { name, category, price },
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      menuItem,
-    });
+    return NextResponse.json({ success: true, menuItem });
   } catch (error) {
     console.error("Menu item creation error:", error);
     return NextResponse.json(
-      { error: "Failed to create menu item" },
+      { success: false, error: "Failed to create menu item" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 // PUT - Update menu item
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = session.user.role as string;
-
-    if (!isSuperAdminOrManager(userRole)) {
-      return NextResponse.json(
-        { error: "Forbidden - Manager access only" },
-        { status: 403 }
-      );
-    }
-
     const body = await req.json();
-    const {
-      id,
-      name,
-      category,
-      price,
-      description,
-      imageUrl,
-      available,
-      popular,
-      vegetarian,
-      spicy,
-    } = body;
+    const { id, name, category, price, description, imageUrl, available, popular, vegetarian, spicy, prepTime } = body;
 
     if (!id) {
       return NextResponse.json(
-        { error: "Menu item ID is required" },
+        { success: false, error: "Menu item ID is required" },
         { status: 400 }
       );
     }
 
-    // Check if menu item exists
-    const existingItem = await prisma.menuItem.findUnique({
-      where: { id },
-    });
+    const existingItem = await prisma.menuItem.findUnique({ where: { id } });
 
     if (!existingItem) {
-      return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Menu item not found" }, { status: 404 });
     }
 
-    // Build update data
     const updateData: any = {};
     if (name) updateData.name = name;
     if (category) updateData.category = category;
@@ -197,90 +104,45 @@ export async function PUT(req: NextRequest) {
     if (popular !== undefined) updateData.popular = popular;
     if (vegetarian !== undefined) updateData.vegetarian = vegetarian;
     if (spicy !== undefined) updateData.spicy = spicy;
+    if (prepTime !== undefined) updateData.prepTime = prepTime ? parseInt(prepTime) : null;
 
     const updatedItem = await prisma.menuItem.update({
       where: { id },
       data: updateData,
     });
 
-    // Log update
-    await prisma.activityLog.create({
-      data: {
-        userId: session.user.email || undefined,
-        branchId: session.user.branchId || "",
-        action: "menu_item_updated",
-        entity: "menu_item",
-        entityId: id,
-        details: { name, category },
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      menuItem: updatedItem,
-    });
+    return NextResponse.json({ success: true, menuItem: updatedItem });
   } catch (error) {
     console.error("Menu item update error:", error);
     return NextResponse.json(
-      { error: "Failed to update menu item" },
+      { success: false, error: "Failed to update menu item" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 // DELETE - Delete menu item
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = session.user.role as string;
-
-    if (!isSuperAdminOrManager(userRole)) {
-      return NextResponse.json(
-        { error: "Forbidden - Manager access only" },
-        { status: 403 }
-      );
-    }
-
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
     if (!id) {
       return NextResponse.json(
-        { error: "Menu item ID is required" },
+        { success: false, error: "Menu item ID is required" },
         { status: 400 }
       );
     }
 
-    // Check if menu item exists
-    const existingItem = await prisma.menuItem.findUnique({
-      where: { id },
-    });
+    const existingItem = await prisma.menuItem.findUnique({ where: { id } });
 
     if (!existingItem) {
-      return NextResponse.json({ error: "Menu item not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Menu item not found" }, { status: 404 });
     }
 
-    // Delete menu item
-    await prisma.menuItem.delete({
-      where: { id },
-    });
-
-    // Log deletion
-    await prisma.activityLog.create({
-      data: {
-        userId: session.user.email || undefined,
-        branchId: session.user.branchId || "",
-        action: "menu_item_deleted",
-        entity: "menu_item",
-        entityId: id,
-        details: { name: existingItem.name },
-      },
-    });
+    await prisma.menuItem.delete({ where: { id } });
 
     return NextResponse.json({
       success: true,
@@ -289,8 +151,10 @@ export async function DELETE(req: NextRequest) {
   } catch (error) {
     console.error("Menu item deletion error:", error);
     return NextResponse.json(
-      { error: "Failed to delete menu item" },
+      { success: false, error: "Failed to delete menu item" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

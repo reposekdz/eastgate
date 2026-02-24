@@ -73,7 +73,7 @@ export default function HeroSection() {
             asChild
             variant="outline"
             size="lg"
-            className="border-white/40 text-white hover:bg-white/10 hover:border-white px-10 py-6 rounded-[2px] uppercase tracking-wider text-sm backdrop-blur-xs"
+            className="bg-emerald hover:bg-emerald-dark text-white border-emerald hover:border-emerald-dark px-10 py-6 rounded-[2px] uppercase tracking-wider text-sm backdrop-blur-xs"
           >
             <a href="#about">Explore</a>
           </Button>
