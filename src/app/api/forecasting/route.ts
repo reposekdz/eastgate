@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth-advanced";
 
 export async function GET(req: NextRequest) {
   try {
+    const token = req.headers.get("authorization")?.replace("Bearer ", "");
+    if (!token) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    
+    const session = verifyToken(token, "access");
+    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+
     const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get("branchId");
+    const branchId = searchParams.get("branchId") || session.branchId;
     const days = parseInt(searchParams.get("days") || "30");
 
     const historicalDate = new Date();
@@ -12,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     const where = branchId && branchId !== "all" ? { branchId } : {};
 
-    const [historicalBookings, historicalRevenue, seasonalData] = await Promise.all([
+    const [historicalBookings, historicalRevenue] = await Promise.all([
       prisma.booking.findMany({
         where: { ...where, createdAt: { gte: historicalDate } },
         orderBy: { createdAt: "asc" },
@@ -20,11 +27,6 @@ export async function GET(req: NextRequest) {
       prisma.payment.findMany({
         where: { ...where, status: "completed", createdAt: { gte: historicalDate } },
         orderBy: { createdAt: "asc" },
-      }),
-      prisma.booking.groupBy({
-        by: ["checkIn"],
-        where: { ...where, createdAt: { gte: historicalDate } },
-        _count: { id: true },
       }),
     ]);
 

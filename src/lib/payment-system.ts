@@ -102,23 +102,56 @@ export async function processPayment(
 
     const transactionId = generateTransactionId();
 
+    // Create payment record first
+    const payment = await prisma.payment.create({
+      data: {
+        transactionId,
+        bookingId: request.bookingId,
+        orderId: request.orderId,
+        amount: request.amount,
+        currency: request.currency,
+        paymentMethod: request.method,
+        status: "pending",
+        branchId: request.branchId,
+        notes: request.description,
+      },
+    });
+
     // Route to appropriate gateway
+    let result: PaymentResponse;
     switch (request.method) {
       case PaymentMethod.STRIPE:
-        return await processStripePayment(request, transactionId);
+        result = await processStripePayment(request, transactionId);
+        break;
       case PaymentMethod.FLUTTERWAVE:
-        return await processFlutterwavePayment(request, transactionId);
+        result = await processFlutterwavePayment(request, transactionId);
+        break;
       case PaymentMethod.PAYPAL:
-        return await processPayPalPayment(request, transactionId);
+        result = await processPayPalPayment(request, transactionId);
+        break;
       case PaymentMethod.BANK_TRANSFER:
-        return await processBankTransfer(request, transactionId);
+        result = await processBankTransfer(request, transactionId);
+        break;
       case PaymentMethod.CASH:
-        return await processCashPayment(request, transactionId);
+        result = await processCashPayment(request, transactionId);
+        break;
       case PaymentMethod.MOBILE_MONEY:
-        return await processMobileMoneyPayment(request, transactionId);
+        result = await processMobileMoneyPayment(request, transactionId);
+        break;
       default:
         throw new Error(`Unsupported payment method: ${request.method}`);
     }
+
+    // Update payment with gateway reference
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        gatewayRef: result.id,
+        status: result.status,
+      },
+    });
+
+    return result;
   } catch (error) {
     console.error("Payment processing error:", error);
     throw error;

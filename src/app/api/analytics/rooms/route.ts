@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
         take: 10,
         orderBy: { createdAt: "desc" },
         include: {
-          room: { select: { number: true, type: true } },
+          room: true,
           branch: { select: { name: true } },
         },
       }),

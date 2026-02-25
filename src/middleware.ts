@@ -1,156 +1,92 @@
 /**
- * Advanced Middleware with Enhanced Security
- * JWT authentication, RBAC, rate limiting, and logging
+ * Middleware with JWT & RBAC
  */
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyToken, TokenPayload } from "@/lib/auth-advanced";
-import {
-  hasPermission,
-  ROLE_DEFINITIONS,
-  getRoleLevel,
-} from "@/lib/rbac-system";
 
-const protectedPrefixes = [
-  "/admin",
-  "/manager",
-  "/receptionist",
-  "/waiter",
-  "/kitchen",
-  "/dashboard",
-  "/profile",
-  "/super-admin",
-  "/branch",
-];
+const protectedPrefixes = ["/admin", "/manager", "/receptionist", "/waiter", "/kitchen", "/dashboard", "/profile"];
+const publicPrefixes = ["/login", "/register", "/public", "/api/public", "/api/auth"];
 
-const publicPrefixes = ["/login", "/register", "/public", "/api/public"];
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  SUPER_ADMIN: ["*"],
+  SUPER_MANAGER: ["*"],
+  BRANCH_MANAGER: ["/manager", "/dashboard", "/profile"],
+  RECEPTIONIST: ["/receptionist", "/dashboard", "/profile"],
+  WAITER: ["/waiter", "/dashboard", "/profile"],
+  RESTAURANT_STAFF: ["/waiter", "/dashboard", "/profile"],
+  CHEF: ["/kitchen", "/dashboard", "/profile"],
+  KITCHEN_STAFF: ["/kitchen", "/dashboard", "/profile"],
+  ACCOUNTANT: ["/admin", "/dashboard", "/profile"],
+  EVENT_MANAGER: ["/admin", "/dashboard", "/profile"],
+};
+
+const ROLE_DASHBOARD_MAP: Record<string, string> = {
+  SUPER_ADMIN: "/admin",
+  SUPER_MANAGER: "/admin",
+  ACCOUNTANT: "/admin",
+  EVENT_MANAGER: "/admin",
+  BRANCH_MANAGER: "/manager",
+  RECEPTIONIST: "/receptionist",
+  WAITER: "/waiter",
+  RESTAURANT_STAFF: "/waiter",
+  CHEF: "/kitchen",
+  KITCHEN_STAFF: "/kitchen",
+};
+
+function hasAccess(role: string, path: string): boolean {
+  const permissions = ROLE_PERMISSIONS[role];
+  if (!permissions) return false;
+  if (permissions.includes("*")) return true;
+  return permissions.some(perm => path.startsWith(perm));
+}
 
 export function middleware(req: NextRequest) {
   const { nextUrl } = req;
 
-  // Allow public routes
-  const isPublicRoute = publicPrefixes.some((prefix) =>
-    nextUrl.pathname.startsWith(prefix)
-  );
-
-  if (isPublicRoute) {
+  if (publicPrefixes.some(prefix => nextUrl.pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
 
-  // Check if route is protected
-  const isProtected = protectedPrefixes.some((prefix) =>
-    nextUrl.pathname.startsWith(prefix)
-  );
-
-  if (!isProtected) {
+  if (!protectedPrefixes.some(prefix => nextUrl.pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
 
-  // Extract and verify token
-  let token = null;
-  let session: TokenPayload | null = null;
-
-  // Try to get token from Authorization header first
-  const authHeader = req.headers.get("authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    token = authHeader.slice(7);
-  }
-
-  // Fall back to cookie if no header token
-  if (!token) {
-    const authCookie = req.cookies.get("eastgate-auth");
-    if (authCookie?.value) {
-      try {
-        token = decodeURIComponent(authCookie.value);
-      } catch (e) {
-        // Invalid cookie format
-      }
-    }
-  }
-
-  // Verify token
-  if (token) {
-    session = verifyToken(token, "access");
-  }
-
-  // If no valid session, redirect to login
-  if (!session) {
+  const authCookie = req.cookies.get("eastgate-auth");
+  
+  if (!authCookie?.value) {
     const loginUrl = new URL("/login", nextUrl);
     loginUrl.searchParams.set("redirect", nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Check role-based access
-  const roleLevel = getRoleLevel(session.role);
-  const role = session.role.toUpperCase();
-
-  const routeRoles: Record<string, string[]> = {
-    "/admin": ["SUPER_ADMIN"],
-    "/super-admin": ["SUPER_ADMIN"],
-    "/manager": ["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER"],
-    "/receptionist": [
-      "SUPER_ADMIN",
-      "SUPER_MANAGER",
-      "BRANCH_MANAGER",
-      "MANAGER",
-      "RECEPTIONIST",
-    ],
-    "/waiter": [
-      "SUPER_ADMIN",
-      "SUPER_MANAGER",
-      "BRANCH_MANAGER",
-      "MANAGER",
-      "WAITER",
-      "RESTAURANT_STAFF",
-    ],
-    "/kitchen": [
-      "SUPER_ADMIN",
-      "SUPER_MANAGER",
-      "BRANCH_MANAGER",
-      "MANAGER",
-      "CHEF",
-      "KITCHEN_STAFF",
-    ],
-    "/dashboard": [
-      "SUPER_ADMIN",
-      "SUPER_MANAGER",
-      "BRANCH_MANAGER",
-      "MANAGER",
-      "RECEPTIONIST",
-      "WAITER",
-      "CHEF",
-      "KITCHEN_STAFF",
-    ],
-  };
-
-  const matchedPrefix = protectedPrefixes.find((p) =>
-    nextUrl.pathname.startsWith(p)
-  );
-
-  if (matchedPrefix && routeRoles[matchedPrefix]) {
-    if (!routeRoles[matchedPrefix].includes(role)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Insufficient permissions to access this resource",
-        },
-        { status: 403 }
-      );
+  try {
+    const decoded = JSON.parse(decodeURIComponent(authCookie.value));
+    
+    if (!decoded.isAuthenticated || !decoded.user) {
+      return NextResponse.redirect(new URL("/login", nextUrl));
     }
+
+    const role = decoded.user.role.toUpperCase();
+    
+    if (!hasAccess(role, nextUrl.pathname)) {
+      const correctDashboard = ROLE_DASHBOARD_MAP[role];
+      if (correctDashboard) {
+        return NextResponse.redirect(new URL(correctDashboard, nextUrl));
+      }
+      return NextResponse.redirect(new URL("/login", nextUrl));
+    }
+
+    const response = NextResponse.next();
+    response.headers.set("x-user-id", decoded.user.id);
+    response.headers.set("x-user-role", decoded.user.role);
+    response.headers.set("x-user-branch", decoded.user.branchId);
+    return response;
+  } catch (e) {
+    return NextResponse.redirect(new URL("/login", nextUrl));
   }
-
-  // Create response and add user info to headers
-  const response = NextResponse.next();
-  response.headers.set("x-user-id", session.id);
-  response.headers.set("x-user-role", session.role);
-  response.headers.set("x-user-branch", session.branchId);
-
-  return response;
 }
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
-
-

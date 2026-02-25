@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Enable standalone output for Docker
-  output: 'standalone',
+  // Enable standalone output for Docker (only in production)
+  ...(process.env.NODE_ENV === 'production' && { output: 'standalone' }),
   
   typescript: {
     ignoreBuildErrors: true,

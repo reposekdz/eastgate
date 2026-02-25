@@ -38,7 +38,7 @@ interface AuthState {
   registeredGuests: (User & { password: string })[];
   /** Staff created by super_admin/super_manager; persisted */
   dynamicStaff: DynamicStaffMember[];
-  login: (email: string, password: string, branchId: string) => Promise<boolean>;
+  login: (email: string, password: string, branchId?: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
   registerGuest: (data: {
@@ -70,16 +70,24 @@ export const useAuthStore = create<AuthState>()(
       registeredGuests: [],
       dynamicStaff: [],
 
-      login: async (email: string, password: string, branchId: string) => {
+      login: async (email: string, password: string, branchId?: string) => {
         try {
+          console.log("[AUTH STORE] Initiating login...");
+          
           const response = await fetch("/api/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, branchId }),
+            body: JSON.stringify({ email: email.trim(), password }),
             credentials: "include",
           });
 
           const result = await response.json();
+          console.log("[AUTH STORE] Login response:", { success: result.success, status: response.status });
+
+          if (!response.ok) {
+            console.error("[AUTH STORE] Login failed:", result.error);
+            return false;
+          }
 
           if (result.success && result.user) {
             const userData: User = {
@@ -93,6 +101,8 @@ export const useAuthStore = create<AuthState>()(
               phone: result.user.phone,
             };
 
+            console.log("[AUTH STORE] Setting user data:", { name: userData.name, role: userData.role });
+
             set({
               user: userData,
               isAuthenticated: true,
@@ -103,11 +113,14 @@ export const useAuthStore = create<AuthState>()(
             const authData = { isAuthenticated: true, role: userData.role, user: userData };
             document.cookie = `eastgate-auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400; SameSite=Lax`;
             
+            console.log("[AUTH STORE] Login successful");
             return true;
           }
+          
+          console.error("[AUTH STORE] Invalid response format");
           return false;
-        } catch (error) {
-          console.error("Login error:", error);
+        } catch (error: any) {
+          console.error("[AUTH STORE] Login exception:", error);
           return false;
         }
       },

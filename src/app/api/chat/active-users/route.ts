@@ -10,11 +10,7 @@ export async function GET(req: NextRequest) {
     // Get active staff members who can respond to chat
     const activeUsers = await prisma.staff.findMany({
       where: {
-        branchId,
         status: "active",
-        role: {
-          in: ["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER", "RECEPTIONIST", "WAITER", "KITCHEN_STAFF"]
-        },
         lastLogin: {
           gte: new Date(Date.now() - 30 * 60 * 1000) // Active in last 30 minutes
         }
@@ -29,7 +25,8 @@ export async function GET(req: NextRequest) {
       },
       orderBy: {
         lastLogin: "desc"
-      }
+      },
+      take: 10
     });
 
     return NextResponse.json({

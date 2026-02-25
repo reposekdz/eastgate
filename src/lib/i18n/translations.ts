@@ -585,19 +585,19 @@ export const translations = {
   // ─── Homepage Sections ─────────────────────────────────────
   homepage: {
     heroSubtitle: { en: "EastGate Hotel · Rwanda", rw: "EastGate Hotel · Rwanda", fr: "EastGate Hotel · Rwanda", sw: "EastGate Hotel · Rwanda", es: "EastGate Hotel · Rwanda", de: "EastGate Hotel · Rwanda", zh: "东门酒店 · 卢旺达", ar: "فندق إيست غيت · رواندا", pt: "EastGate Hotel · Ruanda", ja: "イーストゲートホテル · ルワンダ" },
-    heroTitle: { en: "Where Luxury Meets", rw: "Aho Ubwiza Buhura", fr: "Où le Luxe Rencontre", sw: "Ambapo Lusika Kukutana", es: "Donde el Lujo se Encuentra", de: "Wo Luxus Auf Sie Wartet", zh: "奢华相遇之处", ar: "حيث يلتقي الفخامة", pt: "Onde o Luxo Se Encontra", ja: "豪華が出会う場所" },
-    heroTitleAccent: { en: "the Heart of Africa", rw: "n'Umutima wa Afurika", fr: "le Cœur de l'Afrique", sw: "Katikati ya Afrika", es: "el Corazón de África", de: "das Herz Afrikas", zh: "非洲之心", ar: "قلب أفريقيا", pt: "o Coração da África", ja: "アフリカの心臓部" },
+    heroTitle: { en: "Exceptional Hospitality", rw: "Kwakira Abashyitsi Neza", fr: "Hospitalité Exceptionnelle", sw: "Ukarimu wa Kipekee", es: "Hospitalidad Excepcional", de: "Außergewöhnliche Gastfreundschaft", zh: "卓越的款待", ar: "ضيافة استثنائية", pt: "Hospitalidade Excepcional", ja: "卓越したおもてなし" },
+    heroTitleAccent: { en: "Redefining Luxury in East Africa", rw: "Gusobanura Ubwiza mu Burasirazuba bw'Afurika", fr: "Redéfinir le Luxe en Afrique de l'Est", sw: "Kufafanua Upya Anasa Afrika Mashariki", es: "Redefiniendo el Lujo en África Oriental", de: "Luxus in Ostafrika Neu Definieren", zh: "重新定义东非奢华", ar: "إعادة تعريف الفخامة في شرق أفريقيا", pt: "Redefinindo o Luxo na África Oriental", ja: "東アフリカの贅沢を再定義" },
     heroDescription: {
-      en: "Discover an experience like no other in the land of a thousand hills. Every moment at EastGate is crafted to create unforgettable memories.",
-      rw: "Shakira ubunararibonye budashobora guhura n'ubundi mu gihugu cy'ibihumbi by'imisozi. Buri akanya muri EastGate byubatswe kugira ngo bikore ibihe bitazibagirana.",
-      fr: "Découvrez une expérience unique au pays des mille collines. Chaque moment à EastGate est conçu pour créer des souvenirs inoubliables.",
-      sw: "Gundua uzoefu wa kipekee katika nchi ya milima elfu. Kila wakati katika EastGate imeundwa kutoa kumbukumbu zisizosahauliwa.",
-      es: "Descubre una experiencia única en la tierra de las mil colinas. Cada momento en EastGate está diseñado para crear recuerdos inolvidables.",
-      de: "Erleben Sie etwas Einzigartiges im Land der tausend Hügel. Jeder Moment bei EastGate ist darauf ausgerichtet, unvergessliche Erinnerungen zu schaffen.",
-      zh: "在千山之国发现独特体验。EastGate的每一刻都为创造难忘回忆而设计。",
-      ar: "اكتشف تجربة فريدة من نوعها في أرض الألوف من التلال. كل لحظة في إيست غيت مصممة لخلق ذكريات لا تُنسى.",
-      pt: "Descubra uma experiência única no país das mil colinas. Cada momento na EastGate é criado para criar memórias inesquecíveis.",
-      ja: "千の丘之国で比類のない体験を。EastGateの各瞬間は忘れられない記憶を生み出すように設計されています。"
+      en: "Immerse yourself in world-class service where every detail is meticulously crafted. From personalized concierge to state-of-the-art amenities, experience hospitality that transcends expectations in Rwanda's most prestigious hotel.",
+      rw: "Winjire mu serivisi y'umwimerere aho buri kintu giteguwe neza. Kuva kuri concierge yihariye kugeza ku bikoresho bigezweho, shakira kwakira abashyitsi kurenza ibyo wari witeze mu ihoteli ikomeye y'u Rwanda.",
+      fr: "Plongez dans un service de classe mondiale où chaque détail est méticuleusement conçu. Du concierge personnalisé aux équipements de pointe, vivez une hospitalité qui transcende les attentes dans l'hôtel le plus prestigieux du Rwanda.",
+      sw: "Jitie katika huduma ya kiwango cha kimataifa ambapo kila undani umeundwa kwa makini. Kutoka kwa concierge maalum hadi vifaa vya kisasa, onja ukarimu unaozidi matarajio katika hoteli yenye hadhi zaidi ya Rwanda.",
+      es: "Sumérgete en un servicio de clase mundial donde cada detalle está meticulosamente elaborado. Desde el conserje personalizado hasta las comodidades de última generación, experimenta una hospitalidad que trasciende las expectativas en el hotel más prestigioso de Ruanda.",
+      de: "Tauchen Sie ein in erstklassigen Service, bei dem jedes Detail sorgfältig gestaltet ist. Vom persönlichen Concierge bis zu modernsten Annehmlichkeiten erleben Sie Gastfreundschaft, die Erwartungen übertrifft, in Ruandas prestigeträchtigstem Hotel.",
+      zh: "沉浸在世界级的服务中，每个细节都精心打造。从个性化礼宾服务到最先进的设施，在卢旺达最尊贵的酒店体验超越期望的款待。",
+      ar: "انغمس في خدمة عالمية حيتيتم صياغة كل تفصيل بدقة. من خدمة الكونسييرج الشخصية إلى المرافق الحديثة، استمتع بضيافة تتجاوز التوقعات في أرقى فندق في رواندا.",
+      pt: "Mergulhe em um serviço de classe mundial onde cada detalhe é meticulosamente elaborado. Do concierge personalizado às comodidades de ponta, experimente uma hospitalidade que transcende expectativas no hotel mais prestigioso de Ruanda.",
+      ja: "世界クラスのサービスに浸り、すべての詳細が細心の注意を払って作られています。パーソナライズされたコンシェルジュから最先端の設備まで、ルワンダで最も名声高いホテルで期待を超えるおもてなしを体験してください。"
     },
     bookARoom: { en: "Book a Room", rw: "Gufata Icyumba", fr: "Réserver une Chambre", sw: "Chumba ya Kuhitimiza", es: "Reservar una Habitación", de: "Ein Zimmer Buchen", zh: "预订房间", ar: "احجز غرفة", pt: "Reservar um Quarto", ja: "部屋を予約" },
     explore: { en: "Explore", rw: "Shakisha", fr: "Explorer", sw: "Gundua", es: "Explorar", de: "Entdecken", zh: "探索", ar: "استكشف", pt: "Explorar", ja: "探索" },

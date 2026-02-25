@@ -8,14 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { Eye, EyeOff, Loader2, Lock, Mail, Building2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, Building2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const { login } = useAuthStore();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,60 +25,56 @@ function LoginPageContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
-    if (!email || !password) {
-      toast.error("Please enter your email and password");
+    // Validation
+    if (!email.trim()) {
+      const errorMsg = "Email address is required";
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return;
+    }
+
+    if (!password) {
+      const errorMsg = "Password is required";
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return;
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      const errorMsg = "Please enter a valid email address";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     setLoading(true);
     try {
-      console.log("Attempting login...");
-      const success = await login(email, password, "kigali-main");
-      console.log("Login result:", success);
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password, branchId: "" }),
+      });
 
-      if (success) {
-        const { user } = useAuthStore.getState();
-        console.log("User after login:", user);
+      const data = await response.json();
 
-        if (user) {
-          toast.success("Welcome back!");
-          const userRole = user.role.toUpperCase();
-          console.log("User role:", userRole);
-
-          if (redirectPath) {
-            console.log("Redirecting to:", redirectPath);
-            router.push(redirectPath);
-          } else if (userRole === "SUPER_ADMIN" || userRole === "SUPER_MANAGER") {
-            console.log("Redirecting to /admin");
-            router.push("/admin");
-          } else if (userRole === "BRANCH_MANAGER") {
-            console.log("Redirecting to /manager");
-            router.push("/manager");
-          } else if (userRole === "RECEPTIONIST") {
-            console.log("Redirecting to /receptionist");
-            router.push("/receptionist");
-          } else if (userRole === "KITCHEN_STAFF" || userRole === "CHEF") {
-            console.log("Redirecting to /kitchen");
-            router.push("/kitchen");
-          } else if (userRole === "WAITER") {
-            console.log("Redirecting to /waiter");
-            router.push("/waiter");
-          } else {
-            console.log("Redirecting to /admin (default)");
-            router.push("/admin");
-          }
-        } else {
-          console.error("No user found after successful login");
-          toast.error("Login error: No user data");
-        }
+      if (response.ok && data.success) {
+        await login(email.trim(), password, "");
+        toast.success(`Welcome back, ${data.user.name}!`);
+        window.location.href = data.redirectTo;
       } else {
-        console.log("Login failed");
-        toast.error("Invalid email or password");
+        const errorMsg = data.error || "Invalid email or password. Please check your credentials.";
+        setError(errorMsg);
+        toast.error(errorMsg);
       }
-    } catch (error) {
-      console.error("Login exception:", error);
-      toast.error("Login failed. Please try again.");
+    } catch (error: any) {
+      console.error("Login error:", error);
+      const errorMsg = error?.message || "Login failed. Please try again later.";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -92,6 +90,12 @@ function LoginPageContent() {
       </div>
 
       <div className="w-full max-w-md relative">
+        {/* Back to Home Button */}
+        <Link href="/" className="inline-flex items-center gap-2 text-white hover:text-emerald-300 transition-colors mb-6 group">
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm font-medium">Back to Home</span>
+        </Link>
+
         {/* Logo & Title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-500/30 mb-4">
@@ -111,43 +115,67 @@ function LoginPageContent() {
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Error Alert */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
+              )}
+
               {/* Email */}
               <div>
-                <label className="text-sm font-semibold text-charcoal mb-2 block">
-                  Email Address
+                <label htmlFor="email" className="text-sm font-semibold text-charcoal mb-2 block">
+                  Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <Input
+                    id="email"
                     type="email"
                     placeholder="your.email@eastgatehotel.rw"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setError("");
+                    }}
                     className="h-12 pl-11 bg-slate-50 border-slate-200 rounded-lg text-base focus:border-emerald-500 focus:ring-emerald-500"
                     autoComplete="email"
+                    required
+                    disabled={loading}
                   />
                 </div>
               </div>
 
               {/* Password */}
               <div>
-                <label className="text-sm font-semibold text-charcoal mb-2 block">
-                  Password
+                <label htmlFor="password" className="text-sm font-semibold text-charcoal mb-2 block">
+                  Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <Input
+                    id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setError("");
+                    }}
                     className="h-12 pl-11 pr-11 bg-slate-50 border-slate-200 rounded-lg text-base focus:border-emerald-500 focus:ring-emerald-500"
                     autoComplete="current-password"
+                    required
+                    minLength={4}
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>

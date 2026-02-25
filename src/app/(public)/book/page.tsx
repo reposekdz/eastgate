@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -140,7 +140,7 @@ interface Room {
   branchId: string;
 }
 
-export default function BookPage() {
+function BookContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useI18n();
@@ -181,20 +181,25 @@ export default function BookPage() {
       try {
         setLoadingRooms(true);
         const params = new URLSearchParams({
-          branchId: selectedBranch,
+          branchId: selectedBranch || "br-kigali-main",
           status: "available",
+          limit: "50",
         });
-        if (checkIn) params.append("checkIn", checkIn.toISOString());
-        if (checkOut) params.append("checkOut", checkOut.toISOString());
+
+        const res = await fetch(`/api/public/rooms?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
         
-        const res = await fetch(`/api/public/rooms?${params}`);
         const data = await res.json();
-        if (data.rooms) {
+        if (data.success && Array.isArray(data.rooms)) {
+          setRooms(data.rooms);
+        } else if (Array.isArray(data.rooms)) {
           setRooms(data.rooms);
         }
       } catch (error) {
         console.error("Failed to fetch rooms:", error);
-        toast.error("Failed to load rooms");
+        toast.error("Failed to load rooms. Please try again.");
       } finally {
         setLoadingRooms(false);
       }
@@ -280,34 +285,49 @@ export default function BookPage() {
         bookingId: booking.id,
         amount: totalPrice,
         currency: "RWF",
-        paymentMethod,
-        gateway: paymentMethod === "stripe_card" ? "stripe" : paymentMethod === "flutterwave" ? "flutterwave" : "paypal",
+        method: paymentMethod,
+        email: guestEmail,
+        fullName: guestName,
+        description: `Booking ${booking.bookingRef} for ${selectedRoomDetails?.type} room`,
         branchId: selectedBranch,
       };
 
       const paymentRes = await fetch("/api/payments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(paymentData),
       });
+
+      if (!paymentRes.ok) {
+        throw new Error(`Payment API error: ${paymentRes.status}`);
+      }
 
       const paymentResult = await paymentRes.json();
 
       if (!paymentResult.success) {
-        toast.error("Payment initialization failed");
+        toast.error(paymentResult.error || "Payment initialization failed");
         setIsProcessing(false);
         return;
       }
 
       // Step 3: Process payment based on gateway
-      const gateway = paymentData.gateway;
+      const gateway = paymentMethod === "stripe_card" ? "stripe" : 
+                      paymentMethod === "flutterwave_card" ? "flutterwave" : 
+                      paymentMethod === "paypal_standard" ? "paypal" : "stripe";
       
-      if (gateway === "stripe") {
+      if (gateway === "stripe" && paymentResult.clientSecret) {
         await processStripePayment(paymentResult.clientSecret, booking.id);
-      } else if (gateway === "flutterwave") {
-        window.location.href = paymentResult.clientSecret;
-      } else if (gateway === "paypal") {
-        window.location.href = `https://www.paypal.com/checkoutnow?token=${paymentResult.clientSecret}`;
+      } else if (gateway === "flutterwave" && paymentResult.paymentUrl) {
+        window.location.href = paymentResult.paymentUrl;
+      } else if (gateway === "paypal" && paymentResult.redirectUrl) {
+        window.location.href = paymentResult.redirectUrl;
+      } else {
+        // Default: mark as pending
+        setBookingId(booking.id);
+        setBookingSuccess(true);
+        toast.success("Booking created! Awaiting payment confirmation.");
       }
 
     } catch (error) {
@@ -658,7 +678,7 @@ export default function BookPage() {
                       </div>
                       <div>
                         <Label>Country</Label>
-                        <CountrySelect value={guestCountry} onChange={setGuestCountry} />
+                        <CountrySelect value={guestCountry} onValueChange={setGuestCountry} />
                       </div>
                     </div>
                     <div>
@@ -822,5 +842,13 @@ export default function BookPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BookPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+      <BookContent />
+    </Suspense>
   );
 }

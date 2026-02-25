@@ -54,9 +54,13 @@ export default function LiveChatWidget() {
   // Fetch active users across all branches
   const fetchActiveUsers = async () => {
     try {
-      const response = await fetch(`/api/chat/active-users?branchId=${branchId}&crossBranch=true`);
+      const params = new URLSearchParams({ branchId, crossBranch: "true" });
+      const response = await fetch(`/api/chat/active-users?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
-      if (data.success) {
+      if (data.success && Array.isArray(data.activeUsers)) {
         setActiveUsers(data.activeUsers);
       }
     } catch (error) {
@@ -78,8 +82,11 @@ export default function LiveChatWidget() {
           branchId,
         }),
       });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
-      return data.success;
+      return data.success === true;
     } catch (error) {
       console.error("Failed to send message:", error);
       return false;
@@ -89,9 +96,13 @@ export default function LiveChatWidget() {
   // Fetch real-time messages
   const fetchMessages = async () => {
     try {
-      const response = await fetch(`/api/chat/realtime?conversationId=${guestEmail}`);
+      const params = new URLSearchParams({ conversationId: guestEmail });
+      const response = await fetch(`/api/chat/realtime?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       const data = await response.json();
-      if (data.success && data.messages) {
+      if (data.success && Array.isArray(data.messages)) {
         const formattedMessages = data.messages.map((msg: any) => ({
           id: msg.id,
           sender: msg.sender,

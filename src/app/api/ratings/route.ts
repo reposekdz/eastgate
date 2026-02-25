@@ -1,24 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { NextRequest } from "next/server";
+import prisma from "@/lib/prisma";
+import { successResponse, errorResponse } from "@/lib/validators";
 
 export async function POST(req: NextRequest) {
   try {
     const { rating, guestName, guestEmail, comment, branchId } = await req.json();
 
     if (!rating || !guestName || !branchId) {
-      return NextResponse.json(
-        { success: false, error: "Rating, name, and branch are required" },
-        { status: 400 }
-      );
+      return errorResponse("Rating, name, and branch are required", [], 400);
     }
 
     if (rating < 1 || rating > 5) {
-      return NextResponse.json(
-        { success: false, error: "Rating must be between 1 and 5" },
-        { status: 400 }
-      );
+      return errorResponse("Rating must be between 1 and 5", [], 400);
     }
 
     const review = await prisma.review.create({
@@ -42,25 +35,19 @@ export async function POST(req: NextRequest) {
     await prisma.branch.update({
       where: { id: branchId },
       data: { 
-        avgRating: avgRating._avg.rating || 0,
+        rating: avgRating._avg.rating || 0,
         totalRooms: { increment: 0 }
       },
     });
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       review,
       avgRating: avgRating._avg.rating || 0,
       totalReviews: avgRating._count,
-    });
+    }, 201);
   } catch (error) {
     console.error("Rating submission error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to submit rating" },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return errorResponse("Failed to submit rating", [], 500);
   }
 }
 
@@ -91,8 +78,7 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       reviews,
       avgRating: avgRating._avg.rating || 0,
       totalReviews: avgRating._count,
@@ -100,11 +86,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("Ratings fetch error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch ratings" },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return errorResponse("Failed to fetch ratings", [], 500);
   }
 }

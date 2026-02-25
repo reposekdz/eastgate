@@ -16,6 +16,7 @@ import {
   Users,
   Maximize,
   MapPin,
+  Bed,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -56,21 +57,32 @@ export default function RoomShowcase() {
   const fetchRooms = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/rooms?status=available");
+      setError(null);
+      
+      // Try primary endpoint first
+      let response = await fetch("/api/public/rooms?status=available&limit=6&sortBy=price&sortOrder=asc");
+      
+      // Fallback to secondary endpoint if primary fails
+      if (!response.ok) {
+        response = await fetch("/api/rooms?status=available&limit=6");
+      }
+      
       const data = await response.json();
 
       if (data.success) {
-        // Get only 6 rooms from different branches
-        const availableRooms = data.rooms.filter(
-          (room: Room) => room.status === "available"
-        );
-        setRooms(availableRooms.slice(0, 6));
+        // Handle both response structures
+        const roomsData = data.data?.rooms || data.rooms || [];
+        setRooms(roomsData);
+        
+        if (roomsData.length === 0) {
+          setError("No rooms available at the moment");
+        }
       } else {
         setError(data.error || "Failed to load rooms");
       }
     } catch (err) {
       console.error("Error fetching rooms:", err);
-      setError("Failed to load rooms");
+      setError("Failed to load rooms. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -157,14 +169,31 @@ export default function RoomShowcase() {
       <section className="py-16 bg-gradient-to-b from-background to-background/50">
         <div className="container mx-auto px-4">
           <div className="text-center py-20">
-            <p className="text-text-muted-custom mb-4">
-              {t("common", "noResults")}
-            </p>
-            <Link href="/book">
-              <Button className="bg-emerald hover:bg-emerald/90">
-                {t("nav", "bookRoom")}
+            <div className="mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald/10 rounded-full mb-4">
+                <Bed className="h-8 w-8 text-emerald" />
+              </div>
+              <h3 className="text-2xl font-bold text-charcoal mb-2">
+                {error || t("common", "noResults")}
+              </h3>
+              <p className="text-text-muted-custom mb-6">
+                {loading ? "Loading rooms..." : "Check out our booking page for all available rooms"}
+              </p>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <Link href="/book">
+                <Button className="bg-emerald hover:bg-emerald/90">
+                  {t("nav", "bookRoom")}
+                </Button>
+              </Link>
+              <Button 
+                variant="outline" 
+                onClick={fetchRooms}
+                className="border-emerald text-emerald hover:bg-emerald/10"
+              >
+                Try Again
               </Button>
-            </Link>
+            </div>
           </div>
         </div>
       </section>

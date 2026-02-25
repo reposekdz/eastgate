@@ -84,7 +84,7 @@ export interface PerformanceMetrics {
   restaurantRevenue: number;
   avgRoomPrice: number;
   occupancyRate: number;
-  revenu per Available Room: number; // RevPAR
+  revPAR: number; // RevPAR (Revenue per Available Room)
   bookingConversionRate: number;
   cancellationRate: number;
   noShowRate: number;
@@ -213,10 +213,10 @@ async function getOccupancyMetrics(
         status: {
           in: ["checked_in"],
         },
-        checkInDate: {
+        checkedInAt: {
           lte: new Date(dateRange.end),
         },
-        checkOutDate: {
+        checkOut: {
           gte: new Date(dateRange.start),
         },
       },
@@ -484,9 +484,12 @@ export async function getGuestAnalytics(
     });
 
     let totalNights = 0;
-    bookings.forEach((b) => {
+    bookings.forEach((b: any) => {
+      const checkIn = b.checkIn || b.checkInDate;
+      const checkOut = b.checkOut || b.checkOutDate;
+      if (!checkIn || !checkOut) return;
       const nights = Math.ceil(
-        (b.checkOutDate.getTime() - b.checkInDate.getTime()) /
+        (new Date(checkOut).getTime() - new Date(checkIn).getTime()) /
           (1000 * 60 * 60 * 24)
       );
       totalNights += nights;

@@ -1,42 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
-
-// GET - Fetch rooms with filters
+// GET - Fetch rooms with advanced filters
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
-    const status = searchParams.get("status");
+    const status = searchParams.get("status") || "available";
     const floor = searchParams.get("floor");
     const branchId = searchParams.get("branchId");
+    const minPrice = searchParams.get("minPrice");
+    const maxPrice = searchParams.get("maxPrice");
+    const capacity = searchParams.get("capacity");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "12");
 
     const where: any = {};
     if (branchId) where.branchId = branchId;
     if (type) where.type = type;
     if (status) where.status = status;
     if (floor) where.floor = parseInt(floor);
+    if (capacity) where.maxOccupancy = { gte: parseInt(capacity) };
+    
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.price.gte = parseFloat(minPrice);
+      if (maxPrice) where.price.lte = parseFloat(maxPrice);
+    }
 
+    const total = await prisma.room.count({ where });
     const rooms = await prisma.room.findMany({
       where,
       orderBy: [{ floor: "asc" }, { number: "asc" }],
-      include: {
-        branch: {
-          select: { id: true, name: true, location: true },
+      select: {
+        id: true,
+        number: true,
+        type: true,
+        floor: true,
+        price: true,
+        maxOccupancy: true,
+        status: true,
+        imageUrl: true,
+        description: true,
+        branchId: true,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        rooms,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
         },
       },
     });
-
-    return NextResponse.json({ success: true, rooms });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Rooms fetch error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch rooms" },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch rooms",
+    }, { status: 500 });
   }
 }
 
@@ -44,148 +73,162 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { number, floor, type, price, description, imageUrl, branchId, maxOccupancy, bedType, size } = body;
+    const { 
+      number,
+      type,
+      floor,
+      price,
+      maxOccupancy,
+      status,
+      description,
+      branchId,
+    } = body;
 
-    if (!number || !floor || !type || !price || !branchId) {
-      return NextResponse.json(
-        { success: false, error: "number, floor, type, price, and branchId are required" },
-        { status: 400 }
-      );
+    if (!number || !type || !branchId) {
+      return NextResponse.json({
+        success: false,
+        error: "Room number, type, and branch ID are required",
+      }, { status: 400 });
     }
 
     const existingRoom = await prisma.room.findFirst({
-      where: { number: number.toString(), branchId },
+      where: { number, branchId },
     });
 
     if (existingRoom) {
-      return NextResponse.json(
-        { success: false, error: "Room number already exists in this branch" },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: "Room number already exists in this branch",
+      }, { status: 400 });
     }
 
     const room = await prisma.room.create({
       data: {
-        number: number.toString(),
-        floor: parseInt(floor),
+        number,
         type,
-        price: parseFloat(price),
-        description,
-        imageUrl,
-        status: "available",
-        branchId,
+        floor: floor || 1,
+        price: price || 0,
         maxOccupancy: maxOccupancy || 2,
-        bedType,
-        size: size ? parseInt(size) : null,
+        status: status || "available",
+        description: description || "",
+        branchId,
+      },
+      select: {
+        id: true,
+        number: true,
+        type: true,
+        floor: true,
+        price: true,
+        status: true,
       },
     });
 
-    return NextResponse.json({ success: true, room });
-  } catch (error) {
+    return NextResponse.json({
+      success: true,
+      data: { room },
+    }, { status: 201 });
+  } catch (error: any) {
     console.error("Room creation error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to create room" },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create room",
+    }, { status: 500 });
   }
 }
 
-// PUT - Update room
-export async function PUT(req: NextRequest) {
+// PATCH - Update room
+export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, number, floor, type, price, description, imageUrl, status, maxOccupancy, bedType, size } = body;
+    const { id, ...updateData } = body;
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: "Room ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: "Room ID is required",
+      }, { status: 400 });
     }
 
-    const existingRoom = await prisma.room.findUnique({ where: { id } });
-
-    if (!existingRoom) {
-      return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 });
+    const room = await prisma.room.findUnique({ where: { id } });
+    if (!room) {
+      return NextResponse.json({
+        success: false,
+        error: "Room not found",
+      }, { status: 404 });
     }
-
-    const updateData: any = {};
-    if (number) updateData.number = number.toString();
-    if (floor) updateData.floor = parseInt(floor);
-    if (type) updateData.type = type;
-    if (price !== undefined) updateData.price = parseFloat(price);
-    if (description !== undefined) updateData.description = description;
-    if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
-    if (status) updateData.status = status;
-    if (maxOccupancy) updateData.maxOccupancy = parseInt(maxOccupancy);
-    if (bedType) updateData.bedType = bedType;
-    if (size) updateData.size = parseInt(size);
 
     const updatedRoom = await prisma.room.update({
       where: { id },
       data: updateData,
+      select: {
+        id: true,
+        number: true,
+        type: true,
+        floor: true,
+        price: true,
+        status: true,
+      },
     });
 
-    return NextResponse.json({ success: true, room: updatedRoom });
-  } catch (error) {
+    return NextResponse.json({
+      success: true,
+      data: { room: updatedRoom },
+    });
+  } catch (error: any) {
     console.error("Room update error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to update room" },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update room",
+    }, { status: 500 });
   }
 }
 
-// DELETE - Delete room
+// DELETE - Remove room
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: "Room ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: "Room ID is required",
+      }, { status: 400 });
     }
 
-    const existingRoom = await prisma.room.findUnique({ where: { id } });
-
-    if (!existingRoom) {
-      return NextResponse.json({ success: false, error: "Room not found" }, { status: 404 });
+    const room = await prisma.room.findUnique({ where: { id } });
+    if (!room) {
+      return NextResponse.json({
+        success: false,
+        error: "Room not found",
+      }, { status: 404 });
     }
 
     const activeBookings = await prisma.booking.count({
       where: {
         roomId: id,
-        status: { in: ["pending", "confirmed", "checked_in"] },
+        status: { in: ["confirmed", "checked_in"] },
       },
     });
 
     if (activeBookings > 0) {
-      return NextResponse.json(
-        { success: false, error: "Cannot delete room with active bookings" },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        error: `Room has ${activeBookings} active booking(s)`,
+      }, { status: 400 });
     }
 
     await prisma.room.delete({ where: { id } });
 
     return NextResponse.json({
       success: true,
-      message: "Room deleted successfully",
+      data: { message: "Room deleted successfully" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Room deletion error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to delete room" },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete room",
+    }, { status: 500 });
   }
 }

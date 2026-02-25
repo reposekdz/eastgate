@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-// Real branch IDs
+// Branch IDs
 const BRANCHES = {
   KIGALI_MAIN: "br-kigali-main",
   NGOMA: "br-ngoma",
@@ -11,294 +11,227 @@ const BRANCHES = {
   GATSIBO: "br-gatsibo",
 };
 
-// Default password for all staff - "2026"
-const DEFAULT_PASSWORD = "2026";
+// Default password for admin accounts
+const DEFAULT_PASSWORD = "EastGate@2026";
 
 async function main() {
-  console.log("🌱 Seeding real staff for EastGate Hotel...");
+  try {
+    console.log("🌱 Starting EastGate Hotel System seeding...\n");
 
-  // Hash the default password
-  const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 12);
+    // Hash the default password
+    const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 12);
 
-  // Create branches first
-  const branches = [
-    {
-      id: BRANCHES.KIGALI_MAIN,
-      name: "EastGate Kigali Main",
-      location: "Kigali",
-      address: "KN 3 Avenue, Kigali, Rwanda",
-      phone: "+250 788 123 001",
-      email: "kigali@eastgate.com",
-      isActive: true,
-    },
-    {
-      id: BRANCHES.NGOMA,
-      name: "EastGate Ngoma",
-      location: "Ngoma",
-      address: "Ngoma District, Eastern Province, Rwanda",
-      phone: "+250 788 123 002",
-      email: "ngoma@eastgate.com",
-      isActive: true,
-    },
-    {
-      id: BRANCHES.KIREHE,
-      name: "EastGate Kirehe",
-      location: "Kirehe",
-      address: "Kirehe District, Eastern Province, Rwanda",
-      phone: "+250 788 123 003",
-      email: "kirehe@eastgate.com",
-      isActive: true,
-    },
-    {
-      id: BRANCHES.GATSIBO,
-      name: "EastGate Gatsibo",
-      location: "Gatsibo",
-      address: "Gatsibo District, Eastern Province, Rwanda",
-      phone: "+250 788 123 004",
-      email: "gatsibo@eastgate.com",
-      isActive: true,
-    },
-  ];
+    // ================================
+    // 1. CLEAN EXISTING DATA
+    // ================================
+    console.log("🧹 Cleaning existing data...");
+    await prisma.staff.deleteMany({});
+    await prisma.room.deleteMany({});
+    await prisma.menuItem.deleteMany({});
+    await prisma.booking.deleteMany({});
+    await prisma.expense.deleteMany({});
+    console.log("  ✓ All data cleaned");
 
-  // Create branches
-  for (const branch of branches) {
-    await prisma.branches.upsert({
-      where: { id: branch.id },
-      update: branch,
-      create: branch,
-    });
-    console.log(`✓ Created branch: ${branch.name}`);
-  }
-
-  // Create SUPER ADMIN
-  const superAdmin = await prisma.staff.upsert({
-    where: { email: "admin@eastgates.com" },
-    update: {
-      name: "Super Admin",
-      password: hashedPassword,
-      phone: "+250 788 100 001",
-      role: "SUPER_ADMIN",
-      department: "Administration",
-      status: "active",
-      branchId: "",
-    },
-    create: {
-      name: "Super Admin",
-      email: "admin@eastgates.com",
-      password: hashedPassword,
-      phone: "+250 788 100 001",
-      role: "SUPER_ADMIN",
-      department: "Administration",
-      status: "active",
-      branchId: "",
-    },
-  });
-  console.log("✓ Created Super Admin: admin@eastgates.com (password: 2026)");
-
-  // Create SUPER MANAGER
-  const superManager = await prisma.staff.upsert({
-    where: { email: "manager@eastgates.com" },
-    update: {
-      name: "Super Manager",
-      password: hashedPassword,
-      phone: "+250 788 100 002",
-      role: "SUPER_MANAGER",
-      department: "Management",
-      status: "active",
-      branchId: "",
-    },
-    create: {
-      name: "Super Manager",
-      email: "manager@eastgates.com",
-      password: hashedPassword,
-      phone: "+250 788 100 002",
-      role: "SUPER_MANAGER",
-      department: "Management",
-      status: "active",
-      branchId: "",
-    },
-  });
-  console.log("✓ Created Super Manager: manager@eastgates.com (password: 2026)");
-
-  // Create Branch Managers for each branch
-  const branchManagers = [
-    {
-      email: "manager.kigali@eastgates.com",
-      name: "Kigali Branch Manager",
-      branchId: BRANCHES.KIGALI_MAIN,
-      phone: "+250 788 200 001",
-    },
-    {
-      email: "manager.ngoma@eastgates.com",
-      name: "Ngoma Branch Manager",
-      branchId: BRANCHES.NGOMA,
-      phone: "+250 788 200 002",
-    },
-    {
-      email: "manager.kirehe@eastgates.com",
-      name: "Kirehe Branch Manager",
-      branchId: BRANCHES.KIREHE,
-      phone: "+250 788 200 003",
-    },
-    {
-      email: "manager.gatsibo@eastgates.com",
-      name: "Gatsibo Branch Manager",
-      branchId: BRANCHES.GATSIBO,
-      phone: "+250 788 200 004",
-    },
-  ];
-
-  for (const bm of branchManagers) {
-    await prisma.staff.upsert({
-      where: { email: bm.email },
-      update: {
-        name: bm.name,
-        password: hashedPassword,
-        phone: bm.phone,
-        role: "BRANCH_MANAGER",
-        department: "Management",
-        status: "active",
-        branchId: bm.branchId,
+    // ================================
+    // 2. CREATE BRANCHES
+    // ================================
+    console.log("\n📍 Creating branches...");
+    const branches = [
+      {
+        id: BRANCHES.KIGALI_MAIN,
+        name: "EastGate Kigali Main",
+        slug: "eastgate-kigali-main",
+        location: "Kigali",
+        city: "Kigali",
+        address: "KN 3 Avenue, Nyarugenge District, Kigali",
+        phone: "+250 788 123 001",
+        email: "kigali@eastgate.rw",
+        isActive: true,
       },
-      create: {
-        name: bm.name,
-        email: bm.email,
-        password: hashedPassword,
-        phone: bm.phone,
-        role: "BRANCH_MANAGER",
-        department: "Management",
-        status: "active",
-        branchId: bm.branchId,
+      {
+        id: BRANCHES.NGOMA,
+        name: "EastGate Ngoma Resort",
+        slug: "eastgate-ngoma-resort",
+        location: "Ngoma",
+        city: "Ngoma",
+        address: "Ngoma Lake District, Eastern Province",
+        phone: "+250 788 123 002",
+        email: "ngoma@eastgate.rw",
+        isActive: true,
       },
-    });
-    console.log(`✓ Created Branch Manager: ${bm.email} (password: 2026)`);
-  }
-
-  // Create staff for Kigali Main branch
-  const kigaliStaff = [
-    { email: "reception.kigali@eastgates.com", name: "Kigali Receptionist", role: "RECEPTIONIST", department: "Front Desk" },
-    { email: "waiter.kigali@eastgates.com", name: "Kigali Waiter", role: "WAITER", department: "Restaurant" },
-    { email: "chef.kigali@eastgates.com", name: "Kigali Chef", role: "CHEF", department: "Kitchen" },
-    { email: "kitchen.kigali@eastgates.com", name: "Kigali Kitchen Staff", role: "KITCHEN_STAFF", department: "Kitchen" },
-  ];
-
-  for (const staff of kigaliStaff) {
-    await prisma.staff.upsert({
-      where: { email: staff.email },
-      update: {
-        name: staff.name,
-        password: hashedPassword,
-        role: staff.role,
-        department: staff.department,
-        status: "active",
-        branchId: BRANCHES.KIGALI_MAIN,
+      {
+        id: BRANCHES.KIREHE,
+        name: "EastGate Kirehe Boutique",
+        slug: "eastgate-kirehe-boutique",
+        location: "Kirehe",
+        city: "Kirehe",
+        address: "Kirehe Commercial Hub, Eastern Province",
+        phone: "+250 788 123 003",
+        email: "kirehe@eastgate.rw",
+        isActive: true,
       },
-      create: {
-        name: staff.name,
-        email: staff.email,
+      {
+        id: BRANCHES.GATSIBO,
+        name: "EastGate Gatsibo Summit",
+        slug: "eastgate-gatsibo-summit",
+        location: "Gatsibo",
+        city: "Gatsibo",
+        address: "Gatsibo Business District, Eastern Province",
+        phone: "+250 788 123 004",
+        email: "gatsibo@eastgate.rw",
+        isActive: true,
+      },
+    ];
+
+    for (const branch of branches) {
+      await prisma.branch.upsert({
+        where: { id: branch.id },
+        update: branch,
+        create: branch,
+      });
+      console.log(`  ✓ ${branch.name}`);
+    }
+
+    // ================================
+    // 3. CREATE SUPER ADMIN (System Owner)
+    // ================================
+    console.log("\n👑 Creating SUPER_ADMIN account...");
+    await prisma.staff.create({
+      data: {
+        name: "System Administrator",
+        email: "admin@eastgate.com",
         password: hashedPassword,
-        phone: "+250 788 300 001",
-        role: staff.role,
-        department: staff.department,
+        phone: "+250 788 100 001",
+        role: "SUPER_ADMIN",
+        department: "Administration",
         status: "active",
         branchId: BRANCHES.KIGALI_MAIN,
       },
     });
-    console.log(`✓ Created Staff: ${staff.email} (password: 2026)`);
-  }
+    console.log(`  ✓ SUPER_ADMIN: admin@eastgate.com`);
 
-  // Create sample rooms for each branch
-  const roomTypes = [
-    { type: "standard", price: 150000 },
-    { type: "deluxe", price: 250000 },
-    { type: "suite", price: 450000 },
-    { type: "presidential", price: 850000 },
-  ];
+    // ================================
+    // 4. CREATE SUPER MANAGER (Operations)
+    // ================================
+    console.log("\n📊 Creating SUPER_MANAGER account...");
+    await prisma.staff.create({
+      data: {
+        name: "Operations Manager",
+        email: "manager@eastgate.com",
+        password: hashedPassword,
+        phone: "+250 788 100 002",
+        role: "SUPER_MANAGER",
+        department: "Operations",
+        status: "active",
+        branchId: BRANCHES.KIGALI_MAIN,
+      },
+    });
+    console.log(`  ✓ SUPER_MANAGER: manager@eastgate.com`);
 
-  for (const branch of branches) {
-    let roomCount = 0;
-    for (const roomType of roomTypes) {
-      for (let floor = 1; floor <= 3; floor++) {
-        for (let roomNum = 1; roomNum <= 5; roomNum++) {
-          roomCount++;
-          const roomId = `${branch.id}-${roomType.type}-${roomCount}`;
-          await prisma.room.upsert({
-            where: { id: roomId },
-            update: {
-              number: `${floor}${roomType.type[0].toUpperCase()}${roomNum}`,
-              floor,
-              type: roomType.type,
-              price: roomType.price,
-              status: "available",
-              branchId: branch.id,
-            },
-            create: {
+    // ================================
+    // 5. CREATE SAMPLE ROOMS
+    // ================================
+    console.log("\n🛏️  Creating sample rooms...");
+    
+    const roomConfigs = [
+      { type: "standard", price: 150000, count: 4 },
+      { type: "deluxe", price: 250000, count: 3 },
+      { type: "suite", price: 450000, count: 2 },
+    ];
+
+    for (const branch of branches) {
+      let roomNum = 0;
+      for (const config of roomConfigs) {
+        for (let i = 0; i < config.count; i++) {
+          roomNum++;
+          const floor = Math.max(1, Math.floor((roomNum - 1) / 5) + 1);
+          const roomOnFloor = ((roomNum - 1) % 5) + 1;
+          const number = `${floor}${String.fromCharCode(64 + i + 1)}${roomOnFloor}`;
+          const roomId = `${branch.id}-${config.type}-${i}`;
+
+          await prisma.room.create({
+            data: {
               id: roomId,
-              number: `${floor}${roomType.type[0].toUpperCase()}${roomNum}`,
+              number,
               floor,
-              type: roomType.type,
-              price: roomType.price,
+              type: config.type,
+              price: config.price,
               status: "available",
               branchId: branch.id,
+              maxOccupancy: config.type === "standard" ? 2 : config.type === "deluxe" ? 3 : 4,
+              bedType: config.type === "suite" ? "2 King Beds" : "1 King Bed",
+              size: config.type === "standard" ? 28 : config.type === "deluxe" ? 38 : 65,
             },
           });
         }
+        console.log(`  ✓ ${branch.name}: ${config.count} ${config.type} rooms`);
       }
     }
-    console.log(`✓ Created rooms for ${branch.name}`);
+
+    // ================================
+    // 6. CREATE SAMPLE MENU ITEMS
+    // ================================
+    console.log("\n🍽️  Creating sample menu items...");
+    
+    const menuItems = [
+      { name: "Traditional Rwandan Breakfast", category: "Breakfast", price: 18000, description: "Ugali with fresh fruits" },
+      { name: "Continental Breakfast", category: "Breakfast", price: 28000, description: "Pastries, cheese, ham" },
+      { name: "Grilled Tilapia", category: "Lunch", price: 45000, description: "Fresh lake fish" },
+      { name: "Beef Ribeye Steak", category: "Lunch", price: 58000, description: "Premium aged beef" },
+      { name: "Filet Mignon", category: "Dinner", price: 85000, description: "Premium cut with sauce" },
+      { name: "Fresh Orange Juice", category: "Drinks", price: 12000, description: "Freshly squeezed" },
+      { name: "Rwandan Coffee", category: "Drinks", price: 8000, description: "Premium local coffee" },
+      { name: "Chocolate Cake", category: "Dessert", price: 15000, description: "Rich chocolate" },
+    ];
+
+    for (const item of menuItems) {
+      const slug = item.name.toLowerCase().replace(/\s+/g, "-");
+      await prisma.menuItem.create({
+        data: {
+          name: item.name,
+          slug,
+          category: item.category,
+          price: item.price,
+          description: item.description,
+          branchId: BRANCHES.KIGALI_MAIN,
+          available: true,
+        },
+      });
+    }
+    console.log(`  ✓ Created ${menuItems.length} menu items`);
+
+    // ================================
+    // SUMMARY
+    // ================================
+    console.log("\n✅ Seeding completed successfully!\n");
+    console.log("📋 DEFAULT LOGIN CREDENTIALS:");
+    console.log("  ┌─────────────────┬─────────────────────────┬───────────────┐");
+    console.log("  │ Role            │ Email                   │ Password      │");
+    console.log("  ├─────────────────┼─────────────────────────┼───────────────┤");
+    console.log("  │ SUPER_ADMIN     │ admin@eastgate.com      │ EastGate@2026 │");
+    console.log("  │ SUPER_MANAGER   │ manager@eastgate.com    │ EastGate@2026 │");
+    console.log("  └─────────────────┴─────────────────────────┴───────────────┘");
+    console.log("\n📊 SYSTEM SUMMARY:");
+    console.log(`  • Branches: ${branches.length} (Kigali, Ngoma, Kirehe, Gatsibo)`);
+    console.log(`  • Rooms: ${roomConfigs.reduce((a, b) => a + (b.count * branches.length), 0)} total`);
+    console.log(`  • Menu Items: ${menuItems.length}`);
+    console.log("\n🎯 HOW TO USE:");
+    console.log("  1. Login as SUPER_ADMIN (admin@eastgate.com)");
+    console.log("  2. Go to Admin Panel → Staff Management");
+    console.log("  3. Create BRANCH_MANAGERS for each branch");
+    console.log("  4. Branch Managers can then create their staff");
+    console.log("  5. All staff roles are managed through the admin panel\n");
+    
+  } catch (error) {
+    console.error("❌ Seeding error:", error);
+    process.exit(1);
+  } finally {
+    await prisma.$disconnect();
   }
-
-  // Create sample menu items for Kigali
-  const menuCategories = ["Breakfast", "Lunch", "Dinner", "Drinks", "Dessert"];
-  const menuItems = [
-    { name: "Traditional Breakfast", category: "Breakfast", price: 15000 },
-    { name: "Continental Breakfast", category: "Breakfast", price: 25000 },
-    { name: "Grilled Chicken", category: "Lunch", price: 22000 },
-    { name: "Fish Tilapia", category: "Lunch", price: 28000 },
-    { name: "Beef Stew", category: "Dinner", price: 25000 },
-    { name: "Vegetarian Platter", category: "Dinner", price: 18000 },
-    { name: "Fresh Juice", category: "Drinks", price: 5000 },
-    { name: "Coffee", category: "Drinks", price: 3000 },
-    { name: "Chocolate Cake", category: "Dessert", price: 8000 },
-    { name: "Ice Cream", category: "Dessert", price: 5000 },
-  ];
-
-  for (const item of menuItems) {
-    const menuId = `menu-${item.name.toLowerCase().replace(/\s+/g, "-")}`;
-    await prisma.menuItem.upsert({
-      where: { id: menuId },
-      update: {
-        name: item.name,
-        category: item.category,
-        price: item.price,
-        branchId: BRANCHES.KIGALI_MAIN,
-        available: true,
-      },
-      create: {
-        id: menuId,
-        name: item.name,
-        category: item.category,
-        price: item.price,
-        branchId: BRANCHES.KIGALI_MAIN,
-        available: true,
-      },
-    });
-  }
-  console.log("✓ Created menu items for Kigali branch");
-
-  console.log("\n✅ Seeding complete!");
-  console.log("\n📋 Login Credentials:");
-  console.log("  Super Admin: admin@eastgates.com / 2026");
-  console.log("  Super Manager: manager@eastgates.com / 2026");
-  console.log("  Branch Managers: manager.[branch]@eastgates.com / 2026");
-  console.log("  Staff: [role].[branch]@eastgates.com / 2026");
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("❌ Fatal error:", e);
     process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });

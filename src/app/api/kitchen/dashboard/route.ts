@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth-advanced";
 
 // Role check helper
 function isKitchenStaff(role: string): boolean {
@@ -10,14 +10,21 @@ function isKitchenStaff(role: string): boolean {
 // GET - Kitchen dashboard data
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
+    // Verify JWT token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userRole = session.user.role as string;
-    const userBranchId = session.user.branchId as string;
+    const token = authHeader.slice(7);
+    const session = verifyToken(token, "access");
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = session.role;
+    const userBranchId = session.branchId;
 
     if (!isKitchenStaff(userRole)) {
       return NextResponse.json({ error: "Forbidden - Kitchen staff access only" }, { status: 403 });
@@ -124,13 +131,20 @@ export async function GET(req: NextRequest) {
 // PUT - Update order status (start preparing, mark ready, complete)
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
+    // Verify JWT token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userRole = session.user.role as string;
+    const token = authHeader.slice(7);
+    const session = verifyToken(token, "access");
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = session.role;
 
     if (!isKitchenStaff(userRole)) {
       return NextResponse.json({ error: "Forbidden - Kitchen staff access only" }, { status: 403 });
@@ -155,7 +169,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    let updateData: any = {};
+    let updateData: { status: string } = { status: "" };
 
     switch (action) {
       case "start":
@@ -183,18 +197,6 @@ export async function PUT(req: NextRequest) {
       data: updateData,
     });
 
-    // Log kitchen action
-    await prisma.activityLog.create({
-      data: {
-        userId: session.user.email || undefined,
-        branchId: session.user.branchId || "",
-        action: `kitchen_${action}`,
-        entity: "order",
-        entityId: orderId,
-        details: { action, performedBy: session.user.name },
-      },
-    });
-
     return NextResponse.json({
       success: true,
       order: updatedOrder,
@@ -211,13 +213,20 @@ export async function PUT(req: NextRequest) {
 // POST - Bulk update orders (for kitchen efficiency)
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
+    // Verify JWT token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userRole = session.user.role as string;
+    const token = authHeader.slice(7);
+    const session = verifyToken(token, "access");
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = session.role;
 
     if (!isKitchenStaff(userRole)) {
       return NextResponse.json({ error: "Forbidden - Kitchen staff access only" }, { status: 403 });
@@ -240,7 +249,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let updateData: any = {};
+    let updateData: { status: string } = { status: "" };
 
     switch (action) {
       case "start":
@@ -258,7 +267,7 @@ export async function POST(req: NextRequest) {
 
     // Update all orders in bulk
     const updatedOrders = await Promise.all(
-      orderIds.map(async (orderId) => {
+      orderIds.map(async (orderId: string) => {
         return await prisma.order.update({
           where: { id: orderId },
           data: updateData,

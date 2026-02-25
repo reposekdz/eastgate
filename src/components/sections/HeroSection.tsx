@@ -4,21 +4,48 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { images } from "@/lib/data";
 import { ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
+
+interface HeroData {
+  title: string;
+  subtitle: string;
+  description: string;
+  imageUrl: string;
+  ctaText: string;
+  ctaLink: string;
+}
 
 export default function HeroSection() {
+  const [heroData, setHeroData] = useState<HeroData>({
+    title: "Exceptional Hospitality",
+    subtitle: "Redefining Luxury in East Africa",
+    description: "Immerse yourself in world-class service where every detail is meticulously crafted. Experience hospitality that transcends expectations.",
+    imageUrl: images.hero,
+    ctaText: "Explore Our Services",
+    ctaLink: "/rooms",
+  });
+
+  useEffect(() => {
+    fetch("/api/hero")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data) {
+          setHeroData({ ...data.data, imageUrl: data.data.imageUrl || images.hero });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <section id="hero" className="relative h-screen w-full overflow-hidden">
-      {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${images.hero})` }}
+        style={{ backgroundImage: `url(${heroData.imageUrl})` }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-charcoal/70 via-charcoal/50 to-charcoal/80" />
       </div>
 
-      {/* Content */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
-        {/* Decorative line */}
         <motion.div
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
@@ -41,8 +68,7 @@ export default function HeroSection() {
           transition={{ duration: 0.8, delay: 0.6 }}
           className="heading-xl max-w-4xl text-white mb-6"
         >
-          Where Luxury Meets{" "}
-          <span className="italic text-gold">the Heart of Africa</span>
+          {heroData.title}
         </motion.h1>
 
         <motion.p
@@ -51,9 +77,7 @@ export default function HeroSection() {
           transition={{ duration: 0.6, delay: 0.9 }}
           className="body-lg max-w-2xl text-white/80 mb-10"
         >
-          Experience unparalleled elegance in the land of a thousand hills.
-          Every moment at EastGate is crafted to create memories that last a
-          lifetime.
+          {heroData.description}
         </motion.p>
 
         <motion.div
@@ -67,7 +91,7 @@ export default function HeroSection() {
             size="lg"
             className="bg-gold hover:bg-gold-dark text-charcoal font-semibold px-10 py-6 rounded-[2px] uppercase tracking-wider text-sm transition-all duration-300 hover:shadow-[0_0_30px_rgba(200,169,81,0.4)]"
           >
-            <a href="#rooms">Book Your Stay</a>
+            <a href={heroData.ctaLink}>{heroData.ctaText}</a>
           </Button>
           <Button
             asChild
@@ -75,11 +99,10 @@ export default function HeroSection() {
             size="lg"
             className="bg-emerald hover:bg-emerald-dark text-white border-emerald hover:border-emerald-dark px-10 py-6 rounded-[2px] uppercase tracking-wider text-sm backdrop-blur-xs"
           >
-            <a href="#about">Explore</a>
+            <a href="#about">Discover More</a>
           </Button>
         </motion.div>
 
-        {/* Scroll indicator */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

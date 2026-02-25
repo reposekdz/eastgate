@@ -63,6 +63,10 @@ model Branch {
   activityLogs  ActivityLog[]
   promotions    Promotion[]
   analytics     Analytics[]
+  heroContents  HeroContent[]
+  suppliers     Supplier[]
+  stockItems    StockItem[]
+  purchaseOrders PurchaseOrder[]
 
   @@index([slug])
   @@index([isActive])
@@ -669,6 +673,41 @@ model PageContent {
   @@map("page_contents")
 }
 
+model HeroContent {
+  id          String   @id @default(cuid())
+  title       String   @db.VarChar(255)
+  subtitle    String   @db.VarChar(255)
+  description String   @db.Text
+  imageUrl    String   @db.Text
+  ctaText     String   @db.VarChar(100)
+  ctaLink     String   @db.VarChar(255)
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  branchId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@index([branchId])
+  @@index([isActive])
+  @@map("hero_contents")
+}
+
+model RoomFeature {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(100)
+  description String   @db.Text
+  icon        String   @db.VarChar(50)
+  isModern    Boolean  @default(true)
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("room_features")
+}
+
 // ============================================
 // REVIEWS & RATINGS
 // ============================================
@@ -769,6 +808,114 @@ model Analytics {
   @@index([branchId])
   @@index([date])
   @@map("analytics")
+}
+
+// ============================================
+// SUPPLIER & PURCHASE ORDER MANAGEMENT
+// ============================================
+
+model Supplier {
+  id              String    @id @default(cuid())
+  name            String    @db.VarChar(200)
+  contactPerson   String?   @db.VarChar(100)
+  email           String?   @db.VarChar(100)
+  phone           String?   @db.VarChar(20)
+  address         String?   @db.Text
+  city            String?   @db.VarChar(100)
+  country         String?   @db.VarChar(100)
+  category        String?   @db.VarChar(100) // food, beverages, supplies, equipment
+  paymentTerms    String?   @db.VarChar(100)
+  rating          Int?      @default(0)
+  isActive        Boolean   @default(true)
+  branchId        String    @db.VarChar(50)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  branch          Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  stockItems      StockItem[]
+  purchaseOrders  PurchaseOrder[]
+
+  @@index([branchId])
+  @@index([isActive])
+  @@index([category])
+  @@map("suppliers")
+}
+
+model StockItem {
+  id              String    @id @default(cuid())
+  name            String    @db.VarChar(200)
+  sku             String?   @db.VarChar(100)
+  category        String    @db.VarChar(100)
+  quantity        Int       @default(0)
+  unit            String    @db.VarChar(50) // pieces, kg, liters, etc.
+  unitPrice       Float     @db.Float
+  reorderLevel    Int       @default(10)
+  supplierId      String    @db.VarChar(50)
+  expiryDate      DateTime?
+  branchId        String    @db.VarChar(50)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  branch          Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  supplier        Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchaseOrders  PurchaseOrderItem[]
+
+  @@unique([sku, branchId])
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([category])
+  @@map("stock_items")
+}
+
+model PurchaseOrder {
+  id              String    @id @default(cuid())
+  orderNumber     String    @unique @db.VarChar(100)
+  supplierId      String    @db.VarChar(50)
+  status          String    @default("pending") @db.VarChar(50) // pending, approved, ordered, received, cancelled
+  subtotal        Float     @default(0) @db.Float
+  taxAmount       Float     @default(0) @db.Float
+  totalAmount     Float     @default(0) @db.Float
+  orderDate       DateTime  @default(now())
+  expectedDelivery DateTime?
+  receivedDate    DateTime?
+  branchId        String    @db.VarChar(50)
+  createdById     String?   @db.VarChar(50)
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  branch          Branch                @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  supplier        Supplier              @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  items           PurchaseOrderItem[]
+
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([orderNumber])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String    @id @default(cuid())
+  purchaseOrderId String    @db.VarChar(50)
+  stockItemId     String    @db.VarChar(50)
+  quantity        Int
+  unitPrice       Float     @db.Float
+  totalPrice      Float     @db.Float
+  receivedQty     Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  stockItem       StockItem @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseOrderId])
+  @@index([stockItemId])
+  @@map("purchase_order_items")
 }
 
 // ============================================

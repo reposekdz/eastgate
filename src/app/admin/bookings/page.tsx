@@ -70,6 +70,7 @@ export default function BookingsPage() {
   const [search, setSearch] = useState("");
   const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
 
   const isSuperUser = user?.role === "SUPER_ADMIN" || user?.role === "SUPER_MANAGER";
@@ -462,11 +463,11 @@ export default function BookingsPage() {
               </div>
 
               {/* Add-ons */}
-              {selectedBooking.addOns.length > 0 && (
+              {selectedBooking.addOns?.length > 0 && (
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-text-muted-custom font-semibold mb-2">Add-ons</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {selectedBooking.addOns.map((addon) => (
+                    {selectedBooking.addOns?.map((addon: string) => (
                       <Badge key={addon} variant="outline" className="text-xs rounded-[4px] bg-gold/5 text-gold-dark border-gold/20">
                         {addon}
                       </Badge>

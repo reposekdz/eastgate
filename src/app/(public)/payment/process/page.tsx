@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "@/lib/i18n/context";
@@ -17,7 +17,7 @@ import { toast } from "sonner";
 
 type PaymentStatus = "processing" | "verifying" | "success" | "failed" | "pending";
 
-export default function PaymentProcessPage() {
+function PaymentProcessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
@@ -350,5 +350,13 @@ export default function PaymentProcessPage() {
         </AnimatePresence>
       </Card>
     </div>
+  );
+}
+
+export default function PaymentProcessPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+      <PaymentProcessContent />
+    </Suspense>
   );
 }

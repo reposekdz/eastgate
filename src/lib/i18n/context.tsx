@@ -28,10 +28,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     setLanguageState(newLocale);
     if (typeof window !== "undefined") {
       localStorage.setItem("eastgate-locale", newLocale);
+      document.documentElement.lang = newLocale;
+      document.documentElement.dir = isRTL(newLocale) ? "rtl" : "ltr";
     }
-    // Set document language and direction
-    document.documentElement.lang = newLocale;
-    document.documentElement.dir = isRTL(newLocale) ? "rtl" : "ltr";
   }, []);
 
   const setLanguage = useCallback((lang: string) => {
@@ -54,13 +53,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem("eastgate-locale") as Locale | null;
-    const validLocales: Locale[] = ["en", "rw", "fr", "sw", "es", "de", "zh", "ar", "pt", "ja"];
-    if (saved && validLocales.includes(saved)) {
-      setLocaleState(saved);
-      setLanguageState(saved);
-      // Set initial direction
-      document.documentElement.dir = isRTL(saved) ? "rtl" : "ltr";
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("eastgate-locale") as Locale | null;
+      const validLocales: Locale[] = ["en", "rw", "fr", "sw", "es", "de", "zh", "ar", "pt", "ja"];
+      if (saved && validLocales.includes(saved)) {
+        setLocaleState(saved);
+        setLanguageState(saved);
+        document.documentElement.dir = isRTL(saved) ? "rtl" : "ltr";
+      }
     }
   }, []);
 

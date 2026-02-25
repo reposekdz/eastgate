@@ -15,81 +15,120 @@ export async function POST(req: NextRequest) {
       fileUrl,
       voiceUrl,
       location,
-      quickReply
+      quickReply,
+      branchId = "br-001"
     } = body;
+
+    if (!action || !conversationId) {
+      return NextResponse.json({
+        success: false,
+        error: "action and conversationId are required"
+      }, { status: 400 });
+    }
 
     switch (action) {
       case "setPriority":
-        await prisma.message.updateMany({
-          where: { senderEmail: conversationId },
-          data: { starred: priority === "high" }
-        });
+        if (priority) {
+          await prisma.message.updateMany({
+            where: { senderEmail: conversationId },
+            data: { starred: priority === "high" }
+          });
+        }
         break;
 
       case "addTags":
-        await prisma.message.update({
-          where: { id: messageId },
-          data: { 
-            message: `${await prisma.message.findUnique({ where: { id: messageId }, select: { message: true } }).then(m => m?.message)} #${tags.join(' #')}`
+        if (messageId && Array.isArray(tags) && tags.length > 0) {
+          const msg = await prisma.message.findUnique({
+            where: { id: messageId },
+            select: { message: true }
+          });
+          if (msg) {
+            await prisma.message.update({
+              where: { id: messageId },
+              data: { 
+                message: `${msg.message} #${tags.join(' #')}`
+              }
+            });
           }
-        });
+        }
         break;
 
       case "sendFile":
-        await prisma.message.create({
-          data: {
-            sender: "staff",
-            senderName: "Staff",
-            senderEmail: conversationId,
-            message: `📎 File shared: ${fileUrl}`,
-            branchId: "br-001",
-            read: false
-          }
-        });
+        if (fileUrl) {
+          await prisma.message.create({
+            data: {
+              sender: "staff",
+              senderName: "Staff",
+              senderEmail: conversationId,
+              message: `📎 File shared: ${fileUrl}`,
+              branchId,
+              read: false
+            }
+          });
+        }
         break;
 
       case "sendVoice":
-        await prisma.message.create({
-          data: {
-            sender: "staff",
-            senderName: "Staff", 
-            senderEmail: conversationId,
-            message: `🎤 Voice message: ${voiceUrl}`,
-            branchId: "br-001",
-            read: false
-          }
-        });
+        if (voiceUrl) {
+          await prisma.message.create({
+            data: {
+              sender: "staff",
+              senderName: "Staff", 
+              senderEmail: conversationId,
+              message: `🎤 Voice message: ${voiceUrl}`,
+              branchId,
+              read: false
+            }
+          });
+        }
         break;
 
       case "sendLocation":
-        await prisma.message.create({
-          data: {
-            sender: "staff",
-            senderName: "Staff",
-            senderEmail: conversationId,
-            message: `📍 Location: ${location.name} - ${location.address}`,
-            branchId: "br-001", 
-            read: false
-          }
-        });
+        if (location && location.name && location.address) {
+          await prisma.message.create({
+            data: {
+              sender: "staff",
+              senderName: "Staff",
+              senderEmail: conversationId,
+              message: `📍 Location: ${location.name} - ${location.address}`,
+              branchId, 
+              read: false
+            }
+          });
+        }
         break;
 
       case "quickReply":
-        await prisma.message.create({
-          data: {
-            sender: "staff",
-            senderName: "Staff",
-            senderEmail: conversationId,
-            message: quickReply,
-            branchId: "br-001",
-            read: false
-          }
-        });
+        if (quickReply) {
+          await prisma.message.create({
+            data: {
+              sender: "staff",
+              senderName: "Staff",
+              senderEmail: conversationId,
+              message: quickReply,
+              branchId,
+              read: false
+            }
+          });
+        }
         break;
+
+      default:
+        return NextResponse.json({
+          success: false,
+          error: `Unknown action: ${action}`
+        }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      timestamp: new Date().toISOString()
+    });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("Chat features error:", error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message || "Failed to process chat feature"
+    }, { status: 500 });
   }
 }

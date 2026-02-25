@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth-advanced";
 
 // Default currency configuration
 const DEFAULT_CURRENCY = "RWF";
@@ -8,10 +8,15 @@ const DEFAULT_CURRENCY = "RWF";
 // GET - Financial analytics with RWF as default
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
+    // Verify authorization
+    const token = req.headers.get("authorization")?.replace("Bearer ", "");
+    if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded = verifyToken(token, "access");
+    if (!decoded) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -19,8 +24,8 @@ export async function GET(req: NextRequest) {
     const period = searchParams.get("period") || "30days"; // 7days, 30days, 90days, year
     const currency = searchParams.get("currency") || DEFAULT_CURRENCY;
 
-    const userRole = session.user.role as string;
-    const userBranchId = session.user.branchId as string;
+    const userRole = (decoded as any)?.role as string;
+    const userBranchId = (decoded as any)?.branchId as string;
 
     // Determine branch filter
     let branchFilter: any = {};
@@ -104,19 +109,22 @@ export async function GET(req: NextRequest) {
     const totalPayments = Number(paymentStats._sum.amount || 0);
     const netProfit = totalRevenue - totalExpenses;
 
-    // Daily breakdown
-    const dailyRevenue = await prisma.$queryRaw`
-      SELECT 
-        DATE(created_at) as date,
-        SUM(total_amount) as booking_revenue,
-        0 as order_revenue
-      FROM bookings
-      WHERE status IN ('confirmed', 'checked_in', 'checked_out')
-        AND created_at >= ${startDate}
-        ${branchId ? prisma.raw(`AND branch_id = '${branchId}'`) : prisma.raw("")}
-      GROUP BY DATE(created_at)
-      ORDER BY date ASC
-    ` as any[];
+    // Daily breakdown - using Prisma groupBy for type safety
+    const dailyBreakdown = await prisma.booking.groupBy({
+      by: ["createdAt"],
+      where: {
+        ...branchFilter,
+        status: { in: ["confirmed", "checked_in", "checked_out"] },
+        createdAt: { gte: startDate },
+      },
+      _sum: { totalAmount: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const dailyRevenue = dailyBreakdown.map(d => ({
+      date: new Date(d.createdAt).toISOString().split("T")[0],
+      revenue: Number(d._sum.totalAmount || 0),
+    }));
 
     // Payment method breakdown
     const paymentMethods = await prisma.payment.groupBy({
@@ -170,10 +178,7 @@ export async function GET(req: NextRequest) {
         count: pm._count,
         amount: formatAmount(Number(pm._sum.amount || 0)),
       })),
-      dailyRevenue: dailyRevenue.map(d => ({
-        date: d.date,
-        revenue: Number(d.booking_revenue || 0),
-      })),
+      dailyRevenue,
     });
   } catch (error) {
     console.error("Financial analytics error:", error);

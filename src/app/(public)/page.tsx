@@ -4,6 +4,7 @@ import { useI18n } from "@/lib/i18n/context";
 import HeroSection from "@/components/sections/HeroSection";
 import RoomShowcase from "@/components/sections/RoomShowcase";
 import GuestRatingSystem from "@/components/sections/GuestRatingSystem";
+import { images } from "@/lib/data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,10 +36,10 @@ export default function HomePage() {
   ];
 
   const branches = [
-    { name: "Kigali Main", location: "KG 7 Ave, Kigali", rooms: 120, phone: "+250 788 123 456" },
-    { name: "Ngoma Branch", location: "Ngoma District", rooms: 80, phone: "+250 788 123 457" },
-    { name: "Kirehe Branch", location: "Kirehe District", rooms: 65, phone: "+250 788 123 458" },
-    { name: "Gatsibo Branch", location: "Gatsibo District", rooms: 75, phone: "+250 788 123 459" },
+    { name: "Kigali Main", location: "KG 7 Ave, Kigali", rooms: 120, phone: "+250 788 123 456", image: images.lobby },
+    { name: "Ngoma Branch", location: "Ngoma District", rooms: 80, phone: "+250 788 123 457", image: images.pool },
+    { name: "Kirehe Branch", location: "Kirehe District", rooms: 65, phone: "+250 788 123 458", image: images.dining },
+    { name: "Gatsibo Branch", location: "Gatsibo District", rooms: 75, phone: "+250 788 123 459", image: images.hero },
   ];
 
   return (
@@ -102,7 +103,11 @@ export default function HomePage() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {branches.map((branch, i) => (
-              <Card key={i} className="hover:shadow-lg transition-shadow">
+              <Card key={i} className="hover:shadow-lg transition-shadow overflow-hidden">
+                {branch.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={branch.image} alt={branch.name} className="w-full h-40 object-cover" />
+                )}
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div>

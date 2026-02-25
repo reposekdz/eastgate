@@ -1,29 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import prisma from "@/lib/prisma";
+import { PrismaClient } from "@prisma/client";
+import { verifyToken } from "@/lib/auth-advanced";
 
-// Role check helper
-function isReceptionist(role: string): boolean {
-  return ["RECEPTIONIST", "SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER"].includes(role);
-}
+const prisma = new PrismaClient();
 
-// GET - Receptionist dashboard data
+const VALID_ACTIONS = ["checkin", "checkout", "confirm", "cancel"];
+
+/**
+ * GET /api/receptionist/dashboard
+ * Get receptionist dashboard with check-ins, check-outs, available rooms, and active bookings
+ * Requires: RECEPTIONIST role or higher
+ */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify JWT token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized: Missing or invalid Bearer token" },
+        { status: 401 }
+      );
     }
 
-    const userRole = session.user.role as string;
-    const userBranchId = session.user.branchId as string;
-
-    if (!isReceptionist(userRole)) {
-      return NextResponse.json({ error: "Forbidden - Receptionist access only" }, { status: 403 });
+    const token = authHeader.slice(7);
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.id) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized: Invalid token" },
+        { status: 401 }
+      );
     }
 
-    const branchWhere = userBranchId ? { branchId: userBranchId } : {};
+    // Verify user role
+    const user = await prisma.staff.findUnique({
+      where: { id: decoded.id },
+    });
+
+    if (!user || !["RECEPTIONIST", "MANAGER", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Insufficient permissions" },
+        { status: 403 }
+      );
+    }
+
+    const branchWhere = user.branchId ? { branchId: user.branchId } : {};
 
     // Get today's check-ins
     const today = new Date();
@@ -34,336 +54,272 @@ export async function GET(req: NextRequest) {
     const todayCheckIns = await prisma.booking.findMany({
       where: {
         ...branchWhere,
-        checkIn: {
-          gte: today,
-          lt: tomorrow,
-        },
-        status: "confirmed",
+        checkIn: { gte: today, lt: tomorrow },
+        status: { in: ["confirmed", "checked_in"] },
       },
-      include: {
-        guest: true,
-      },
+      include: { guest: true },
+      orderBy: { checkIn: "asc" },
     });
 
     // Get today's check-outs
     const todayCheckOuts = await prisma.booking.findMany({
       where: {
         ...branchWhere,
-        checkOut: {
-          gte: today,
-          lt: tomorrow,
-        },
-        status: "confirmed",
+        checkOut: { gte: today, lt: tomorrow },
+        status: { in: ["confirmed", "checked_in"] },
       },
-      include: {
-        guest: true,
-      },
+      include: { guest: true },
+      orderBy: { checkOut: "asc" },
     });
 
     // Get available rooms
     const availableRooms = await prisma.room.findMany({
-      where: {
-        ...branchWhere,
-        status: "available",
-      },
-      orderBy: {
-        number: "asc",
-      },
+      where: { ...branchWhere, status: "available" },
+      orderBy: { roomNumber: "asc" },
     });
 
-    // Get all active bookings
+    // Get active bookings
     const activeBookings = await prisma.booking.findMany({
       where: {
         ...branchWhere,
-        status: "confirmed",
+        status: { in: ["confirmed", "checked_in"] },
       },
-      include: {
-        guest: true,
-      },
-      orderBy: {
-        checkIn: "asc",
-      },
+      include: { guest: true, room: true },
+      orderBy: { checkIn: "asc" },
     });
 
-    // Get pending bookings (not confirmed yet)
+    // Get pending bookings
     const pendingBookings = await prisma.booking.findMany({
-      where: {
-        ...branchWhere,
-        status: "pending",
-      },
-      include: {
-        guest: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+      where: { ...branchWhere, status: "pending" },
+      include: { guest: true },
+      orderBy: { createdAt: "desc" },
       take: 10,
     });
 
-    // Statistics
+    // Calculate statistics
     const totalRooms = await prisma.room.count({ where: branchWhere });
+    const occupiedRooms = await prisma.room.count({
+      where: { ...branchWhere, status: "occupied" },
+    });
     const bookedRooms = await prisma.room.count({
-      where: { ...branchWhere, status: "booked" }
+      where: { ...branchWhere, status: { in: ["occupied", "booked"] } },
     });
     const occupancyRate = totalRooms > 0 ? Math.round((bookedRooms / totalRooms) * 100) : 0;
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        todayCheckIns,
-        todayCheckOuts,
-        availableRooms,
-        activeBookings,
-        pendingBookings,
-        stats: {
-          totalRooms,
-          bookedRooms,
-          available: totalRooms - bookedRooms,
-          occupancyRate,
-          todayCheckInsCount: todayCheckIns.length,
-          todayCheckOutsCount: todayCheckOuts.length,
+    // Calculate today's revenue
+    const todayRevenue = await prisma.booking.aggregate({
+      where: {
+        ...branchWhere,
+        checkIn: { gte: today, lt: tomorrow },
+        paymentStatus: "paid",
+      },
+      _sum: { totalAmount: true },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          todayCheckIns,
+          todayCheckOuts,
+          availableRooms,
+          activeBookings,
+          pendingBookings,
+          stats: {
+            totalRooms,
+            occupiedRooms,
+            availableRoomsCount: totalRooms - bookedRooms,
+            occupancyRate,
+            todayCheckInsCount: todayCheckIns.length,
+            todayCheckOutsCount: todayCheckOuts.length,
+            todayRevenue: todayRevenue._sum.totalAmount || 0,
+          },
         },
       },
-    });
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Receptionist dashboard error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch dashboard data" },
+      { success: false, error: "Failed to fetch dashboard data" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
-// PUT - Update booking status (check-in, check-out, cancel)
+/**
+ * PUT /api/receptionist/dashboard
+ * Update booking status (checkin, checkout, confirm, cancel)
+ * Requires: RECEPTIONIST role or higher
+ * Body: { bookingId, action }
+ */
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify JWT token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized: Missing or invalid Bearer token" },
+        { status: 401 }
+      );
     }
 
-    const userRole = session.user.role as string;
+    const token = authHeader.slice(7);
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.id) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized: Invalid token" },
+        { status: 401 }
+      );
+    }
 
-    if (!isReceptionist(userRole)) {
-      return NextResponse.json({ error: "Forbidden - Receptionist access only" }, { status: 403 });
+    // Verify user role
+    const user = await prisma.staff.findUnique({
+      where: { id: decoded.id },
+    });
+
+    if (!user || !["RECEPTIONIST", "MANAGER", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Insufficient permissions" },
+        { status: 403 }
+      );
     }
 
     const body = await req.json();
-    const { bookingId, action, roomId } = body;
+    const { bookingId, action } = body;
 
+    // Validate input
     if (!bookingId || !action) {
       return NextResponse.json(
-        { error: "bookingId and action are required" },
+        { success: false, error: "Booking ID and action are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!VALID_ACTIONS.includes(action)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid action. Must be one of: ${VALID_ACTIONS.join(", ")}` },
         { status: 400 }
       );
     }
 
     // Get existing booking
-    const existingBooking = await prisma.booking.findUnique({
+    const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
+      include: { room: true, guest: true },
     });
 
-    if (!existingBooking) {
-      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    if (!booking) {
+      return NextResponse.json(
+        { success: false, error: "Booking not found" },
+        { status: 404 }
+      );
     }
 
-    let updateData: any = {};
-    let roomUpdate: any = {};
+    // Verify booking belongs to user's branch
+    if (user.branchId && booking.branchId !== user.branchId && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized: Booking belongs to different branch" },
+        { status: 403 }
+      );
+    }
+
+    const updateData: { updatedAt: Date; status?: string; checkedInAt?: Date; checkedInBy?: string; checkedOutAt?: Date; checkedOutBy?: string; cancelledAt?: Date; cancelledBy?: string } = { updatedAt: new Date() };
+    const roomUpdate: { status?: string } = {};
 
     switch (action) {
       case "checkin":
-        // Guest checking in
-        updateData = { status: "checked_in" };
-        roomUpdate = { status: "booked" };
+        if (booking.status !== "confirmed") {
+          return NextResponse.json(
+            { success: false, error: "Only confirmed bookings can be checked in" },
+            { status: 400 }
+          );
+        }
+        updateData.status = "checked_in";
+        updateData.checkedInAt = new Date();
+        updateData.checkedInBy = user.id;
+        roomUpdate.status = "occupied";
         break;
+
       case "checkout":
-        // Guest checking out
-        updateData = { status: "checked_out" };
-        roomUpdate = { status: "available" };
+        if (!["confirmed", "checked_in"].includes(booking.status)) {
+          return NextResponse.json(
+            { success: false, error: "Invalid booking status for checkout" },
+            { status: 400 }
+          );
+        }
+        updateData.status = "checked_out";
+        updateData.checkedOutAt = new Date();
+        updateData.checkedOutBy = user.id;
+        roomUpdate.status = "available";
         break;
+
       case "confirm":
-        // Confirm pending booking
-        updateData = { status: "confirmed" };
+        if (booking.status !== "pending") {
+          return NextResponse.json(
+            { success: false, error: "Only pending bookings can be confirmed" },
+            { status: 400 }
+          );
+        }
+        updateData.status = "confirmed";
         break;
+
       case "cancel":
-        // Cancel booking
-        updateData = { status: "cancelled" };
-        roomUpdate = { status: "available" };
+        updateData.status = "cancelled";
+        updateData.cancelledAt = new Date();
+        updateData.cancelledBy = user.id;
+        if (["confirmed", "checked_in"].includes(booking.status)) {
+          roomUpdate.status = "available";
+        }
         break;
+
       default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+        return NextResponse.json(
+          { success: false, error: "Invalid action" },
+          { status: 400 }
+        );
     }
 
     // Update booking
     const updatedBooking = await prisma.booking.update({
       where: { id: bookingId },
       data: updateData,
+      include: { guest: true, room: true },
     });
 
     // Update room status if needed
-    if (roomUpdate.status && existingBooking.roomId) {
+    if (Object.keys(roomUpdate).length > 0 && booking.roomId) {
       await prisma.room.update({
-        where: { id: existingBooking.roomId },
+        where: { id: booking.roomId },
         data: roomUpdate,
       });
     }
 
-    // Log receptionist action
-    await prisma.activityLog.create({
-      data: {
-        userId: session.user.email || undefined,
-        branchId: session.user.branchId || "",
-        action: `booking_${action}`,
-        entity: "booking",
-        entityId: bookingId,
-        details: { action, performedBy: session.user.name },
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Booking ${action} successfully`,
+        booking: updatedBooking,
       },
-    });
-
-    return NextResponse.json({
-      success: true,
-      booking: updatedBooking,
-    });
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Receptionist booking update error:", error);
-    return NextResponse.json(
-      { error: "Failed to update booking" },
-      { status: 500 }
-    );
-  }
-}
 
-// POST - Create new booking
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = session.user.role as string;
-
-    if (!isReceptionist(userRole)) {
-      return NextResponse.json({ error: "Forbidden - Receptionist access only" }, { status: 403 });
-    }
-
-    const body = await req.json();
-    const {
-      guestName,
-      guestEmail,
-      guestPhone,
-      roomId,
-      roomNumber,
-      roomType,
-      checkIn,
-      checkOut,
-      adults,
-      children,
-      totalAmount,
-      paymentMethod,
-      specialRequests,
-    } = body;
-
-    // Validate required fields
-    if (!guestName || !guestEmail || !roomId || !checkIn || !checkOut || !totalAmount) {
+    if (error instanceof SyntaxError) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { success: false, error: "Invalid JSON in request body" },
         { status: 400 }
       );
     }
 
-    // Check if room is available
-    const room = await prisma.room.findUnique({
-      where: { id: roomId },
-    });
-
-    if (!room) {
-      return NextResponse.json({ error: "Room not found" }, { status: 404 });
-    }
-
-    if (room.status !== "available") {
-      return NextResponse.json({ error: "Room is not available" }, { status: 400 });
-    }
-
-    // Check for conflicting bookings
-    const conflictingBookings = await prisma.booking.findMany({
-      where: {
-        roomId,
-        status: { in: ["pending", "confirmed", "checked_in"] },
-        OR: [
-          {
-            checkIn: { lte: new Date(checkIn) },
-            checkOut: { gt: new Date(checkIn) },
-          },
-          {
-            checkIn: { lt: new Date(checkOut) },
-            checkOut: { gte: new Date(checkOut) },
-          },
-          {
-            checkIn: { gte: new Date(checkIn) },
-            checkOut: { lte: new Date(checkOut) },
-          },
-        ],
-      },
-    });
-
-    if (conflictingBookings.length > 0) {
-      return NextResponse.json(
-        { error: "Room is already booked for these dates" },
-        { status: 400 }
-      );
-    }
-
-    // Create booking
-    const booking = await prisma.booking.create({
-      data: {
-        guestName,
-        guestEmail,
-        guestPhone,
-        roomId,
-        roomNumber: roomNumber || room.number,
-        roomType: roomType || room.type,
-        checkIn: new Date(checkIn),
-        checkOut: new Date(checkOut),
-        adults: adults || 1,
-        children: children || 0,
-        totalAmount,
-        paymentMethod,
-        specialRequests,
-        status: "confirmed",
-        branchId: session.user.branchId || "",
-      },
-    });
-
-    // Update room status
-    await prisma.room.update({
-      where: { id: roomId },
-      data: { status: "booked" },
-    });
-
-    // Log the booking creation
-    await prisma.activityLog.create({
-      data: {
-        userId: session.user.email || undefined,
-        branchId: session.user.branchId || "",
-        action: "booking_created",
-        entity: "booking",
-        entityId: booking.id,
-        details: { guestName, roomNumber, performedBy: session.user.name },
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      booking,
-    });
-  } catch (error) {
-    console.error("Receptionist booking creation error:", error);
     return NextResponse.json(
-      { error: "Failed to create booking" },
+      { success: false, error: "Failed to update booking" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

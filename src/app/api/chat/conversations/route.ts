@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get("branchId") || "br-001";
     const conversationId = searchParams.get("conversationId");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
 
     if (conversationId) {
       // Get specific conversation messages
@@ -25,33 +25,66 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        messages,
+        messages: messages || [],
         conversationId
       });
     }
 
-    // Get all conversations grouped by sender
-    const conversations = await prisma.$queryRaw`
-      SELECT 
-        sender_email as id,
-        sender_name as name,
-        sender_phone as phone,
-        MAX(created_at) as lastMessageTime,
-        COUNT(*) as messageCount,
-        MAX(message) as lastMessage,
-        SUM(CASE WHEN \`read\` = 0 THEN 1 ELSE 0 END) as unreadCount,
-        branch_id as branchId
-      FROM messages 
-      WHERE branch_id = ${branchId}
-        AND sender = 'guest'
-      GROUP BY sender_email, sender_name, sender_phone, branch_id
-      ORDER BY lastMessageTime DESC
-      LIMIT 20
-    ` as any[];
+    // Get all conversations using Prisma (no raw SQL)
+    const conversations = await prisma.message.groupBy({
+      by: ["senderEmail"],
+      where: {
+        branchId,
+        sender: "guest"
+      },
+      _max: { createdAt: true },
+      _count: { id: true },
+      orderBy: { _max: { createdAt: "desc" } },
+      take: 20
+    });
+
+    // Enrich with latest message details
+    const enrichedConversations = await Promise.all(
+      conversations.map(async (conv) => {
+        const latestMessage = await prisma.message.findFirst({
+          where: {
+            branchId,
+            senderEmail: conv.senderEmail
+          },
+          orderBy: { createdAt: "desc" },
+          select: {
+            senderName: true,
+            senderEmail: true,
+            message: true,
+            createdAt: true
+          }
+        });
+
+        const unreadCount = await prisma.message.count({
+          where: {
+            branchId,
+            senderEmail: conv.senderEmail,
+            sender: "guest",
+            read: false
+          }
+        });
+
+        return {
+          id: conv.senderEmail,
+          name: latestMessage?.senderName || "Guest",
+          email: conv.senderEmail,
+          lastMessageTime: conv._max.createdAt,
+          messageCount: conv._count.id,
+          lastMessage: latestMessage?.message,
+          unreadCount,
+          branchId
+        };
+      })
+    );
 
     return NextResponse.json({
       success: true,
-      conversations,
+      conversations: enrichedConversations,
       timestamp: new Date().toISOString()
     });
   } catch (error: any) {

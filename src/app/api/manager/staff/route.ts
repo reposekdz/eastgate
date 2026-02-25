@@ -1,322 +1,301 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import bcrypt from "bcryptjs";
-import prisma from "@/lib/prisma";
-import { ROLE_PERMISSIONS, isSuperAdmin, isManager } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth-advanced";
+import { hash } from "bcryptjs";
 
-// GET - Fetch all staff members
+/**
+ * GET /api/manager/staff
+ * Fetch staff members for a branch (managers can only see their own branch, super admin sees all)
+ */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const token = req.headers.get("authorization")?.replace("Bearer ", "");
+    if (!token) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    
+    const session = verifyToken(token, "access");
+    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = session.user.role as string;
-    const userBranchId = session.user.branchId as string;
-
-    // Check permissions
-    if (!isSuperAdmin(userRole) && !isManager(userRole)) {
-      return NextResponse.json({ error: "Forbidden - Insufficient permissions" }, { status: 403 });
+    if (!["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER"].includes(session.role)) {
+      return NextResponse.json({ success: false, error: "Insufficient permissions" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get("branchId");
-    const status = searchParams.get("status");
     const role = searchParams.get("role");
     const search = searchParams.get("search");
 
-    // Build query
-    let where: any = {};
+    const where: any = {};
 
-    // Non-super admins can only see their branch
-    if (!isSuperAdmin(userRole) && branchId) {
-      where.branchId = branchId;
-    } else if (!isSuperAdmin(userRole)) {
-      where.branchId = userBranchId;
+    if (session.role === "BRANCH_MANAGER" || session.role === "MANAGER") {
+      where.branchId = session.branchId;
     } else if (branchId) {
       where.branchId = branchId;
     }
 
-    if (status) where.status = status;
     if (role) where.role = role;
+    
     if (search) {
       where.OR = [
-        { name: { contains: search } },
-        { email: { contains: search } },
-        { department: { contains: search } },
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
       ];
     }
 
-    const staff = await prisma.$queryRaw`
-      SELECT id, name, email, phone, role, department, shift, status, avatar, branch_id, join_date, last_login, created_at, updated_at
-      FROM staff
-      WHERE ${branchId ? `branch_id = ${isSuperAdmin(userRole) ? `'${branchId}'` : `'${userBranchId}'`}` : '1=1'}
-        ${status ? `AND status = '${status}'` : ''}
-        ${role ? `AND role = '${role}'` : ''}
-        ${search ? `AND (name LIKE '%${search}%' OR email LIKE '%${search}%' OR department LIKE '%${search}%')` : ''}
-      ORDER BY created_at DESC
-    ` as any[];
+    const staff = await prisma.staff.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        department: true,
+        status: true,
+        avatar: true,
+        branchId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
     return NextResponse.json({
       success: true,
-      staff,
-      count: staff.length
+      data: {
+        staff,
+        count: staff.length,
+      },
     });
   } catch (error) {
-    console.error("Error fetching staff:", error);
-    return NextResponse.json({ error: "Failed to fetch staff" }, { status: 500 });
+    console.error("Staff GET error:", error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Failed to fetch staff" },
+      { status: 500 }
+    );
   }
 }
 
-// POST - Create a new staff member
+/**
+ * POST /api/manager/staff
+ * Create a new staff member (manager scope limited to their branch)
+ */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const token = req.headers.get("authorization")?.replace("Bearer ", "");
+    if (!token) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    
+    const session = verifyToken(token, "access");
+    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = session.user.role as string;
-    const userBranchId = session.user.branchId as string;
-
-    // Check permissions
-    if (!isSuperAdmin(userRole) && !isManager(userRole)) {
-      return NextResponse.json({ error: "Forbidden - Insufficient permissions" }, { status: 403 });
+    if (!["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER"].includes(session.role)) {
+      return NextResponse.json({ success: false, error: "Insufficient permissions" }, { status: 403 });
     }
 
     const body = await req.json();
-    const { name, email, phone, role, department, shift, status, branchId, password } = body;
+    const { name, email, phone, password, role, department, branchId } = body;
 
-    // Validate required fields
-    if (!name || !email || !role || !password) {
-      return NextResponse.json({ error: "Name, email, role, and password are required" }, { status: 400 });
+    if (!name || !email || !password || !role || !branchId) {
+      return NextResponse.json(
+        { success: false, error: "Name, email, password, role, and branch ID are required" },
+        { status: 400 }
+      );
     }
 
-    // Validate password length
     if (password.length < 6) {
-      return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Password must be at least 6 characters" },
+        { status: 400 }
+      );
     }
 
-    // Branch managers can only create certain roles
-    const userRoleStr = userRole as string;
-    if (userRoleStr === "BRANCH_MANAGER" || userRoleStr === "MANAGER") {
-      const allowedRoles = ["WAITER", "RECEPTIONIST", "CHEF", "KITCHEN_STAFF", "STAFF"];
-      if (!allowedRoles.includes(role)) {
-        return NextResponse.json({ 
-          error: `Branch managers can only create: ${allowedRoles.join(", ")}. Use the branches API to assign branch managers.` 
-        }, { status: 403 });
-      }
+    if (session.role === "BRANCH_MANAGER" && branchId !== session.branchId) {
+      return NextResponse.json(
+        { success: false, error: "Managers can only create staff for their own branch" },
+        { status: 403 }
+      );
     }
 
-    // Super managers can also create BRANCH_MANAGER roles
-    if (role === "BRANCH_MANAGER" || role === "MANAGER") {
-      if (!isSuperAdmin(userRoleStr) && userRoleStr !== "SUPER_MANAGER") {
-        return NextResponse.json({ 
-          error: "Only Super Admin or Super Manager can create manager roles" 
-        }, { status: 403 });
-      }
+    const existingStaff = await prisma.staff.findUnique({ where: { email } });
+    if (existingStaff) {
+      return NextResponse.json(
+        { success: false, error: "Email already exists" },
+        { status: 400 }
+      );
     }
 
-    // Check if email already exists
-    const existingStaff = await prisma.$queryRaw`
-      SELECT id FROM staff WHERE email = ${email} LIMIT 1
-    ` as any[];
+    const hashedPassword = await hash(password, 12);
 
-    if (existingStaff.length > 0) {
-      return NextResponse.json({ error: "Email already exists" }, { status: 400 });
-    }
-
-    // Hash password - always required
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Determine branch ID
-    const finalBranchId = branchId || userBranchId;
-
-    // Create staff member
-    const newStaff = await prisma.$executeRaw`
-      INSERT INTO staff (id, name, email, phone, role, department, shift, status, password, branch_id, join_date, created_at, updated_at)
-      VALUES (
-        ${crypto.randomUUID()},
-        ${name},
-        ${email},
-        ${phone || null},
-        ${role},
-        ${department || 'General'},
-        ${shift || null},
-        ${status || 'active'},
-        ${hashedPassword},
-        ${finalBranchId},
-        NOW(),
-        NOW(),
-        NOW()
-      )
-    `;
+    const staff = await prisma.staff.create({
+      data: {
+        name,
+        email,
+        phone: phone || "",
+        password: hashedPassword,
+        role,
+        department: department || "General",
+        status: "active",
+        branchId,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        department: true,
+        status: true,
+        branchId: true,
+        createdAt: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Staff member created successfully",
-      staffId: crypto.randomUUID()
-    });
+      data: { staff },
+    }, { status: 201 });
   } catch (error) {
-    console.error("Error creating staff:", error);
-    return NextResponse.json({ error: "Failed to create staff member" }, { status: 500 });
+    console.error("Staff POST error:", error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Failed to create staff" },
+      { status: 500 }
+    );
   }
 }
 
-// PUT - Update a staff member
-export async function PUT(req: NextRequest) {
+/**
+ * PATCH /api/manager/staff
+ * Update staff member details
+ */
+export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const token = req.headers.get("authorization")?.replace("Bearer ", "");
+    if (!token) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    
+    const session = verifyToken(token, "access");
+    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = session.user.role as string;
-    const userBranchId = session.user.branchId as string;
-
-    // Check permissions
-    if (!isSuperAdmin(userRole) && !isManager(userRole)) {
-      return NextResponse.json({ error: "Forbidden - Insufficient permissions" }, { status: 403 });
+    if (!["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER"].includes(session.role)) {
+      return NextResponse.json({ success: false, error: "Insufficient permissions" }, { status: 403 });
     }
 
     const body = await req.json();
-    const { id, name, email, phone, role, department, shift, status, branchId, password } = body;
+    const { id, ...updateData } = body;
 
     if (!id) {
-      return NextResponse.json({ error: "Staff ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Staff ID is required" },
+        { status: 400 }
+      );
     }
 
-    // Check if staff exists
-    const existingStaff = await prisma.$queryRaw`
-      SELECT id, branch_id FROM staff WHERE id = ${id} LIMIT 1
-    ` as any[];
+    const staff = await prisma.staff.findUnique({
+      where: { id },
+      select: { branchId: true },
+    });
 
-    if (existingStaff.length === 0) {
-      return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+    if (!staff) {
+      return NextResponse.json(
+        { success: false, error: "Staff not found" },
+        { status: 404 }
+      );
     }
 
-    // Non-super admins can only update their branch's staff
-    if (!isSuperAdmin(userRole) && existingStaff[0].branch_id !== userBranchId) {
-      return NextResponse.json({ error: "Cannot update staff from other branches" }, { status: 403 });
+    if (session.role === "BRANCH_MANAGER" && staff.branchId !== session.branchId) {
+      return NextResponse.json(
+        { success: false, error: "Cannot update staff from other branches" },
+        { status: 403 }
+      );
     }
 
-    // Build update query
-    let updates: string[] = [];
-    let values: any[] = [];
-
-    if (name) { updates.push("name = ?"); values.push(name); }
-    if (email) { updates.push("email = ?"); values.push(email); }
-    if (phone !== undefined) { updates.push("phone = ?"); values.push(phone); }
-    if (role) { updates.push("role = ?"); values.push(role); }
-    if (department) { updates.push("department = ?"); values.push(department); }
-    if (shift !== undefined) { updates.push("shift = ?"); values.push(shift); }
-    if (status) { updates.push("status = ?"); values.push(status); }
-    if (branchId && isSuperAdmin(userRole)) { updates.push("branch_id = ?"); values.push(branchId); }
-
-    if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      updates.push("password = ?");
-      values.push(hashedPassword);
+    if (updateData.password) {
+      updateData.password = await hash(updateData.password, 12);
     }
 
-    if (updates.length === 0) {
-      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
-    }
-
-    updates.push("updated_at = NOW()");
-    values.push(id);
-
-    await prisma.$executeRaw`
-      UPDATE staff 
-      SET name = ${name}, email = ${email}, phone = ${phone}, role = ${role}, 
-          department = ${department}, shift = ${shift}, status = ${status}, updated_at = NOW()
-      WHERE id = ${id}
-    `;
+    const updated = await prisma.staff.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        department: true,
+        status: true,
+        branchId: true,
+        updatedAt: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Staff member updated successfully"
+      data: { staff: updated },
     });
   } catch (error) {
-    console.error("Error updating staff:", error);
-    return NextResponse.json({ error: "Failed to update staff member" }, { status: 500 });
+    console.error("Staff PATCH error:", error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Failed to update staff" },
+      { status: 500 }
+    );
   }
 }
 
-// DELETE - Delete a staff member
+/**
+ * DELETE /api/manager/staff
+ * Delete a staff member
+ */
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const token = req.headers.get("authorization")?.replace("Bearer ", "");
+    if (!token) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    
+    const session = verifyToken(token, "access");
+    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userRole = session.user.role as string;
-    const userBranchId = session.user.branchId as string;
-
-    // Only super admin can delete staff
-    if (!isSuperAdmin(userRole)) {
-      return NextResponse.json({ error: "Forbidden - Only super admins can delete staff" }, { status: 403 });
+    if (!["SUPER_ADMIN", "SUPER_MANAGER", "BRANCH_MANAGER", "MANAGER"].includes(session.role)) {
+      return NextResponse.json({ success: false, error: "Insufficient permissions" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    const branchId = searchParams.get("branchId");
-    const deleteAll = searchParams.get("deleteAll");
-
-    // Delete all staff from a branch
-    if (deleteAll === "true" && branchId) {
-      // Check if there are staff in this branch
-      const existingStaff = await prisma.$queryRaw`
-        SELECT COUNT(*) as count FROM staff WHERE branch_id = ${branchId}
-      ` as any[];
-
-      const count = Number(existingStaff[0]?.count || 0);
-
-      if (count === 0) {
-        return NextResponse.json({ error: "No staff members found in this branch" }, { status: 404 });
-      }
-
-      // Delete all staff from branch (except super admin)
-      await prisma.$executeRaw`
-        DELETE FROM staff WHERE branch_id = ${branchId} AND role != 'SUPER_ADMIN'
-      `;
-
-      return NextResponse.json({
-        success: true,
-        message: `Successfully deleted ${count} staff members from branch`
-      });
-    }
 
     if (!id) {
-      return NextResponse.json({ error: "Staff ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Staff ID is required" },
+        { status: 400 }
+      );
     }
 
-    // Check if staff exists
-    const existingStaff = await prisma.$queryRaw`
-      SELECT id FROM staff WHERE id = ${id} LIMIT 1
-    ` as any[];
+    const staff = await prisma.staff.findUnique({
+      where: { id },
+      select: { branchId: true },
+    });
 
-    if (existingStaff.length === 0) {
-      return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+    if (!staff) {
+      return NextResponse.json(
+        { success: false, error: "Staff not found" },
+        { status: 404 }
+      );
     }
 
-    // Delete staff
-    await prisma.$executeRaw`
-      DELETE FROM staff WHERE id = ${id}
-    `;
+    if (session.role === "BRANCH_MANAGER" && staff.branchId !== session.branchId) {
+      return NextResponse.json(
+        { success: false, error: "Cannot delete staff from other branches" },
+        { status: 403 }
+      );
+    }
+
+    await prisma.staff.delete({ where: { id } });
 
     return NextResponse.json({
       success: true,
-      message: "Staff member deleted successfully"
+      data: { message: "Staff member deleted" },
     });
   } catch (error) {
-    console.error("Error deleting staff:", error);
-    return NextResponse.json({ error: "Failed to delete staff member" }, { status: 500 });
+    console.error("Staff DELETE error:", error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Failed to delete staff" },
+      { status: 500 }
+    );
   }
 }
