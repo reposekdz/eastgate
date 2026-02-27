@@ -133,6 +133,11 @@ export const useAuthStore = create<AuthState>()(
         });
         // Clear cookie
         document.cookie = "eastgate-auth=; path=/; max-age=0";
+        // Clear localStorage
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("eastgate-auth");
+          localStorage.removeItem("eastgate-token");
+        }
       },
 
       updateUser: (data) => {

@@ -67,11 +67,68 @@ model Branch {
   suppliers     Supplier[]
   stockItems    StockItem[]
   purchaseOrders PurchaseOrder[]
+  managerAssignments ManagerAssignment[]
 
   @@index([slug])
   @@index([isActive])
   @@index([city])
   @@map("branches")
+}
+
+// ============================================
+// MANAGER ASSIGNMENT & ROLE HIERARCHY
+// ============================================
+
+model ManagerAssignment {
+  id             String    @id @default(cuid())
+  managerId      String    @db.VarChar(50)
+  branchId       String    @db.VarChar(50)
+  assignedBy     String?   @db.VarChar(50)
+  assignedAt     DateTime  @default(now())
+  canManageMenu  Boolean   @default(true)
+  canManageStaff Boolean   @default(true)
+  canManageRevenue Boolean @default(true)
+  permissions    Json?
+  isActive       Boolean   @default(true)
+  notes          String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  manager Manager  @relation(fields: [managerId], references: [id], onDelete: Cascade)
+  branch  Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([managerId, branchId])
+  @@index([managerId])
+  @@index([branchId])
+  @@index([isActive])
+  @@map("manager_assignments")
+}
+
+model Manager {
+  id                 String    @id @default(cuid())
+  name               String    @db.VarChar(100)
+  email              String    @unique @db.VarChar(100)
+  phone              String?   @db.VarChar(20)
+  avatar             String?   @db.Text
+  level              String    @default("manager") @db.VarChar(50) // manager, senior_manager, super_manager
+  password           String?   @db.VarChar(255)
+  isActive           Boolean   @default(true)
+  totalBranches      Int       @default(0)
+  lastLogin          DateTime?
+  loginCount         Int       @default(0)
+  twoFactorEnabled   Boolean   @default(false)
+  mustChangePassword Boolean   @default(false)
+  preferences        Json?
+  metadata           Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  assignments ManagerAssignment[]
+
+  @@index([email])
+  @@index([level])
+  @@index([isActive])
+  @@map("managers")
 }
 
 // ============================================
@@ -84,10 +141,10 @@ model Staff {
   email              String    @unique @db.VarChar(100)
   password           String?   @db.VarChar(255)
   phone              String?   @db.VarChar(20)
-  role               String    @db.VarChar(50)
-  department         String    @db.VarChar(50)
-  shift              String?   @db.VarChar(20)
-  status             String    @default("active") @db.VarChar(20)
+  role               String    @db.VarChar(50) // waiter, stock_manager, receptionist, kitchen_staff, manager
+  department         String    @db.VarChar(50) // restaurant, reception, kitchen, housekeeping, stock
+  shift              String?   @db.VarChar(20) // morning, afternoon, night
+  status             String    @default("active") @db.VarChar(20) // active, inactive, on_leave
   avatar             String?   @db.Text
   branchId           String    @db.VarChar(50)
   salary             Float?    @db.Float
@@ -96,6 +153,11 @@ model Staff {
   loginCount         Int       @default(0)
   mustChangePassword Boolean   @default(false)
   twoFactorEnabled   Boolean   @default(false)
+  reportsTo          String?   @db.VarChar(50) // manager/supervisor ID
+  idNumber           String?   @db.VarChar(50)
+  createdBy          String?   @db.VarChar(50)
+  activityStatus     String    @default("online") @db.VarChar(20) // online, offline, busy
+  lastActivityAt     DateTime?
   permissions        Json?
   preferences        Json?
   metadata           Json?
@@ -110,6 +172,7 @@ model Staff {
   @@index([email])
   @@index([branchId])
   @@index([role])
+  @@index([department])
   @@index([status])
   @@map("staff")
 }
@@ -283,15 +346,24 @@ model Payment {
   id            String   @id @default(cuid())
   bookingId     String?  @map("booking_id")
   orderId       String?  @map("order_id")
+  eventId       String?  @map("event_id")
   amount        Float
   currency      String   @default("RWF")
-  status        String   @default("pending") // pending, completed, failed, refunded
-  paymentMethod String?  @map("payment_method") // card, mobile_money, cash, bank_transfer
+  status        String   @default("pending") // pending, processing, completed, failed, refunded
+  paymentMethod String?  @map("payment_method") // card, mobile_money, cash, bank_transfer, wallet
+  paymentType   String   @default("booking") // booking, order, event, service
   transactionId String?  @map("transaction_id")
-  gateway       String? // stripe, flutterwave, paypal
+  gateway       String? // stripe, flutterwave, paypal, mtn_momo, airtel_money
   gatewayRef    String?  @map("gateway_ref")
+  guestName     String?  @db.VarChar(100)
+  guestEmail    String?  @db.VarChar(100)
+  guestPhone    String?  @db.VarChar(20)
+  processedBy   String?  @db.VarChar(50) // staff ID who processed
+  paidAt        DateTime?
   notes         String?  @db.Text
-  branchId      String
+  receiptUrl    String?  @db.Text
+  metadata      Json?
+  branchId      String   @db.VarChar(50)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -299,6 +371,14 @@ model Payment {
   booking Booking? @relation(fields: [bookingId], references: [id])
   branch  Branch   @relation(fields: [branchId], references: [id])
 
+  @@index([bookingId])
+  @@index([orderId])
+  @@index([eventId])
+  @@index([status])
+  @@index([paymentMethod])
+  @@index([paymentType])
+  @@index([branchId])
+  @@index([createdAt])
   @@map("payments")
 }
 
@@ -372,13 +452,20 @@ model Order {
   orderNumber String?  @unique @map("order_number") // e.g., "ORD-001"
   tableNumber Int?     @map("table_number")
   guestName   String?  @map("guest_name")
+  guestEmail  String?  @db.VarChar(100)
+  guestPhone  String?  @db.VarChar(20)
   items       Json
   status      String   @default("pending") // pending, preparing, ready, served, cancelled
   total       Float
+  subtotal    Float    @default(0)
+  taxAmount   Float    @default(0)
+  discountAmount Float @default(0)
   roomCharge  Boolean  @default(false) @map("room_charge")
+  paymentStatus String @default("unpaid") // unpaid, paid, partial_paid, refunded
+  paidAmount  Float    @default(0)
   notes       String?  @db.Text
   performedBy String?  @map("performed_by")
-  branchId    String
+  branchId    String   @db.VarChar(50)
   roomId      String?  @map("room_id")
   guestId     String?  @map("guest_id")
   createdAt   DateTime @default(now())
@@ -390,6 +477,11 @@ model Order {
   guest  Guest? @relation(fields: [guestId], references: [id])
   staff  Staff? @relation("OrderCreator", fields: [performedBy], references: [id])
 
+  @@index([orderNumber])
+  @@index([branchId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([guestId])
   @@map("orders")
 }
 
@@ -424,7 +516,7 @@ model MenuItem {
   descriptionFr String?  @db.Text
   descriptionSw String?  @db.Text
   imageUrl      String?  @db.Text
-  images        Json?
+  images        Json? // array of {url, uploadedAt, uploadedBy}
   available     Boolean  @default(true)
   popular       Boolean  @default(false)
   featured      Boolean  @default(false)
@@ -447,6 +539,9 @@ model MenuItem {
   totalOrders   Int      @default(0)
   tags          Json?
   branchId      String   @db.VarChar(50)
+  createdBy     String?  @db.VarChar(50) // staff ID of who created it
+  lastModifiedBy String? @db.VarChar(50) // staff ID of who modified it
+  isApproved    Boolean  @default(false) // managers add items pending approval
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -456,6 +551,7 @@ model MenuItem {
   @@index([category])
   @@index([available])
   @@index([popular])
+  @@index([isApproved])
   @@map("menu_items")
 }
 
@@ -465,28 +561,36 @@ model MenuItem {
 
 model Event {
   id               String   @id @default(cuid())
-  name             String
-  type             String // wedding, conference, meeting, party
+  name             String   @db.VarChar(200)
+  type             String   @db.VarChar(50) // wedding, conference, meeting, party
   date             DateTime
   startTime        String   @map("start_time")
   endTime          String   @map("end_time")
-  hall             String // venue name
+  hall             String   @db.VarChar(100) // venue name
   capacity         Int
   attendees        Int      @default(0)
-  status           String   @default("upcoming") // upcoming, ongoing, completed, cancelled
+  status           String   @default("upcoming") @db.VarChar(20) // upcoming, ongoing, completed, cancelled
   totalAmount      Float    @default(0) @map("total_amount")
   paidAmount       Float    @default(0) @map("paid_amount")
-  organizer        String
-  organizerContact String?  @map("organizer_contact")
-  organizerEmail   String?  @map("organizer_email")
+  remainingAmount  Float    @default(0) @map("remaining_amount")
+  paymentStatus    String   @default("pending") @db.VarChar(20) // pending, partial_paid, paid
+  organizer        String   @db.VarChar(100)
+  organizerContact String?  @map("organizer_contact") @db.VarChar(20)
+  organizerEmail   String?  @map("organizer_email") @db.VarChar(100)
   description      String?  @db.Text
-  branchId         String
+  notes            String?  @db.Text
+  branchId         String   @db.VarChar(50)
+  createdBy        String?  @db.VarChar(50)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   // Relations
-  branch Branch @relation(fields: [branchId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
+  @@index([branchId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([date])
   @@map("events")
 }
 

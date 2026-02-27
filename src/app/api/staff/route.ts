@@ -355,11 +355,12 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// DELETE - Deactivate staff member with validation
+// DELETE - Permanently delete staff member from database
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const permanent = searchParams.get("permanent") === "true";
 
     if (!id) {
       return errorResponse(
@@ -428,28 +429,36 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Soft delete by setting status to inactive
-    await prisma.staff.update({
-      where: { id },
-      data: { status: "inactive" },
-    });
-
-    // Log activity
+    // Log activity before deletion
     await prisma.activityLog.create({
       data: {
         userId: id,
         branchId: existingStaff.branchId,
-        action: "delete",
+        action: permanent ? "permanent_delete" : "delete",
         entity: "staff",
         entityId: id,
         details: {
           name: existingStaff.name,
           email: existingStaff.email,
+          role: existingStaff.role,
         },
       },
     });
 
-    return successResponse({ message: "Staff member deactivated successfully" });
+    if (permanent) {
+      // Permanent delete - remove from database
+      await prisma.staff.delete({
+        where: { id },
+      });
+      return successResponse({ message: "Staff member permanently deleted" });
+    } else {
+      // Soft delete - set status to inactive
+      await prisma.staff.update({
+        where: { id },
+        data: { status: "inactive" },
+      });
+      return successResponse({ message: "Staff member deactivated" });
+    }
   } catch (error: any) {
     console.error("Error deleting staff:", error);
     return errorResponse("Failed to delete staff member", [], 500);

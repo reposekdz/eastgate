@@ -1,30 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
-import { isSuperAdmin, isSuperAdminOrManager, isBranchManager } from "@/lib/auth";
+import { verifyToken } from "@/lib/auth-advanced";
 
-// GET - Fetch comprehensive dashboard data from database
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userRole = session.user.role as string;
-    const userBranchId = session.user.branchId as string;
+    const token = authHeader.slice(7);
+    const session = verifyToken(token, "access");
 
-    // Determine branch filter
-    const branchWhere = !isSuperAdmin(userRole) && userBranchId 
-      ? { branchId: userBranchId } 
-      : undefined;
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = session.role;
+    const userBranchId = session.branchId;
 
     const { searchParams } = new URL(req.url);
     const branchIdParam = searchParams.get("branchId");
-    const branchWhereFilter = branchIdParam && isSuperAdmin(userRole) 
-      ? { branchId: branchIdParam } 
-      : branchWhere;
+    
+    const isSuperUser = ["SUPER_ADMIN", "SUPER_MANAGER"].includes(userRole);
+    const branchWhereFilter = branchIdParam && isSuperUser ? { branchId: branchIdParam } : userBranchId ? { branchId: userBranchId } : {};
 
     // Get room statistics
     const totalRooms = await prisma.room.count({
@@ -171,20 +170,25 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Fetch branches list for super admin
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
-
-    if (!session?.user) {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userRole = session.user.role as string;
+    const token = authHeader.slice(7);
+    const session = verifyToken(token, "access");
 
-    // Only super admin and super manager can access this
-    if (!isSuperAdminOrManager(userRole)) {
-      return NextResponse.json({ error: "Forbidden - Insufficient permissions" }, { status: 403 });
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = session.role;
+    const isSuperUser = ["SUPER_ADMIN", "SUPER_MANAGER"].includes(userRole);
+
+    if (!isSuperUser) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Get all branches

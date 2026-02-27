@@ -5,33 +5,37 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedPrefixes = ["/admin", "/manager", "/receptionist", "/waiter", "/kitchen", "/dashboard", "/profile"];
+const protectedPrefixes = ["/admin", "/manager", "/receptionist", "/waiter", "/kitchen", "/housekeeping", "/stock-manager", "/dashboard", "/profile"];
 const publicPrefixes = ["/login", "/register", "/public", "/api/public", "/api/auth"];
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  SUPER_ADMIN: ["*"],
-  SUPER_MANAGER: ["*"],
-  BRANCH_MANAGER: ["/manager", "/dashboard", "/profile"],
-  RECEPTIONIST: ["/receptionist", "/dashboard", "/profile"],
-  WAITER: ["/waiter", "/dashboard", "/profile"],
-  RESTAURANT_STAFF: ["/waiter", "/dashboard", "/profile"],
-  CHEF: ["/kitchen", "/dashboard", "/profile"],
-  KITCHEN_STAFF: ["/kitchen", "/dashboard", "/profile"],
-  ACCOUNTANT: ["/admin", "/dashboard", "/profile"],
-  EVENT_MANAGER: ["/admin", "/dashboard", "/profile"],
+  super_admin: ["*"],
+  super_manager: ["*"],
+  branch_manager: ["/manager", "/dashboard", "/profile"],
+  receptionist: ["/receptionist", "/dashboard", "/profile"],
+  waiter: ["/waiter", "/dashboard", "/profile"],
+  restaurant_staff: ["/waiter", "/dashboard", "/profile"],
+  chef: ["/kitchen", "/dashboard", "/profile"],
+  kitchen_staff: ["/kitchen", "/dashboard", "/profile"],
+  housekeeping: ["/housekeeping", "/dashboard", "/profile"],
+  stock_manager: ["/stock-manager", "/dashboard", "/profile"],
+  accountant: ["/admin", "/dashboard", "/profile"],
+  event_manager: ["/admin", "/dashboard", "/profile"],
 };
 
 const ROLE_DASHBOARD_MAP: Record<string, string> = {
-  SUPER_ADMIN: "/admin",
-  SUPER_MANAGER: "/admin",
-  ACCOUNTANT: "/admin",
-  EVENT_MANAGER: "/admin",
-  BRANCH_MANAGER: "/manager",
-  RECEPTIONIST: "/receptionist",
-  WAITER: "/waiter",
-  RESTAURANT_STAFF: "/waiter",
-  CHEF: "/kitchen",
-  KITCHEN_STAFF: "/kitchen",
+  super_admin: "/admin",
+  super_manager: "/admin",
+  accountant: "/admin",
+  event_manager: "/admin",
+  branch_manager: "/manager",
+  receptionist: "/receptionist",
+  waiter: "/waiter",
+  restaurant_staff: "/waiter",
+  chef: "/kitchen",
+  kitchen_staff: "/kitchen",
+  housekeeping: "/housekeeping",
+  stock_manager: "/stock-manager",
 };
 
 function hasAccess(role: string, path: string): boolean {
@@ -67,7 +71,7 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/login", nextUrl));
     }
 
-    const role = decoded.user.role.toUpperCase();
+    const role = decoded.user.role.toLowerCase();
     
     if (!hasAccess(role, nextUrl.pathname)) {
       const correctDashboard = ROLE_DASHBOARD_MAP[role];

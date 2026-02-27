@@ -7,29 +7,33 @@ import { generateTokens, setAuthCookies, checkRateLimit, verifyPassword } from "
 import prisma from "@/lib/prisma";
 
 const ROLE_DASHBOARD_MAP: Record<string, string> = {
-  SUPER_ADMIN: "/admin",
-  SUPER_MANAGER: "/admin",
-  ACCOUNTANT: "/admin",
-  EVENT_MANAGER: "/admin",
-  BRANCH_MANAGER: "/manager",
-  RECEPTIONIST: "/receptionist",
-  WAITER: "/waiter",
-  RESTAURANT_STAFF: "/waiter",
-  CHEF: "/kitchen",
-  KITCHEN_STAFF: "/kitchen",
+  super_admin: "/admin",
+  super_manager: "/admin",
+  accountant: "/admin",
+  event_manager: "/admin",
+  branch_manager: "/manager",
+  receptionist: "/receptionist",
+  waiter: "/waiter",
+  restaurant_staff: "/waiter",
+  chef: "/kitchen",
+  kitchen_staff: "/kitchen",
+  housekeeping: "/housekeeping",
+  stock_manager: "/stock-manager",
 };
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  SUPER_ADMIN: ["*"],
-  SUPER_MANAGER: ["*"],
-  BRANCH_MANAGER: ["/manager", "/dashboard", "/profile", "/api/bookings", "/api/guests", "/api/staff"],
-  RECEPTIONIST: ["/receptionist", "/dashboard", "/profile", "/api/bookings", "/api/guests", "/api/rooms"],
-  WAITER: ["/waiter", "/dashboard", "/profile", "/api/orders", "/api/menu", "/api/tables"],
-  RESTAURANT_STAFF: ["/waiter", "/dashboard", "/profile", "/api/orders", "/api/menu"],
-  ACCOUNTANT: ["/admin", "/dashboard", "/profile", "/api/finance", "/api/reports"],
-  EVENT_MANAGER: ["/admin", "/dashboard", "/profile", "/api/events", "/api/bookings"],
-  CHEF: ["/kitchen", "/dashboard", "/profile", "/api/orders", "/api/menu"],
-  KITCHEN_STAFF: ["/kitchen", "/dashboard", "/profile", "/api/orders"],
+  super_admin: ["*"],
+  super_manager: ["*"],
+  branch_manager: ["/manager", "/dashboard", "/profile", "/api/bookings", "/api/guests", "/api/staff"],
+  receptionist: ["/receptionist", "/dashboard", "/profile", "/api/bookings", "/api/guests", "/api/rooms"],
+  waiter: ["/waiter", "/dashboard", "/profile", "/api/orders", "/api/menu", "/api/tables"],
+  restaurant_staff: ["/waiter", "/dashboard", "/profile", "/api/orders", "/api/menu"],
+  accountant: ["/admin", "/dashboard", "/profile", "/api/finance", "/api/reports"],
+  event_manager: ["/admin", "/dashboard", "/profile", "/api/events", "/api/bookings"],
+  chef: ["/kitchen", "/dashboard", "/profile", "/api/orders", "/api/menu"],
+  kitchen_staff: ["/kitchen", "/dashboard", "/profile", "/api/orders"],
+  housekeeping: ["/housekeeping", "/dashboard", "/profile", "/api/tasks"],
+  stock_manager: ["/stock-manager", "/dashboard", "/profile", "/api/inventory"],
 };
 
 export async function POST(req: NextRequest) {
@@ -62,8 +66,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
     }
 
-    const userRole = user.role.toUpperCase();
-    const isSuperUser = ["SUPER_ADMIN", "SUPER_MANAGER"].includes(userRole);
+    const userRole = user.role.toLowerCase();
+    const isSuperUser = ["super_admin", "super_manager"].includes(userRole);
     
     if (!isSuperUser && branchId && user.branchId !== branchId) {
       return NextResponse.json(

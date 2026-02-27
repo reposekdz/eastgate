@@ -153,7 +153,14 @@ export default function AdminSidebar() {
             <span className="text-sm font-medium text-charcoal truncate">Jean-Pierre H.</span>
             <span className="text-[11px] text-text-muted-custom">Branch Manager</span>
           </div>
-          <button className="ml-auto text-text-muted-custom hover:text-destructive transition-colors group-data-[collapsible=icon]:hidden">
+          <button 
+            onClick={() => {
+              const { logout } = require("@/lib/store/auth-store").useAuthStore.getState();
+              logout();
+              window.location.href = "/login";
+            }}
+            className="ml-auto text-text-muted-custom hover:text-destructive transition-colors group-data-[collapsible=icon]:hidden"
+          >
             <LogOut className="h-4 w-4" />
           </button>
         </div>

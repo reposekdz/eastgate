@@ -1,96 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth-advanced/jwt";
 
 export async function GET(req: NextRequest) {
   try {
+    const token = req.headers.get("authorization")?.replace("Bearer ", "");
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const decoded = verifyToken(token);
+    if (!decoded) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+
     const { searchParams } = new URL(req.url);
+    const startDate = searchParams.get("startDate") || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const endDate = searchParams.get("endDate") || new Date().toISOString();
     const branchId = searchParams.get("branchId");
-    const type = searchParams.get("type") || "daily";
-    const date = searchParams.get("date") || new Date().toISOString().split("T")[0];
 
-    const targetDate = new Date(date);
-    const startDate = new Date(targetDate);
-    const endDate = new Date(targetDate);
+    const where: any = {
+      createdAt: { gte: new Date(startDate), lte: new Date(endDate) },
+    };
+    if (branchId) where.room = { branchId };
 
-    if (type === "weekly") {
-      startDate.setDate(targetDate.getDate() - 7);
-    } else if (type === "monthly") {
-      startDate.setMonth(targetDate.getMonth() - 1);
-    } else if (type === "yearly") {
-      startDate.setFullYear(targetDate.getFullYear() - 1);
-    }
-
-    const where = branchId && branchId !== "all" ? { branchId } : {};
-    const dateFilter = { gte: startDate, lte: endDate };
-
-    const [bookings, payments, orders, services, expenses, rooms] = await Promise.all([
+    const [bookings, orders, payments] = await Promise.all([
       prisma.booking.findMany({
-        where: { ...where, createdAt: dateFilter },
-        include: { guest: true, room: true },
-      }),
-      prisma.payment.findMany({
-        where: { ...where, createdAt: dateFilter, status: "completed" },
+        where: { ...where, status: "checked_out" },
+        select: { paidAmount: true, checkIn: true, checkedOutAt: true, room: { select: { branchId: true, branch: { select: { name: true } } } } },
       }),
       prisma.order.findMany({
-        where: { ...where, createdAt: dateFilter },
-        include: { items: true },
+        where: { createdAt: where.createdAt, status: "served" },
+        select: { total: true, createdAt: true },
       }),
-      prisma.service.findMany({
-        where: { ...where, createdAt: dateFilter },
+      prisma.payment.findMany({
+        where: { createdAt: where.createdAt, status: "completed" },
+        select: { amount: true, paymentMethod: true, createdAt: true },
       }),
-      prisma.expense.findMany({
-        where: { ...where, date: dateFilter },
-      }),
-      prisma.room.findMany({ where }),
     ]);
 
-    const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const netProfit = totalRevenue - totalExpenses;
-    const occupancyRate = rooms.length > 0 ? (rooms.filter(r => r.status === "occupied").length / rooms.length) * 100 : 0;
+    const totalRevenue = bookings.reduce((sum, b) => sum + (b.paidAmount || 0), 0) + orders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const bookingRevenue = bookings.reduce((sum, b) => sum + (b.paidAmount || 0), 0);
+    const orderRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
 
-    const report = {
-      type,
-      period: { start: startDate, end: endDate },
-      summary: {
+    const paymentsByMethod = payments.reduce((acc, p) => {
+      acc[p.paymentMethod || 'unknown'] = (acc[p.paymentMethod || 'unknown'] || 0) + p.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const dailyRevenue = [...bookings.filter(b => b.checkedOutAt).map(b => ({ date: b.checkedOutAt!, amount: b.paidAmount })), ...orders.map(o => ({ date: o.createdAt, amount: o.total }))]
+      .reduce((acc, item) => {
+        const date = new Date(item.date).toISOString().split('T')[0];
+        acc[date] = (acc[date] || 0) + (item.amount || 0);
+        return acc;
+      }, {} as Record<string, number>);
+
+    return NextResponse.json({
+      success: true,
+      report: {
+        period: { startDate, endDate },
         totalRevenue,
-        totalExpenses,
-        netProfit,
-        profitMargin: totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(2) : 0,
-        occupancyRate: occupancyRate.toFixed(2),
+        bookingRevenue,
+        orderRevenue,
         totalBookings: bookings.length,
         totalOrders: orders.length,
-        totalServices: services.length,
+        paymentsByMethod,
+        dailyRevenue: Object.entries(dailyRevenue).map(([date, amount]) => ({ date, amount })),
       },
-      bookings: {
-        total: bookings.length,
-        confirmed: bookings.filter(b => b.status === "confirmed").length,
-        checkedIn: bookings.filter(b => b.status === "checked_in").length,
-        checkedOut: bookings.filter(b => b.status === "checked_out").length,
-        cancelled: bookings.filter(b => b.status === "cancelled").length,
-      },
-      revenue: {
-        rooms: payments.filter(p => p.method === "room_charge").reduce((sum, p) => sum + p.amount, 0),
-        restaurant: orders.reduce((sum, o) => sum + o.totalAmount, 0),
-        services: services.reduce((sum, s) => sum + s.cost, 0),
-      },
-      topGuests: bookings
-        .reduce((acc, b) => {
-          const existing = acc.find(g => g.guestId === b.guestId);
-          if (existing) {
-            existing.bookings++;
-            existing.spent += b.totalAmount;
-          } else {
-            acc.push({ guestId: b.guestId, name: b.guest.name, bookings: 1, spent: b.totalAmount });
-          }
-          return acc;
-        }, [] as any[])
-        .sort((a, b) => b.spent - a.spent)
-        .slice(0, 10),
-    };
-
-    return NextResponse.json({ success: true, data: report });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    });
+  } catch (error) {
+    console.error("Financial report error:", error);
+    return NextResponse.json({ error: "Failed to generate report" }, { status: 500 });
   }
 }

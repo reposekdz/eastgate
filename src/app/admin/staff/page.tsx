@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import StaffProfileSheet from "@/components/admin/staff/StaffProfileSheet";
+import { getUserDisplayInfo } from "@/lib/user-utils";
 
 const statusStyles: Record<string, string> = {
   active: "bg-status-available/10 text-status-available border-status-available/20",
@@ -92,17 +93,38 @@ export default function StaffPage() {
   }, []);
 
   const fetchStaff = async () => {
+    setLoading(true);
     try {
       const params = new URLSearchParams();
       if (!isSuperUser && user?.branchId) {
         params.append("branchId", user.branchId);
       }
-      const res = await fetch(`/api/staff?${params}`);
+      params.append("_t", Date.now().toString());
+      
+      console.log("Fetching staff with params:", params.toString());
+      console.log("User info:", { role: user?.role, branchId: user?.branchId, isSuperUser });
+      
+      const res = await fetch(`/api/staff?${params}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      });
+      
+      console.log("Response status:", res.status);
       const data = await res.json();
-      if (data.success) {
-        setStaff(data.staff || []);
+      console.log("Full API Response:", JSON.stringify(data, null, 2));
+      
+      if (data.success && (data.staff || data.data?.staff)) {
+        const staffArray = data.staff || data.data?.staff || [];
+        setStaff(staffArray);
+        console.log("✅ Staff loaded:", staffArray.length, "members");
+      } else {
+        console.error("❌ Staff API error:", data);
+        setStaff([]);
       }
     } catch (error) {
+      console.error("❌ Fetch staff exception:", error);
       toast.error("Failed to fetch staff");
     } finally {
       setLoading(false);
@@ -111,9 +133,11 @@ export default function StaffPage() {
 
   const fetchBranches = async () => {
     try {
-      const res = await fetch("/api/staff");
+      const res = await fetch("/api/branches");
       const data = await res.json();
       if (data.success && data.branches) {
+        setBranches(data.branches);
+      } else if (data.branches) {
         setBranches(data.branches);
       }
     } catch (error) {
@@ -129,21 +153,41 @@ export default function StaffPage() {
 
     setAddLoading(true);
     try {
+      console.log("Creating staff:", newStaff);
       const res = await fetch("/api/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newStaff),
       });
       const data = await res.json();
+      console.log("Create staff response:", data);
       if (data.success) {
-        toast.success("Staff member added successfully");
+        const createdStaff = {
+          id: data.staff?.id || Date.now().toString(),
+          name: data.staff?.name || newStaff.name,
+          email: data.staff?.email || newStaff.email,
+          phone: data.staff?.phone || newStaff.phone,
+          role: data.staff?.role || newStaff.role,
+          department: data.staff?.department || newStaff.department,
+          shift: data.staff?.shift || newStaff.shift,
+          branchId: data.staff?.branchId || newStaff.branchId,
+          status: data.staff?.status || "active",
+          avatar: data.staff?.avatar || null,
+        };
+        console.log("Created staff object:", createdStaff);
+        toast.success(`Staff member added: ${createdStaff.name}`);
+        
+        // Don't add to local state - just fetch from server
         setShowAddDialog(false);
         setNewStaff({ name: "", email: "", phone: "", password: "", role: "", department: "", shift: "Morning", branchId: "" });
+        
+        // Fetch from server immediately
         fetchStaff();
       } else {
         toast.error(data.error || "Failed to add staff");
       }
     } catch (error) {
+      console.error("Add staff error:", error);
       toast.error("Failed to add staff");
     } finally {
       setAddLoading(false);
@@ -151,28 +195,40 @@ export default function StaffPage() {
   };
 
   const handleDeleteStaff = async (staffId: string, staffName: string) => {
-    if (!confirm(`Delete ${staffName}? This action cannot be undone.`)) return;
+    if (!confirm(`Permanently delete ${staffName}? This will remove them from the database and cannot be undone.`)) return;
+    
     try {
-      const res = await fetch(`/api/staff/${staffId}`, { method: "DELETE" });
+      console.log("Permanently deleting staff:", staffId, staffName);
+      const res = await fetch(`/api/staff?id=${staffId}&permanent=true`, { method: "DELETE" });
       const data = await res.json();
+      console.log("Delete response:", data);
+      
       if (data.success) {
-        toast.success(`${staffName} deleted successfully`);
-        fetchStaff();
+        // Remove from local state immediately
+        setStaff(prevStaff => prevStaff.filter(s => s.id !== staffId));
+        toast.success(`${staffName} permanently deleted`);
+        
+        // Also fetch from server to ensure sync
+        setTimeout(() => {
+          fetchStaff();
+        }, 500);
       } else {
         toast.error(data.error || "Failed to delete staff");
       }
     } catch (error) {
+      console.error("Delete staff error:", error);
       toast.error("Failed to delete staff");
     }
   };
 
   const filtered = staff.filter((s) => {
+    if (!s) return false;
     if (deptFilter !== "all" && s.department !== deptFilter) return false;
-    if (search && !s.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !s.name?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const activeCount = staff.filter((s) => s.status === "active").length;
+  const activeCount = staff.filter((s) => s?.status === "active").length;
 
   if (loading) {
     return (
@@ -192,9 +248,21 @@ export default function StaffPage() {
             Manage team members, roles, and schedules
           </p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} className="bg-emerald hover:bg-emerald-dark text-white rounded-[6px] gap-2 text-sm">
-          <Plus className="h-4 w-4" /> Add Staff
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={fetchStaff}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            className="gap-2"
+          >
+            <Clock className="h-4 w-4" />
+            Refresh
+          </Button>
+          <Button onClick={() => setShowAddDialog(true)} className="bg-emerald hover:bg-emerald-dark text-white rounded-[6px] gap-2 text-sm">
+            <Plus className="h-4 w-4" /> Add Staff
+          </Button>
+        </div>
       </div>
 
       {/* Summary */}
@@ -275,18 +343,36 @@ export default function StaffPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((member) => (
-                <TableRow
-                  key={member.id}
-                  className="hover:bg-pearl/30 border-b-pearl/50 cursor-pointer"
-                  onClick={() => setSelectedStaff(member)}
-                >
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <div className="flex flex-col items-center gap-2">
+                      <Users className="h-12 w-12 text-gray-300" />
+                      <p className="text-sm text-text-muted-custom">No staff members found</p>
+                      <Button
+                        onClick={() => setShowAddDialog(true)}
+                        size="sm"
+                        className="mt-2 bg-emerald hover:bg-emerald-dark text-white"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add First Staff Member
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filtered.map((member) => (
+                  <TableRow
+                    key={member.id}
+                    className="hover:bg-pearl/30 border-b-pearl/50 cursor-pointer"
+                    onClick={() => setSelectedStaff(member)}
+                  >
                   <TableCell>
                     <div className="flex items-center gap-2.5">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={member.avatar} alt={member.name} />
                         <AvatarFallback className="text-[10px] bg-emerald/10 text-emerald">
-                          {member.name.split(" ").map((n: string) => n[0]).join("")}
+                          {getUserDisplayInfo(member.email, member.name).initials}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -307,7 +393,7 @@ export default function StaffPage() {
                       <Badge variant="outline" className={`text-[10px] font-semibold uppercase tracking-wider rounded-[4px] ${statusStyles[member.status]}`}>
                         {member.status === "on_leave" ? "On Leave" : member.status === "off_duty" ? "Off Duty" : "Active"}
                       </Badge>
-                      {(isSuperUser || user?.role === "BRANCH_MANAGER") && member.role !== "SUPER_ADMIN" && (
+                      {(isSuperUser || (user?.role as string) === "BRANCH_MANAGER") && member.role !== "SUPER_ADMIN" && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -323,7 +409,8 @@ export default function StaffPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -373,6 +460,8 @@ export default function StaffPage() {
                   <SelectItem value="WAITER">Waiter</SelectItem>
                   <SelectItem value="CHEF">Chef</SelectItem>
                   <SelectItem value="KITCHEN_STAFF">Kitchen Staff</SelectItem>
+                  <SelectItem value="STOCK_MANAGER">Stock Manager</SelectItem>
+                  <SelectItem value="HOUSEKEEPING">Housekeeping</SelectItem>
                 </SelectContent>
               </Select>
             </div>

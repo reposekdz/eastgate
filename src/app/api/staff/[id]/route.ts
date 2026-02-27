@@ -23,7 +23,7 @@ export async function GET(
         status: true,
         avatar: true,
         branchId: true,
-        joinDate: true,
+        hireDate: true,
         lastLogin: true,
         createdAt: true,
         updatedAt: true,
@@ -109,12 +109,15 @@ export async function PUT(
   }
 }
 
-// DELETE - Deactivate staff member
+// DELETE - Permanently delete staff member from database
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const { searchParams } = new URL(req.url);
+    const permanent = searchParams.get("permanent") === "true";
+
     const existingStaff = await prisma.staff.findUnique({
       where: { id: params.id },
     });
@@ -133,15 +136,41 @@ export async function DELETE(
       );
     }
 
-    await prisma.staff.update({
-      where: { id: params.id },
-      data: { status: "inactive" },
+    // Log before deletion
+    await prisma.activityLog.create({
+      data: {
+        userId: params.id,
+        branchId: existingStaff.branchId,
+        action: permanent ? "permanent_delete" : "deactivate",
+        entity: "staff",
+        entityId: params.id,
+        details: {
+          name: existingStaff.name,
+          email: existingStaff.email,
+        },
+      },
     });
 
-    return NextResponse.json({
-      success: true,
-      message: "Staff member deactivated successfully",
-    });
+    if (permanent) {
+      // Permanent delete
+      await prisma.staff.delete({
+        where: { id: params.id },
+      });
+      return NextResponse.json({
+        success: true,
+        message: "Staff member permanently deleted",
+      });
+    } else {
+      // Soft delete
+      await prisma.staff.update({
+        where: { id: params.id },
+        data: { status: "inactive" },
+      });
+      return NextResponse.json({
+        success: true,
+        message: "Staff member deactivated",
+      });
+    }
   } catch (error) {
     console.error("Error deleting staff:", error);
     return NextResponse.json(

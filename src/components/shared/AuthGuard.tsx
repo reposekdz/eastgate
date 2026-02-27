@@ -58,7 +58,12 @@ export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     );
   }
 
-  const hasAccess = user && (allowedRoles.includes(user.role) || user.role === "super_admin" || user.role === "super_manager");
+  const hasAccess = user && (
+    allowedRoles.includes(user.role) || 
+    user.role === "super_admin" || 
+    user.role === "super_manager" ||
+    allowedRoles.some(role => role.toLowerCase() === user.role.toLowerCase())
+  );
   
   if (user && !hasAccess) {
     return (
