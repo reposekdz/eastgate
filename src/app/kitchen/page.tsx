@@ -5,20 +5,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { ChefHat, Clock, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { useRealTimeNotifications } from "@/hooks/useRealTimeNotifications";
+import { ChefHat, Clock, CheckCircle, AlertCircle, RefreshCw, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/format";
 
 export default function KitchenDashboard() {
   const { user } = useAuthStore();
   const branchId = user?.branchId || "";
+  const token = typeof window !== "undefined" ? localStorage.getItem("eastgate-token") : "";
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const { unreadCount } = useRealTimeNotifications(5000);
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch(`/api/kitchen/orders?branchId=${branchId}`);
+      const res = await fetch(`/api/kitchen/orders?branchId=${branchId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       if (data.success) {
         setOrders(data.orders || []);
@@ -32,21 +37,24 @@ export default function KitchenDashboard() {
 
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 30000);
+    const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
   }, [branchId]);
 
   const updateOrderStatus = async (orderId: string, status: string) => {
     setUpdating(orderId);
     try {
-      const res = await fetch("/api/kitchen/orders", {
+      const res = await fetch("/api/orders/status", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ orderId, status }),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Order ${status === "preparing" ? "started" : status === "ready" ? "ready" : "completed"}`);
+        toast.success(`Order ${status === "preparing" ? "started" : status === "ready" ? "ready for serving" : "completed"}!`);
         fetchOrders();
       } else {
         toast.error(data.error || "Failed to update order");
@@ -84,10 +92,20 @@ export default function KitchenDashboard() {
               <p className="text-sm text-text-muted-custom">Manage orders and preparation</p>
             </div>
           </div>
-          <Button onClick={fetchOrders} variant="outline" className="gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <div className="relative">
+                <Bell className="h-5 w-5 text-emerald" />
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              </div>
+            )}
+            <Button onClick={fetchOrders} variant="outline" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

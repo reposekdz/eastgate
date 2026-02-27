@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { getUserDisplayInfo } from "@/lib/user-utils";
+import { useRealTimeNotifications } from "@/hooks/useRealTimeNotifications";
 import {
   Card,
   CardContent,
@@ -24,6 +25,7 @@ import {
   XCircle,
   Calendar,
   MapPin,
+  Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -55,11 +57,13 @@ interface Stats {
 
 export default function HousekeepingDashboard() {
   const { user } = useAuthStore();
+  const token = typeof window !== "undefined" ? localStorage.getItem("eastgate-token") : "";
   const [tasks, setTasks] = useState<Task[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const userInfo = getUserDisplayInfo(user?.email || "", user?.name);
+  const { unreadCount } = useRealTimeNotifications(5000);
 
   const fetchTasks = async () => {
     if (!user?.branchId) return;
@@ -73,7 +77,7 @@ export default function HousekeepingDashboard() {
 
       const response = await fetch(`/api/housekeeping/dashboard?${params}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -92,7 +96,7 @@ export default function HousekeepingDashboard() {
 
   useEffect(() => {
     fetchTasks();
-    const interval = setInterval(fetchTasks, 30000); // Refresh every 30s
+    const interval = setInterval(fetchTasks, 10000);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -102,7 +106,7 @@ export default function HousekeepingDashboard() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           taskId,
@@ -194,6 +198,14 @@ export default function HousekeepingDashboard() {
           <Clock className="h-4 w-4" />
           Refresh
         </Button>
+        {unreadCount > 0 && (
+          <div className="relative">
+            <Bell className="h-5 w-5 text-emerald" />
+            <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+              {unreadCount}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Stats Cards */}
