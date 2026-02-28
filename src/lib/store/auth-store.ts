@@ -22,6 +22,7 @@ export interface User {
   avatar: string;
   phone?: string;
   nationality?: string;
+  department?: string;
 }
 
 /** Staff added by Super Admin / Super Manager; must change password & email on first login */
@@ -99,6 +100,7 @@ export const useAuthStore = create<AuthState>()(
               branchName: result.user.branchName,
               avatar: result.user.avatar,
               phone: result.user.phone,
+              department: result.user.department,
             };
 
             console.log("[AUTH STORE] Setting user data:", { name: userData.name, role: userData.role });

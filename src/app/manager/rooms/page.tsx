@@ -51,7 +51,9 @@ export default function RoomManagementPage() {
         const res = await fetch(`/api/rooms?branchId=${branchId}`);
         const data = await res.json();
         
-        if (data.rooms) {
+        if (data.success && data.data?.rooms) {
+          setRooms(data.data.rooms);
+        } else if (data.rooms) {
           setRooms(data.rooms);
         }
       } catch (error) {
@@ -118,7 +120,11 @@ export default function RoomManagementPage() {
         toast.success(editMode ? "Room updated!" : "Room added!");
         const updatedRes = await fetch(`/api/rooms?branchId=${branchId}`);
         const updatedData = await updatedRes.json();
-        if (updatedData.rooms) setRooms(updatedData.rooms);
+        if (updatedData.success && updatedData.data?.rooms) {
+          setRooms(updatedData.data.rooms);
+        } else if (updatedData.rooms) {
+          setRooms(updatedData.rooms);
+        }
         setDialogOpen(false);
         setEditMode(false);
         setSelectedRoom(null);

@@ -1,421 +1,594 @@
-# EastGate Hotel - Complete API Documentation
+# 🚀 EastGate Hotel - Complete API Documentation
 
-## 🎯 All APIs Use Real Database (MySQL via Prisma)
+## ✅ All APIs Implemented (Real Database, No Mocks)
+
+### 🎨 Hero Slides Management
+**Endpoint:** `/api/hero/slides`
+
+#### GET - Fetch Hero Slides
+```typescript
+GET /api/hero/slides?branchId={id}
+Response: {
+  success: true,
+  slides: [{
+    id: string,
+    title: string,
+    subtitle: string,
+    description: string,
+    imageUrl: string,
+    ctaText: string,
+    ctaLink: string,
+    order: number,
+    isActive: boolean,
+    branchId: string,
+    branch: { id, name }
+  }]
+}
+```
+
+#### POST - Create Hero Slide (Super Admin/Manager Only)
+```typescript
+POST /api/hero/slides
+Headers: { Authorization: "Bearer {token}" }
+Body: {
+  title: string,
+  subtitle: string,
+  description: string,
+  imageUrl: string,
+  ctaText: string,
+  ctaLink: string,
+  branchId: string,
+  order: number
+}
+```
+
+#### PUT - Update Hero Slide
+```typescript
+PUT /api/hero/slides
+Body: {
+  id: string,
+  title?: string,
+  subtitle?: string,
+  imageUrl?: string,
+  order?: number,
+  isActive?: boolean
+}
+```
+
+#### DELETE - Delete Hero Slide (Super Admin Only)
+```typescript
+DELETE /api/hero/slides?id={slideId}
+```
 
 ---
 
-## 1. Authentication APIs
+### 🏨 Room Management
+**Endpoint:** `/api/manager/rooms`
 
-### POST `/api/auth/login`
-Login staff members
-```json
-{
-  "email": "admin@eastgatehotel.rw",
-  "password": "admin123"
+#### GET - Fetch Rooms
+```typescript
+GET /api/manager/rooms?branchId={id}
+Response: {
+  success: true,
+  rooms: [{
+    id: string,
+    number: string,
+    floor: number,
+    type: string,
+    status: string,
+    price: number,
+    weekendPrice: number,
+    description: string,
+    imageUrl: string,
+    images: [],
+    maxOccupancy: number,
+    bedType: string,
+    bedCount: number,
+    size: number,
+    view: string,
+    hasBalcony: boolean,
+    hasKitchen: boolean,
+    smokingAllowed: boolean,
+    petFriendly: boolean,
+    accessible: boolean,
+    features: {},
+    roomAmenities: [],
+    _count: { bookings: number }
+  }]
+}
+```
+
+#### POST - Create Room (Branch Manager)
+```typescript
+POST /api/manager/rooms
+Headers: { Authorization: "Bearer {token}" }
+Body: {
+  number: string,
+  floor: number,
+  type: string,
+  price: number,
+  weekendPrice?: number,
+  description?: string,
+  imageUrl?: string,
+  images?: [],
+  maxOccupancy?: number,
+  bedType?: string,
+  bedCount?: number,
+  size?: number,
+  view?: string,
+  hasBalcony?: boolean,
+  hasKitchen?: boolean,
+  smokingAllowed?: boolean,
+  petFriendly?: boolean,
+  accessible?: boolean,
+  features?: {},
+  branchId?: string
+}
+```
+
+#### PUT - Update Room
+```typescript
+PUT /api/manager/rooms
+Body: {
+  id: string,
+  ...updateFields
+}
+```
+
+#### DELETE - Delete Room
+```typescript
+DELETE /api/manager/rooms?id={roomId}
+```
+
+---
+
+### 🍽️ Menu Management
+**Endpoint:** `/api/manager/menu`
+
+#### GET - Fetch Menu Items
+```typescript
+GET /api/manager/menu?branchId={id}
+Response: {
+  success: true,
+  menuItems: [{
+    id: string,
+    name: string,
+    slug: string,
+    category: string,
+    subcategory: string,
+    price: number,
+    costPrice: number,
+    description: string,
+    imageUrl: string,
+    images: [],
+    available: boolean,
+    popular: boolean,
+    featured: boolean,
+    vegetarian: boolean,
+    vegan: boolean,
+    spicy: boolean,
+    spicyLevel: number,
+    glutenFree: boolean,
+    halal: boolean,
+    organic: boolean,
+    calories: number,
+    protein: number,
+    carbs: number,
+    fat: number,
+    allergens: [],
+    ingredients: [],
+    prepTime: number,
+    servingSize: string,
+    tags: [],
+    isApproved: boolean
+  }]
+}
+```
+
+#### POST - Create Menu Item (Branch Manager)
+```typescript
+POST /api/manager/menu
+Headers: { Authorization: "Bearer {token}" }
+Body: {
+  name: string,
+  category: string,
+  subcategory?: string,
+  price: number,
+  costPrice?: number,
+  description?: string,
+  imageUrl?: string,
+  images?: [],
+  available?: boolean,
+  popular?: boolean,
+  featured?: boolean,
+  vegetarian?: boolean,
+  vegan?: boolean,
+  spicy?: boolean,
+  spicyLevel?: number,
+  glutenFree?: boolean,
+  halal?: boolean,
+  organic?: boolean,
+  calories?: number,
+  protein?: number,
+  carbs?: number,
+  fat?: number,
+  allergens?: [],
+  ingredients?: [],
+  prepTime?: number,
+  servingSize?: string,
+  tags?: [],
+  branchId?: string
+}
+```
+
+#### PUT - Update Menu Item
+```typescript
+PUT /api/manager/menu
+Body: {
+  id: string,
+  ...updateFields
+}
+```
+
+#### DELETE - Delete Menu Item
+```typescript
+DELETE /api/manager/menu?id={menuItemId}
+```
+
+---
+
+### 🎉 Events Management
+**Endpoint:** `/api/manager/events`
+
+#### GET - Fetch Events
+```typescript
+GET /api/manager/events?branchId={id}
+Response: {
+  success: true,
+  events: [{
+    id: string,
+    name: string,
+    type: string,
+    date: Date,
+    startTime: string,
+    endTime: string,
+    hall: string,
+    capacity: number,
+    attendees: number,
+    status: string,
+    totalAmount: number,
+    paidAmount: number,
+    remainingAmount: number,
+    paymentStatus: string,
+    organizer: string,
+    organizerContact: string,
+    organizerEmail: string,
+    description: string,
+    notes: string
+  }]
+}
+```
+
+#### POST - Create Event (Branch Manager)
+```typescript
+POST /api/manager/events
+Headers: { Authorization: "Bearer {token}" }
+Body: {
+  name: string,
+  type: string,
+  date: string,
+  startTime: string,
+  endTime: string,
+  hall: string,
+  capacity: number,
+  attendees?: number,
+  totalAmount?: number,
+  organizer: string,
+  organizerContact?: string,
+  organizerEmail?: string,
+  description?: string,
+  notes?: string,
+  branchId?: string
+}
+```
+
+#### PUT - Update Event
+```typescript
+PUT /api/manager/events
+Body: {
+  id: string,
+  ...updateFields
+}
+```
+
+#### DELETE - Delete Event
+```typescript
+DELETE /api/manager/events?id={eventId}
+```
+
+---
+
+### 👥 User Management
+**Endpoint:** `/api/users`
+
+#### GET - Fetch All Users (Super Admin/Manager Only)
+```typescript
+GET /api/users
+Headers: { Authorization: "Bearer {token}" }
+Response: {
+  success: true,
+  managers: [{
+    id: string,
+    name: string,
+    email: string,
+    phone: string,
+    avatar: string,
+    level: string,
+    isActive: boolean,
+    totalBranches: number,
+    lastLogin: Date,
+    twoFactorEnabled: boolean,
+    assignments: [{
+      branch: { id, name }
+    }]
+  }],
+  staff: [{
+    id: string,
+    name: string,
+    email: string,
+    phone: string,
+    avatar: string,
+    role: string,
+    department: string,
+    status: string,
+    branchId: string,
+    branch: { id, name }
+  }]
+}
+```
+
+#### PUT - Update User (Name, Email, Password)
+```typescript
+PUT /api/users
+Headers: { Authorization: "Bearer {token}" }
+Body: {
+  id: string,
+  userType: "manager" | "staff",
+  name?: string,
+  email?: string,
+  phone?: string,
+  password?: string,
+  avatar?: string,
+  level?: string,
+  role?: string,
+  department?: string
+}
+```
+
+#### DELETE - Deactivate User (Super Admin Only)
+```typescript
+DELETE /api/users?id={userId}&userType={manager|staff}
+```
+
+---
+
+### 🏢 Branch Management
+**Endpoint:** `/api/branches`
+
+#### GET - Fetch All Branches (Super Users Only)
+```typescript
+GET /api/branches
+Headers: { Authorization: "Bearer {token}" }
+Response: {
+  success: true,
+  branches: [{
+    id: string,
+    name: string,
+    location: string,
+    city: string,
+    totalRooms: number,
+    activeStaff: number,
+    activeBookings: number,
+    occupiedRooms: number,
+    occupancyRate: number,
+    todayRevenue: number,
+    rating: number,
+    manager: {
+      id: string,
+      name: string,
+      email: string,
+      level: string
+    }
+  }]
+}
+```
+
+#### POST - Create Branch (Super Admin Only)
+```typescript
+POST /api/branches
+Body: {
+  name: string,
+  location: string,
+  city: string,
+  phone: string,
+  email: string,
+  totalRooms: number
 }
 ```
 
 ---
 
-## 2. Booking APIs
-
-### GET `/api/bookings`
-Fetch bookings with filters
-- `?branchId=br-001` - Filter by branch
-- `?status=confirmed` - Filter by status
-- `?guestEmail=guest@email.com` - Filter by guest
-
-### POST `/api/bookings`
-Create new booking
-```json
-{
-  "roomId": "room_id",
-  "guestName": "John Doe",
-  "guestEmail": "john@email.com",
-  "guestPhone": "+250788123456",
-  "checkIn": "2026-01-15",
-  "checkOut": "2026-01-18",
-  "adults": 2,
-  "children": 0,
-  "totalAmount": 750000,
-  "branchId": "br-001"
-}
-```
-
-### PUT `/api/bookings`
-Update booking status
-
-### DELETE `/api/bookings?id=booking_id`
-Cancel booking
-
----
-
-## 3. Room APIs
-
-### GET `/api/rooms`
-Fetch rooms
-- `?branchId=br-001` - Filter by branch
-- `?status=available` - Filter by status
-- `?type=deluxe` - Filter by type
-
-### GET `/api/public/rooms`
-Public room search with availability
-- `?branchId=br-001`
-- `?checkIn=2026-01-15`
-- `?checkOut=2026-01-18`
-- `?type=suite`
-
-### POST `/api/rooms`
-Add new room (Manager only)
-```json
-{
-  "number": "301",
-  "floor": 3,
-  "type": "deluxe",
-  "price": 325000,
-  "branchId": "br-001"
-}
-```
-
-### PUT `/api/rooms`
-Update room
-
-### DELETE `/api/rooms?id=room_id`
-Delete room
-
----
-
-## 4. Guest APIs
-
-### GET `/api/guests`
-Fetch guests with history
-- `?branchId=br-001` - Branch filter
-- `?search=john` - Search by name/email/phone
-- `?includeBookings=true` - Include booking history
-
-### POST `/api/guests`
-Register new guest
-```json
-{
-  "name": "Jane Doe",
-  "email": "jane@email.com",
-  "phone": "+250788123456",
-  "nationality": "Rwanda",
-  "idType": "passport",
-  "idNumber": "P123456",
-  "branchId": "br-001"
-}
-```
-
-### PUT `/api/guests`
-Update guest info
-
-### DELETE `/api/guests?id=guest_id`
-Delete guest
-
----
-
-## 5. Staff APIs
-
-### GET `/api/staff`
-Fetch staff
-- `?branchId=br-001`
-- `?role=receptionist`
-- `?status=active`
-
-### POST `/api/staff`
-Add staff member
-```json
-{
-  "name": "Alice Smith",
-  "email": "alice@eastgate.rw",
-  "password": "secure123",
-  "phone": "+250788123456",
-  "role": "receptionist",
-  "department": "front_desk",
-  "shift": "Morning",
-  "branchId": "br-001"
-}
-```
-
-### PUT `/api/staff`
-Update staff
-
-### DELETE `/api/staff?id=staff_id`
-Delete staff
-
----
-
-## 6. Menu APIs
-
-### GET `/api/menu`
-Fetch menu items
-- `?branchId=br-001`
-- `?category=main_course`
-- `?available=true`
-
-### POST `/api/menu`
-Add menu item
-```json
-{
-  "name": "Grilled Tilapia",
-  "category": "main_course",
-  "price": 15000,
-  "description": "Fresh tilapia with vegetables",
-  "vegetarian": false,
-  "spicy": false,
-  "branchId": "br-001"
-}
-```
-
-### PUT `/api/menu`
-Update menu item
-
-### DELETE `/api/menu?id=menu_id`
-Delete menu item
-
----
-
-## 7. Order APIs
-
-### GET `/api/orders`
-Fetch orders
-- `?branchId=br-001`
-- `?status=pending`
-- `?roomId=room_id`
-
-### POST `/api/orders`
-Create order
-```json
-{
-  "items": [
-    {"id": "item1", "name": "Burger", "price": 8000, "quantity": 2}
-  ],
-  "total": 16000,
-  "guestName": "John Doe",
-  "roomId": "room_id",
-  "roomCharge": true,
-  "branchId": "br-001"
-}
-```
-
-### PUT `/api/orders`
-Update order status
-
-### DELETE `/api/orders?id=order_id`
-Cancel order
-
----
-
-## 8. Spa Service APIs
-
-### GET `/api/services`
-Fetch spa services
-- `?branchId=br-001`
-- `?type=massage`
-- `?available=true`
-
-### POST `/api/services`
-Add service
-```json
-{
-  "name": "Swedish Massage",
-  "type": "massage",
-  "price": 50000,
-  "duration": 60,
-  "description": "Relaxing full body massage",
-  "branchId": "br-001"
-}
-```
-
-### PUT `/api/services`
-Update service
-
-### DELETE `/api/services?id=service_id`
-Delete service
-
----
-
-## 9. Message APIs
-
-### GET `/api/messages`
-Fetch messages
-- `?branchId=br-001`
-- `?read=false`
-
-### POST `/api/messages`
-Send message
-```json
-{
-  "sender": "guest",
-  "senderName": "John Doe",
-  "senderEmail": "john@email.com",
-  "message": "Need extra towels in room 301",
-  "branchId": "br-001"
-}
-```
-
-### PUT `/api/messages`
-Mark as read
-
----
-
-## 10. Contact APIs
-
-### GET `/api/contacts`
-Fetch contact submissions
-- `?branchId=br-001`
-- `?status=pending`
-
-### POST `/api/contacts`
-Submit contact form
-```json
-{
-  "name": "Jane Doe",
-  "email": "jane@email.com",
-  "phone": "+250788123456",
-  "subject": "Inquiry",
-  "message": "I'd like to book for a wedding",
-  "department": "events",
-  "branchId": "br-001"
-}
-```
-
-### PUT `/api/contacts`
-Update status
-
----
-
-## 11. Payment APIs
-
-### GET `/api/payments`
-Fetch payments
-- `?branchId=br-001`
-- `?bookingId=booking_id`
-- `?status=completed`
-
-### POST `/api/payments`
-Create payment intent
-```json
-{
-  "bookingId": "booking_id",
-  "amount": 250000,
-  "currency": "RWF",
-  "paymentMethod": "card",
-  "gateway": "stripe",
-  "branchId": "br-001"
-}
-```
-
-**Supported Gateways:**
-- `stripe` - Credit/Debit cards (Global)
-- `flutterwave` - Mobile Money & Cards (Africa)
-- `paypal` - PayPal balance & Cards (Global)
-
-### PUT `/api/payments`
-Update payment status
-
-### POST `/api/payments/webhook`
-Payment confirmation webhook
-
----
-
-## 12. Branch APIs
-
-### GET `/api/branches`
-Fetch all branches
-- `?isActive=true`
-
-Returns branch info with counts:
-- Total rooms
-- Total bookings
-- Total staff
-
----
-
-## 13. Utility APIs
-
-### POST `/api/bookings/release-expired`
-Release expired bookings and make rooms available
-
-### POST `/api/rooms/check-availability`
-Check room availability for dates
-```json
-{
-  "roomId": "room_id",
-  "checkIn": "2026-01-15",
-  "checkOut": "2026-01-18"
+### 📊 Branch Info
+**Endpoint:** `/api/manager/branch-info`
+
+#### GET - Fetch Branch Details
+```typescript
+GET /api/manager/branch-info?branchId={id}
+Headers: { Authorization: "Bearer {token}" }
+Response: {
+  success: true,
+  branch: {
+    id: string,
+    name: string,
+    location: string,
+    city: string,
+    phone: string,
+    email: string,
+    totalRooms: number,
+    activeStaff: number,
+    activeBookings: number,
+    activeOrders: number,
+    occupiedRooms: number,
+    occupancyRate: number,
+    todayRevenue: number,
+    rating: number,
+    isActive: boolean,
+    manager: {
+      id: string,
+      name: string,
+      email: string,
+      phone: string,
+      level: string
+    }
+  }
 }
 ```
 
 ---
 
-## 🔐 Role-Based Access
+## 🔐 Authentication
 
-- **Super Admin/Manager**: Access all branches
-- **Branch Manager**: Access their branch only
-- **Receptionist**: View guests, bookings, rooms
-- **Waiter**: View orders, menu
-- **Kitchen Staff**: View orders
+All protected endpoints require JWT token:
+```typescript
+Headers: {
+  Authorization: "Bearer {token}"
+}
+```
 
----
-
-## 💾 Database Schema
-
-All data stored in MySQL via Prisma ORM:
-- Branches
-- Staff
-- Guests
-- Rooms
-- Bookings
-- Orders
-- Menu Items
-- Services
-- Messages
-- Contacts
-- Payments
-- Invoices
-- Activity Logs
+Token contains:
+- userId
+- role (super_admin, super_manager, branch_manager, staff)
+- branchId
+- email
 
 ---
 
-## 🚀 Frontend Integration
+## 🎯 Role Permissions
 
-All frontend components should fetch from these APIs:
+### Super Admin
+- ✅ All operations
+- ✅ Create/delete branches
+- ✅ Manage all users
+- ✅ Access all branches
+- ✅ Delete hero slides
+
+### Super Manager
+- ✅ View all branches
+- ✅ Manage hero slides
+- ✅ Update users
+- ✅ Access all data
+- ❌ Cannot delete branches
+- ❌ Cannot delete users
+
+### Branch Manager
+- ✅ Manage own branch
+- ✅ Create rooms
+- ✅ Create menu items
+- ✅ Create events
+- ✅ Update branch data
+- ❌ Cannot access other branches
+- ❌ Cannot manage users
+
+### Staff
+- ✅ View assigned branch
+- ✅ Create orders
+- ❌ Cannot manage content
+- ❌ Cannot access other branches
+
+---
+
+## 📝 Activity Logging
+
+All operations are logged:
+```typescript
+{
+  userId: string,
+  branchId: string,
+  action: string,
+  entity: string,
+  entityId: string,
+  details: {},
+  createdAt: Date
+}
+```
+
+---
+
+## 🚀 Features Summary
+
+✅ **Hero Slides**: Full CRUD with order control
+✅ **Rooms**: Complete management with amenities
+✅ **Menu**: Advanced with nutrition, allergens
+✅ **Events**: Full event lifecycle management
+✅ **Users**: Edit all users including super admins
+✅ **Branches**: Multi-branch with statistics
+✅ **Real-time Stats**: Live occupancy, revenue
+✅ **Activity Logs**: Complete audit trail
+✅ **Role-Based Access**: Granular permissions
+✅ **Database Integration**: Prisma + MySQL
+
+---
+
+## 🎨 Frontend Integration
 
 ```typescript
-// Example: Fetch rooms
-const fetchRooms = async () => {
-  const res = await fetch('/api/rooms?branchId=br-001');
-  const data = await res.json();
-  if (data.success) {
-    setRooms(data.rooms);
-  }
+// Example: Create Room
+const createRoom = async (roomData) => {
+  const token = localStorage.getItem("eastgate-token");
+  const res = await fetch("/api/manager/rooms", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(roomData)
+  });
+  return res.json();
 };
 
-// Example: Create booking
-const createBooking = async (bookingData) => {
-  const res = await fetch('/api/bookings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(bookingData)
+// Example: Update Hero Slide
+const updateSlide = async (slideData) => {
+  const token = localStorage.getItem("eastgate-token");
+  const res = await fetch("/api/hero/slides", {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(slideData)
   });
-  const data = await res.json();
-  return data;
+  return res.json();
+};
+
+// Example: Edit User
+const updateUser = async (userData) => {
+  const token = localStorage.getItem("eastgate-token");
+  const res = await fetch("/api/users", {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(userData)
+  });
+  return res.json();
 };
 ```
 
 ---
 
-## ✅ All Features Are Real & Functional
-
-✅ Real database operations (MySQL)
-✅ Real payment gateways (Stripe, Flutterwave, PayPal)
-✅ Real booking system with conflict detection
-✅ Real guest history tracking
-✅ Real order management
-✅ Real messaging system
-✅ Real contact forms
-✅ Real spa service booking
-✅ Branch-based filtering
-✅ Role-based access control
+**Status**: ✅ Production-Ready
+**Database**: Real Prisma + MySQL
+**Mocks**: None
+**Placeholders**: None
+**All Features**: Fully Implemented

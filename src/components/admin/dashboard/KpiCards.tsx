@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
+import { useBranchStore } from "@/lib/store/branch-store";
 import { formatCurrency, formatPercentage } from "@/lib/format";
 import {
   DollarSign,
@@ -15,6 +16,7 @@ import {
 
 export default function KpiCards() {
   const { data, loading } = useAdminDashboard();
+  const selectedBranchId = useBranchStore((s) => s.selectedBranchId);
 
   if (loading) {
     return (

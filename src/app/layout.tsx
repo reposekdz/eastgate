@@ -14,6 +14,12 @@ export const metadata: Metadata = {
     "ubwiza bw'Afurika",
     "kuryama mu Rwanda",
   ],
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({
@@ -23,7 +29,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="rw" suppressHydrationWarning>
-      <body className="antialiased">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+      </head>
+      <body className="antialiased overflow-x-hidden">
         <Providers>
           <I18nProvider>{children}</I18nProvider>
         </Providers>

@@ -1,14 +1,13 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthStore } from "@/lib/store/auth-store";
 import { useBranchStore } from "@/lib/store/branch-store";
 import { useI18n } from "@/lib/i18n/context";
@@ -41,27 +40,37 @@ import {
   AlertCircle,
   CheckCircle2,
   Timer,
+  Filter,
 } from "lucide-react";
 import Link from "next/link";
 
 export default function ManagerDashboard() {
   const { user } = useAuthStore();
   const { t, isRw } = useI18n();
-  const { getStaff, getBookings, getRooms, getOrders, getServiceRequests, getTables } = useBranchStore();
+  const { getStaff, getBookings, getRooms, getOrders, getServiceRequests, getTables, getBranches } = useBranchStore();
   const [activeTab, setActiveTab] = useState("overview");
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>(user?.branchId || "all");
 
   const userRole = user?.role || "branch_manager";
   const branchId = user?.branchId || "br-001";
   const isSuperRole = userRole === "super_manager" || userRole === "super_admin";
 
-  const branchStaff = getStaff(branchId, userRole);
-  const branchBookings = getBookings(branchId, userRole);
-  const branchRooms = getRooms(branchId, userRole);
-  const branchOrders = getOrders(branchId, userRole);
-  const serviceRequests = getServiceRequests(branchId, userRole);
-  const tables = getTables(branchId, userRole);
+  // Get all branches for super users
+  const allBranches = getBranches(userRole, branchId);
+  
+  // Determine active branch for display
+  const activeBranchId = isSuperRole ? selectedBranchFilter : branchId;
+  const activeBranch = allBranches.find(b => b.id === activeBranchId);
+  const activeBranchName = activeBranch?.name || user?.branchName || "All Branches";
+
+  const branchStaff = getStaff(activeBranchId, userRole);
+  const branchBookings = getBookings(activeBranchId, userRole);
+  const branchRooms = getRooms(activeBranchId, userRole);
+  const branchOrders = getOrders(activeBranchId, userRole);
+  const serviceRequests = getServiceRequests(activeBranchId, userRole);
+  const tables = getTables(activeBranchId, userRole);
 
   // Statistics
   const totalRevenue = branchBookings.reduce((sum, b) => sum + b.totalAmount, 0);
@@ -102,19 +111,16 @@ export default function ManagerDashboard() {
   ];
 
   // Alerts and notifications
-  const alerts = useMemo(() => {
-    const result = [];
-    if (occupancyRate > 90) {
-      result.push({ type: "warning", message: "High occupancy - consider overbooking" });
-    }
-    if (pendingRequests > 5) {
-      result.push({ type: "info", message: `${pendingRequests} pending service requests` });
-    }
-    if (activeOrders > 10) {
-      result.push({ type: "success", message: `${activeOrders} orders in progress` });
-    }
-    return result;
-  }, [occupancyRate, pendingRequests, activeOrders]);
+  const alerts = [];
+  if (occupancyRate > 90) {
+    alerts.push({ type: "warning", message: "High occupancy - consider overbooking" });
+  }
+  if (pendingRequests > 5) {
+    alerts.push({ type: "info", message: `${pendingRequests} pending service requests` });
+  }
+  if (activeOrders > 10) {
+    alerts.push({ type: "success", message: `${activeOrders} orders in progress` });
+  }
 
   return (
     <div className="space-y-6">
@@ -126,7 +132,7 @@ export default function ManagerDashboard() {
           </div>
           <div>
             <h1 className="heading-md text-charcoal">
-              {isSuperRole ? t("management", "allBranches") : user?.branchName}
+              {activeBranchName}
             </h1>
             <p className="text-xs text-text-muted-custom flex items-center gap-2">
               {isSuperRole ? t("management", "superManagerDashboard") : t("dashboard", "managerDashboard")}
@@ -138,6 +144,31 @@ export default function ManagerDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Branch Filter for Super Users */}
+          {isSuperRole && (
+            <Select value={selectedBranchFilter} onValueChange={setSelectedBranchFilter}>
+              <SelectTrigger className="w-[200px] h-9 border-emerald/30">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter Branch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    All Branches
+                  </div>
+                </SelectItem>
+                {allBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      {branch.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {/* Last Update */}
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-pearl rounded-lg text-xs text-text-muted-custom">
             <Clock className="h-3.5 w-3.5" />
@@ -198,7 +229,9 @@ export default function ManagerDashboard() {
                   {isRw ? "Ikibaho cy'Umucunga Mukuru — Gucunga Amashami Yose" : "Super Manager Dashboard — Managing All Branches"}
                 </p>
                 <p className="text-xs text-text-muted-custom">
-                  {t("management", "accountsNote")}
+                  {selectedBranchFilter === "all" 
+                    ? (isRw ? "Ureba amashami yose" : "Viewing all branches") 
+                    : (isRw ? `Ureba: ${activeBranchName}` : `Viewing: ${activeBranchName}`)}
                 </p>
               </div>
               <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">

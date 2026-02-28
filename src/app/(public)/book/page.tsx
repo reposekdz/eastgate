@@ -72,13 +72,18 @@ import {
   Download,
   ImageIcon,
   RefreshCw,
+  Eye,
+  Maximize,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { MenuOrderDialog, type CartItem } from "@/components/MenuOrderDialog";
 import CountrySelect from "@/components/shared/CountrySelect";
+import { loadStripe } from "@stripe/stripe-js";
 import { useCurrency } from "@/components/shared/CurrencySelector";
 import { formatWithCurrency } from "@/lib/currencies";
+
+import RoomViewModal from "@/components/booking/RoomViewModal";
 
 // Room type details mapping with images
 const roomTypeDetails: Record<string, {
@@ -138,6 +143,15 @@ interface Room {
   description?: string;
   imageUrl?: string;
   branchId: string;
+  maxOccupancy?: number;
+  size?: number;
+  bedType?: string;
+  view?: string;
+  branch?: {
+    id: string;
+    name: string;
+    location?: string;
+  };
 }
 
 function BookContent() {
@@ -152,6 +166,8 @@ function BookContent() {
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(searchParams.get("room"));
   const [selectedBranch, setSelectedBranch] = useState(searchParams.get("branch") || "kigali-main");
+  const [displayedRoomsCount, setDisplayedRoomsCount] = useState(9);
+  const [viewingRoomImages, setViewingRoomImages] = useState<Room | null>(null);
   const [checkIn, setCheckIn] = useState<Date | undefined>(
     searchParams.get("checkin") ? new Date(searchParams.get("checkin")!) : addDays(new Date(), 1)
   );
@@ -192,10 +208,12 @@ function BookContent() {
         }
         
         const data = await res.json();
-        if (data.success && Array.isArray(data.rooms)) {
+        if (data.success && data.data?.rooms) {
+          setRooms(data.data.rooms);
+        } else if (data.rooms) {
           setRooms(data.rooms);
-        } else if (Array.isArray(data.rooms)) {
-          setRooms(data.rooms);
+        } else {
+          setRooms([]);
         }
       } catch (error) {
         console.error("Failed to fetch rooms:", error);
@@ -212,6 +230,9 @@ function BookContent() {
     if (roomFilter === "all") return rooms;
     return rooms.filter(room => room.type === roomFilter);
   }, [rooms, roomFilter]);
+
+  const displayedRooms = filteredRooms.slice(0, displayedRoomsCount);
+  const hasMore = displayedRoomsCount < filteredRooms.length;
 
   // Calculate nights
   const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
@@ -292,7 +313,7 @@ function BookContent() {
         branchId: selectedBranch,
       };
 
-      const paymentRes = await fetch("/api/payments", {
+      const paymentRes = await fetch("/api/payments/public", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -313,21 +334,35 @@ function BookContent() {
       }
 
       // Step 3: Process payment based on gateway
-      const gateway = paymentMethod === "stripe_card" ? "stripe" : 
-                      paymentMethod === "flutterwave_card" ? "flutterwave" : 
-                      paymentMethod === "paypal_standard" ? "paypal" : "stripe";
-      
-      if (gateway === "stripe" && paymentResult.clientSecret) {
-        await processStripePayment(paymentResult.clientSecret, booking.id);
-      } else if (gateway === "flutterwave" && paymentResult.paymentUrl) {
+      if (paymentMethod.includes("stripe") && paymentResult.clientSecret) {
+        // Redirect to Stripe checkout
+        const stripe = await loadStripe(paymentResult.publishableKey || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+        if (!stripe) {
+          toast.error("Stripe failed to load");
+          setIsProcessing(false);
+          return;
+        }
+
+        const { error } = await stripe.confirmPayment({
+          clientSecret: paymentResult.clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/payment/success?bookingId=${booking.id}`,
+          },
+        });
+
+        if (error) {
+          toast.error(error.message || "Payment failed");
+          setIsProcessing(false);
+        }
+      } else if (paymentMethod.includes("paypal") && paymentResult.approvalUrl) {
+        window.location.href = paymentResult.approvalUrl;
+      } else if (paymentMethod.includes("flutterwave") && paymentResult.paymentUrl) {
         window.location.href = paymentResult.paymentUrl;
-      } else if (gateway === "paypal" && paymentResult.redirectUrl) {
-        window.location.href = paymentResult.redirectUrl;
       } else {
-        // Default: mark as pending
         setBookingId(booking.id);
         setBookingSuccess(true);
         toast.success("Booking created! Awaiting payment confirmation.");
+        setIsProcessing(false);
       }
 
     } catch (error) {
@@ -342,11 +377,11 @@ function BookContent() {
     try {
       // In production, use Stripe Elements
       // For now, simulate successful payment
-      const paymentUpdateRes = await fetch("/api/payments", {
+      const paymentUpdateRes = await fetch("/api/payments/public", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: bookingId,
+          paymentId: bookingId,
           status: "completed",
           transactionId: `txn_${Date.now()}`,
         }),
@@ -369,53 +404,202 @@ function BookContent() {
   // Success view
   if (bookingSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-100 flex items-center justify-center p-4">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center"
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.5, type: "spring" }}
+          className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 max-w-2xl w-full"
         >
-          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-charcoal mb-2">Booking Confirmed!</h2>
-          <p className="text-text-muted-custom mb-4">
-            Your reservation has been successfully processed.
-          </p>
-          <div className="bg-slate-50 rounded-lg p-4 mb-6">
-            <p className="text-sm text-text-muted-custom">Booking ID</p>
-            <p className="text-xl font-mono font-bold text-charcoal">{bookingId}</p>
-          </div>
-          <div className="space-y-2 text-left text-sm mb-6">
-            <p><span className="font-semibold">Room:</span> {selectedRoomDetails?.type}</p>
-            <p><span className="font-semibold">Check-in:</span> {checkIn?.toLocaleDateString()}</p>
-            <p><span className="font-semibold">Check-out:</span> {checkOut?.toLocaleDateString()}</p>
-            <p><span className="font-semibold">Total:</span> {formatCurrency(totalPrice)}</p>
-          </div>
-          <Button
-            onClick={() => router.push("/")}
-            className="w-full bg-emerald-600 hover:bg-emerald-700"
+          {/* Success Icon */}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg"
           >
-            Return Home
-          </Button>
+            <CheckCircle2 className="w-12 h-12 text-white" />
+          </motion.div>
+
+          {/* Success Message */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-center mb-8"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-charcoal mb-3">Booking Confirmed!</h2>
+            <p className="text-lg text-slate-600">
+              Your reservation has been successfully processed. We've sent a confirmation email to <span className="font-semibold text-emerald-600">{guestEmail}</span>
+            </p>
+          </motion.div>
+
+          {/* Booking Details Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 mb-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-slate-500 font-medium">Booking Reference</p>
+              <Badge className="bg-emerald-600 text-white px-4 py-1.5 text-base">
+                <BadgeCheck className="w-4 h-4 mr-1" />
+                Confirmed
+              </Badge>
+            </div>
+            <p className="text-3xl font-mono font-bold text-charcoal mb-6 tracking-wider">{bookingId}</p>
+            
+            <Separator className="my-4" />
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <BedDouble className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">Room Type</p>
+                    <p className="font-semibold text-charcoal capitalize">{selectedRoomDetails?.type.replace('_', ' ')}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Users className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">Guests</p>
+                    <p className="font-semibold text-charcoal">{adults} Adults, {children} Children</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <CalendarIcon className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">Check-in</p>
+                    <p className="font-semibold text-charcoal">{checkIn?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CalendarIcon className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">Check-out</p>
+                    <p className="font-semibold text-charcoal">{checkOut?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator className="my-4" />
+
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600 font-medium">Total Amount Paid</span>
+              <span className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPrice)}</span>
+            </div>
+          </motion.div>
+
+          {/* Quick Actions */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="grid md:grid-cols-2 gap-4 mb-6"
+          >
+            <Button
+              variant="outline"
+              className="border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 py-6 rounded-xl font-semibold"
+              onClick={() => window.print()}
+            >
+              <Download className="mr-2 w-5 h-5" />
+              Download Receipt
+            </Button>
+            <Button
+              variant="outline"
+              className="border-2 border-slate-300 text-slate-700 hover:bg-slate-50 py-6 rounded-xl font-semibold"
+              onClick={() => {
+                navigator.clipboard.writeText(bookingId);
+                toast.success("Booking ID copied!");
+              }}
+            >
+              <Mail className="mr-2 w-5 h-5" />
+              Copy Booking ID
+            </Button>
+          </motion.div>
+
+          {/* Info Box */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6"
+          >
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div className="text-sm text-blue-900">
+                <p className="font-semibold mb-1">Check-in Time: 2:00 PM | Check-out Time: 12:00 PM</p>
+                <p className="text-blue-700">Please arrive after 2:00 PM on your check-in date. Early check-in subject to availability.</p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Action Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="flex flex-col sm:flex-row gap-3"
+          >
+            <Button
+              onClick={() => router.push("/")}
+              className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white py-6 rounded-xl shadow-lg font-semibold text-lg"
+            >
+              Return to Home
+            </Button>
+            <Button
+              onClick={() => router.push("/rooms")}
+              variant="outline"
+              className="flex-1 border-2 border-charcoal text-charcoal hover:bg-charcoal hover:text-white py-6 rounded-xl font-semibold text-lg transition-all"
+            >
+              Explore More Rooms
+            </Button>
+          </motion.div>
+
+          {/* Contact Support */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="text-center text-sm text-slate-500 mt-6"
+          >
+            Need help? Contact us at <a href="tel:+250788123456" className="text-emerald-600 font-semibold hover:underline">+250 788 123 456</a> or <a href="mailto:info@eastgate.rw" className="text-emerald-600 font-semibold hover:underline">info@eastgate.rw</a>
+          </motion.p>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 w-full max-w-[100vw] overflow-x-hidden">
+      {/* Full Page Room View Modal */}
+      {viewingRoomImages && (
+        <RoomViewModal
+          room={viewingRoomImages}
+          onClose={() => setViewingRoomImages(null)}
+          onSelect={() => {
+            setSelectedRoom(viewingRoomImages.id);
+            setViewingRoomImages(null);
+          }}
+        />
+      )}
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-charcoal via-slate-800 to-charcoal text-white py-8">
-        <div className="container mx-auto px-4">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Book Your Stay</h1>
-          <p className="text-slate-300">Experience luxury at EastGate Hotel</p>
+      <div className="bg-gradient-to-r from-charcoal via-slate-800 to-charcoal text-white py-4 sm:py-6 md:py-8">
+        <div className="container mx-auto px-3 sm:px-4">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2">Book Your Stay</h1>
+          <p className="text-xs sm:text-sm md:text-base text-slate-300">Experience luxury at EastGate Hotel</p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8 w-full max-w-full overflow-x-hidden">
         {/* Progress Steps */}
-        <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center justify-center mb-4 sm:mb-6 md:mb-8 gap-1 sm:gap-2">
           {[
             { num: 1, label: "Select Room" },
             { num: 2, label: "Guest Details" },
@@ -424,40 +608,42 @@ function BookContent() {
             <div key={s.num} className="flex items-center">
               <div
                 className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center font-bold",
+                  "w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm md:text-base flex-shrink-0",
                   step >= s.num
                     ? "bg-emerald-600 text-white"
                     : "bg-slate-200 text-slate-500"
                 )}
               >
-                {step > s.num ? <Check className="w-5 h-5" /> : s.num}
+                {step > s.num ? <Check className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" /> : s.num}
               </div>
               <span
                 className={cn(
-                  "mx-2 text-sm hidden sm:inline",
+                  "mx-1 sm:mx-1.5 md:mx-2 text-[10px] sm:text-xs md:text-sm hidden sm:inline whitespace-nowrap",
                   step >= s.num ? "text-charcoal font-medium" : "text-slate-400"
                 )}
               >
                 {s.label}
               </span>
-              {i < 2 && <ArrowRight className="w-4 h-4 mx-2 text-slate-300" />}
+              {i < 2 && <ArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 mx-0.5 sm:mx-1 md:mx-2 text-slate-300 flex-shrink-0" />}
             </div>
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
             {step === 1 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 {/* Branch & Date Selection */}
-                <Card className="mb-6">
-                  <CardContent className="p-6">
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="mb-2 block">Select Branch</Label>
+                <Card className="mb-4 sm:mb-6">
+                  <CardContent className="p-3 sm:p-4 md:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 md:gap-4">
+                      <div className="w-full">
+                        <Label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-medium">Select Branch</Label>
                         <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-                          <SelectTrigger>
+                          <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm">
+                            <SelectValue placeholder="Select branch" />
+                          </SelectTrigger>
                             <SelectValue placeholder="Select branch" />
                           </SelectTrigger>
                           <SelectContent>
@@ -468,10 +654,12 @@ function BookContent() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <Label className="mb-2 block">Room Type</Label>
+                      <div className="w-full">
+                        <Label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-medium">Room Type</Label>
                         <Select value={roomFilter} onValueChange={setRoomFilter}>
-                          <SelectTrigger>
+                          <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm">
+                            <SelectValue placeholder="All rooms" />
+                          </SelectTrigger>
                             <SelectValue placeholder="All rooms" />
                           </SelectTrigger>
                           <SelectContent>
@@ -483,13 +671,13 @@ function BookContent() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <Label className="mb-2 block">Check-in</Label>
+                      <div className="w-full">
+                        <Label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-medium">Check-in</Label>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start">
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {checkIn ? format(checkIn, "PPP") : "Select date"}
+                            <Button variant="outline" className="w-full justify-start h-9 sm:h-10 text-xs sm:text-sm">
+                              <CalendarIcon className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              <span className="truncate">{checkIn ? format(checkIn, "PPP") : "Select date"}</span>
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
@@ -507,13 +695,13 @@ function BookContent() {
                           </PopoverContent>
                         </Popover>
                       </div>
-                      <div>
-                        <Label className="mb-2 block">Check-out</Label>
+                      <div className="w-full">
+                        <Label className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-medium">Check-out</Label>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start">
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {checkOut ? format(checkOut, "PPP") : "Select date"}
+                            <Button variant="outline" className="w-full justify-start h-9 sm:h-10 text-xs sm:text-sm">
+                              <CalendarIcon className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              <span className="truncate">{checkOut ? format(checkOut, "PPP") : "Select date"}</span>
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
@@ -531,11 +719,11 @@ function BookContent() {
                 </Card>
 
                 {/* Rooms Grid */}
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-charcoal">
-                    {loadingRooms ? "Loading rooms..." : `${filteredRooms.length} Rooms Available`}
+                <div className="mb-3 sm:mb-4 flex items-center justify-between">
+                  <h2 className="text-base sm:text-lg md:text-xl font-semibold text-charcoal">
+                    {loadingRooms ? "Loading..." : `${filteredRooms.length} Rooms`}
                   </h2>
-                  <Button variant="outline" size="sm" onClick={() => {
+                  <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm" onClick={() => {
                     setLoadingRooms(true);
                     const params = new URLSearchParams({
                       branchId: selectedBranch,
@@ -555,7 +743,7 @@ function BookContent() {
                         toast.error("Failed to refresh rooms");
                       });
                   }}>
-                    <RefreshCw className={`w-4 h-4 mr-2 ${loadingRooms ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${loadingRooms ? 'animate-spin' : ''}`} />
                     Refresh
                   </Button>
                 </div>
@@ -570,75 +758,136 @@ function BookContent() {
                     <p className="text-slate-500">No rooms available for selected criteria</p>
                   </Card>
                 ) : (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {filteredRooms.map((room) => {
-                      const details = roomTypeDetails[room.type] || roomTypeDetails.standard;
-                      const imageUrl = room.imageUrl || details.image;
-                      
-                      return (
-                        <motion.div
-                          key={room.id}
-                          whileHover={{ y: -4 }}
-                          className={cn(
-                            "bg-white rounded-xl shadow-md overflow-hidden cursor-pointer transition-all",
-                            selectedRoom === room.id
-                              ? "ring-2 ring-emerald-600 shadow-lg"
-                              : "hover:shadow-lg"
-                          )}
-                          onClick={() => setSelectedRoom(room.id)}
-                        >
-                          <div className="relative h-48">
-                            <img
-                              src={imageUrl}
-                              alt={`Room ${room.number}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                            <Badge className="absolute top-3 right-3 bg-emerald-600">
-                              {room.status}
-                            </Badge>
-                            <div className="absolute bottom-3 left-3 text-white">
-                              <p className="text-sm opacity-80">Room {room.number}</p>
-                              <p className="font-semibold capitalize">{room.type.replace('_', ' ')}</p>
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+                      {displayedRooms.map((room) => {
+                        const details = roomTypeDetails[room.type] || roomTypeDetails.standard;
+                        const imageUrl = room.imageUrl || details.image;
+                        
+                        return (
+                          <motion.div
+                            key={room.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            whileHover={{ y: -8, scale: 1.02 }}
+                            transition={{ duration: 0.3 }}
+                            className={cn(
+                              "group bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all",
+                              selectedRoom === room.id
+                                ? "ring-4 ring-emerald-500 shadow-2xl"
+                                : "hover:shadow-2xl"
+                            )}
+                          >
+                            {/* Image with Overlay */}
+                            <div 
+                              className="relative h-40 sm:h-48 md:h-56 lg:h-64 overflow-hidden"
+                              onClick={() => setViewingRoomImages(room)}
+                            >
+                              <img
+                                src={imageUrl}
+                                alt={`Room ${room.number}`}
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                              
+                              {/* Status Badge */}
+                              <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 md:top-4 md:right-4 bg-emerald-500 text-white shadow-lg px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs">
+                                {room.status}
+                              </Badge>
+                              
+                              {/* View Icon */}
+                              <div className="absolute top-2 left-2 sm:top-3 sm:left-3 md:top-4 md:left-4 bg-white/90 backdrop-blur-sm rounded-full p-1.5 sm:p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-emerald-600" />
+                              </div>
+                              
+                              {/* Room Info Overlay */}
+                              <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 md:p-4 lg:p-5 text-white">
+                                <p className="text-[10px] sm:text-xs md:text-sm opacity-90 mb-0.5 sm:mb-1">Room {room.number}</p>
+                                <h3 className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold capitalize line-clamp-1">
+                                  {room.type.replace('_', ' ')}
+                                </h3>
+                              </div>
                             </div>
-                          </div>
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <p className="text-sm text-slate-500">{details.size} • {details.beds}</p>
-                                <div className="flex gap-1 mt-1">
-                                  {details.amenities.slice(0, 3).map((a) => (
-                                    <Badge key={a} variant="outline" className="text-xs">
-                                      {a}
-                                    </Badge>
-                                  ))}
+
+                            {/* Content */}
+                            <div className="p-3 sm:p-4 md:p-5" onClick={() => setSelectedRoom(room.id)}>
+                              {/* Price */}
+                              <div className="flex items-baseline justify-between mb-2 sm:mb-3 md:mb-4">
+                                <div>
+                                  <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-emerald-600">
+                                    RWF {(room.price || details.price).toLocaleString()}
+                                  </p>
+                                  <p className="text-[10px] sm:text-xs md:text-sm text-slate-500">per night</p>
+                                </div>
+                                <Badge variant="outline" className="text-[10px] sm:text-xs">
+                                  Floor {room.floor}
+                                </Badge>
+                              </div>
+
+                              {/* Quick Info */}
+                              <div className="grid grid-cols-2 gap-1.5 sm:gap-2 md:gap-3 mb-2 sm:mb-3 md:mb-4">
+                                <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-[10px] sm:text-xs md:text-sm text-slate-600">
+                                  <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-emerald-600 flex-shrink-0" />
+                                  <span className="truncate">{room.maxOccupancy || details.capacity} guests</span>
+                                </div>
+                                <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-[10px] sm:text-xs md:text-sm text-slate-600">
+                                  <Maximize className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-emerald-600 flex-shrink-0" />
+                                  <span className="truncate">{room.size || details.size}</span>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="text-xl font-bold text-emerald-600">
-                                  {formatCurrency(room.price || details.price)}
-                                </p>
-                                <p className="text-xs text-slate-500">per night</p>
+
+                              {/* Amenities */}
+                              <div className="flex flex-wrap gap-1 sm:gap-1.5 md:gap-2 mb-2 sm:mb-3 md:mb-4">
+                                {details.amenities.slice(0, 3).map((amenity) => (
+                                  <Badge key={amenity} variant="secondary" className="text-[9px] sm:text-[10px] md:text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 sm:px-2 sm:py-1">
+                                    {amenity}
+                                  </Badge>
+                                ))}
+                                {details.amenities.length > 3 && (
+                                  <Badge variant="secondary" className="text-[9px] sm:text-[10px] md:text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 sm:px-2 sm:py-1">
+                                    +{details.amenities.length - 3} more
+                                  </Badge>
+                                )}
                               </div>
-                            </div>
-                            {selectedRoom === room.id && (
-                              <div className="mt-3 pt-3 border-t">
+
+                              {/* Action Button */}
+                              {selectedRoom === room.id ? (
                                 <Button
-                                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white py-3 sm:py-4 md:py-5 lg:py-6 rounded-xl shadow-lg font-semibold text-xs sm:text-sm md:text-base"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setStep(2);
                                   }}
                                 >
                                   Continue Booking
+                                  <ArrowRight className="ml-1.5 sm:ml-2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
                                 </Button>
-                              </div>
-                            )}
-                          </CardContent>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  className="w-full border-2 border-emerald-600 text-emerald-600 hover:bg-emerald-50 py-3 sm:py-4 md:py-5 lg:py-6 rounded-xl font-semibold text-xs sm:text-sm md:text-base"
+                                >
+                                  Select Room
+                                </Button>
+                              )}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                    {hasMore && (
+                      <div className="flex justify-center mt-8">
+                        <Button
+                          onClick={() => setDisplayedRoomsCount(prev => prev + 9)}
+                          variant="outline"
+                          size="lg"
+                          className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                        >
+                          Load More Rooms ({filteredRooms.length - displayedRoomsCount} remaining)
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
               </motion.div>
             )}
@@ -646,11 +895,11 @@ function BookContent() {
             {step === 2 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Guest Details</CardTitle>
+                  <CardHeader className="p-3 sm:p-4 md:p-6">
+                    <CardTitle className="text-base sm:text-lg md:text-xl">Guest Details</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid sm:grid-cols-2 gap-4">
+                  <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4 md:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 md:gap-4">
                       <div>
                         <Label>Full Name *</Label>
                         <Input
@@ -690,13 +939,13 @@ function BookContent() {
                         rows={3}
                       />
                     </div>
-                    <div className="flex gap-4 pt-4">
-                      <Button variant="outline" onClick={() => setStep(1)}>
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
+                      <Button variant="outline" onClick={() => setStep(1)} className="order-last sm:order-first">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back
                       </Button>
                       <Button
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 order-first sm:order-last"
                         onClick={() => setStep(3)}
                         disabled={!guestName || !guestEmail || !guestPhone}
                       >
@@ -712,10 +961,10 @@ function BookContent() {
             {step === 3 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Payment</CardTitle>
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="text-lg sm:text-xl">Payment</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-4 p-4 sm:p-6">
                     <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
                       <div className="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
                         <RadioGroupItem value="stripe_card" id="stripe" />
@@ -745,20 +994,31 @@ function BookContent() {
                         <Lock className="w-4 h-4" />
                         Secure payment powered by industry leaders
                       </div>
-                      <div className="flex gap-2">
-                        <Badge variant="outline">Stripe</Badge>
-                        <Badge variant="outline">PayPal</Badge>
-                        <Badge variant="outline">Flutterwave</Badge>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className="bg-white">🔒 256-bit SSL</Badge>
+                        <Badge variant="outline" className="bg-white">Stripe</Badge>
+                        <Badge variant="outline" className="bg-white">PayPal</Badge>
+                        <Badge variant="outline" className="bg-white">Flutterwave</Badge>
                       </div>
                     </div>
 
-                    <div className="flex gap-4 pt-4">
-                      <Button variant="outline" onClick={() => setStep(2)}>
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Shield className="w-5 h-5 text-emerald-600 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-emerald-900 mb-1">100% Secure Payment</p>
+                          <p className="text-sm text-emerald-700">Your payment information is encrypted and secure. We never store your card details.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
+                      <Button variant="outline" onClick={() => setStep(2)} className="order-last sm:order-first">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back
                       </Button>
                       <Button
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 order-first sm:order-last"
                         onClick={handleBooking}
                         disabled={isProcessing}
                       >
@@ -781,12 +1041,12 @@ function BookContent() {
           </div>
 
           {/* Sidebar - Booking Summary */}
-          <div>
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle>Booking Summary</CardTitle>
+          <div className="lg:sticky lg:top-4">
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl">Booking Summary</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6">
                 {selectedRoomDetails ? (
                   <div className="space-y-4">
                     <div className="rounded-lg overflow-hidden">

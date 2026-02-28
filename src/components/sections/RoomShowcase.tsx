@@ -275,7 +275,7 @@ export default function RoomShowcase() {
                     </div>
                     <div className="text-right">
                       <p className="font-heading text-2xl font-bold text-emerald">
-                        ${room.price}
+                        RWF {room.price.toLocaleString()}
                       </p>
                       <p className="text-xs text-text-muted-custom">
                         {t("common", "perNight")}
@@ -331,7 +331,7 @@ export default function RoomShowcase() {
                   {/* Action Button */}
                   <div className="pt-4 border-t border-gray-100 mt-auto">
                     <Link
-                      href={`/book?room=${room.id}&branch=${room.branch.id}`}
+                      href={`/book?room=${room.id}&branch=${room.branch?.id || ''}`}
                       className="w-full"
                     >
                       <Button className="w-full bg-emerald hover:bg-emerald/90 gap-2">

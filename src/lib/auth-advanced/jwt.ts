@@ -3,9 +3,11 @@ import jwt from "jsonwebtoken";
 const JWT_SECRET = process.env.JWT_SECRET || "eastgate-hotel-secret-key-2026";
 const JWT_EXPIRES_IN = "7d";
 
-export function verifyToken(token: string) {
+export function verifyToken(token: string, type: "access" | "refresh" = "access") {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (type === "refresh" && decoded.type !== "refresh") return null;
+    return decoded;
   } catch (error) {
     return null;
   }

@@ -110,9 +110,9 @@ export default function BottomNav() {
       </AnimatePresence>
 
       {/* Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-[997] md:hidden">
-        <div className="bg-charcoal/95 backdrop-blur-xl border-t border-white/10 px-2 pb-[env(safe-area-inset-bottom)]">
-          <div className="flex items-center justify-around py-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden shadow-2xl">
+        <div className="bg-charcoal/98 backdrop-blur-xl border-t border-white/10 px-2 pb-safe-or-2">
+          <div className="flex items-center justify-around py-2.5">
             {bottomNavLinks.map((link) => {
               const Icon = iconMap[link.icon as keyof typeof iconMap];
               const isMore = link.href === "#more";

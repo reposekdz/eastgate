@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
       messages: [],
       conversations: [],
       timestamp: new Date().toISOString()
-    });
+    }, { status: 200 });
   }
 }
 
@@ -158,6 +158,6 @@ export async function POST(req: NextRequest) {
       success: true,
       message: { id: Date.now().toString(), createdAt: new Date().toISOString() },
       timestamp: new Date().toISOString()
-    });
+    }, { status: 200 });
   }
 }

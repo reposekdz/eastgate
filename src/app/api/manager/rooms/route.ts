@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     const existingRoom = await prisma.room.findFirst({
-      where: { roomNumber, branchId },
+      where: { number: roomNumber, branchId },
     });
 
     if (existingRoom) {
@@ -28,13 +28,11 @@ export async function POST(req: NextRequest) {
 
     const room = await prisma.room.create({
       data: {
-        roomNumber,
+        number: roomNumber,
         type,
         floor: floor || 1,
         price: parseFloat(price),
-        capacity: capacity || 2,
-        amenities: amenities || [],
-        images: images || [],
+        maxOccupancy: capacity || 2,
         status: status || "available",
         branchId,
       },

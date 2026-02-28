@@ -44,11 +44,7 @@ import {
   getRoomTypeLabel,
 } from "@/lib/format";
 import { useAuthStore } from "@/lib/store/auth-store";
-import {
-  useGuestStore,
-  type GuestStatus,
-  type IdType,
-} from "@/stores/guest-store";
+import type { GuestStatus, IdType } from "@/stores/guest-store";
 import { useI18n } from "@/lib/i18n/context";
 import { countries, searchCountries } from "@/lib/countries";
 import CountrySelect from "@/components/shared/CountrySelect";
@@ -148,13 +144,8 @@ export default function ReceptionistDashboard() {
   const userBranchId = user?.branchId || "br-001";
   const userBranchName = user?.branchName || "Kigali Main";
 
-  const {
-    registerGuest,
-    updateGuestStatus,
-    getGuestsByBranch,
-    getActiveGuests,
-    searchGuests,
-  } = useGuestStore();
+  const [guests, setGuests] = useState<any[]>([]);
+  const [loadingGuests, setLoadingGuests] = useState(true);
 
   const getBookings = useBranchStore((s) => s.getBookings);
   const getStaff = useBranchStore((s) => s.getStaff);
@@ -197,9 +188,28 @@ export default function ReceptionistDashboard() {
   const [regGuests, setRegGuests] = useState("1");
   const [regRequests, setRegRequests] = useState("");
 
-  // Data
-  const branchGuests = getGuestsByBranch(userBranchId);
-  const activeGuests = getActiveGuests(userBranchId);
+  // Fetch guests from API
+  useEffect(() => {
+    fetchGuests();
+  }, [userBranchId]);
+
+  const fetchGuests = async () => {
+    setLoadingGuests(true);
+    try {
+      const res = await fetch(`/api/receptionist/guests?branchId=${userBranchId}`);
+      const data = await res.json();
+      if (data.success) {
+        setGuests(data.guests);
+      }
+    } catch (error) {
+      console.error("Failed to fetch guests:", error);
+    } finally {
+      setLoadingGuests(false);
+    }
+  };
+
+  const branchGuests = guests;
+  const activeGuests = guests.filter(g => g.status === "checked_in");
 
   // Room stats
   const roomStats = useMemo(() => {
@@ -222,11 +232,16 @@ export default function ReceptionistDashboard() {
   }, [branchRooms, roomFloorFilter, roomStatusFilter]);
 
   // Filter guests
-  const filteredGuests = searchTerm
-    ? searchGuests(searchTerm, userBranchId)
-    : branchGuests.filter((g) =>
-        statusFilter === "all" ? true : g.status === statusFilter
-      );
+  const filteredGuests = branchGuests.filter((g) => {
+    const matchesSearch = !searchTerm || 
+      g.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      g.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      g.phone.includes(searchTerm) ||
+      g.idNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      g.roomNumber.includes(searchTerm);
+    const matchesStatus = statusFilter === "all" || g.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   // Booking filters
   const todayBookings = branchBookings.filter(
@@ -254,13 +269,12 @@ export default function ReceptionistDashboard() {
   const floors = [...new Set(branchRooms.map((r) => r.floor))].sort();
 
   const handleRegister = async () => {
-    if (!regName || !regPhone || !regIdNumber || !regRoom || !regCheckOut) {
+    if (!regName || !regPhone || !regIdNumber || !regCheckOut) {
       toast.error(t("receptionist", "fillAllFields"));
       return;
     }
 
     try {
-      const roomData = branchRooms.find(r => r.number === regRoom);
       const res = await fetch("/api/receptionist/register-guest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -270,7 +284,6 @@ export default function ReceptionistDashboard() {
           phone: regPhone,
           idNumber: regIdNumber,
           nationality: regNationality || "Rwanda",
-          roomId: roomData?.id,
           checkIn: regCheckIn,
           checkOut: regCheckOut,
           numberOfGuests: parseInt(regGuests) || 1,
@@ -280,10 +293,10 @@ export default function ReceptionistDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`${t("receptionist", "guestRegisteredSuccess")}`);
+        toast.success(`✅ ${regName} registered successfully! Room ${data.booking.roomNumber} assigned.`);
         resetRegForm();
         setShowRegisterDialog(false);
-        window.location.reload();
+        fetchGuests();
       } else {
         toast.error(data.error || "Failed to register guest");
       }
@@ -299,17 +312,29 @@ export default function ReceptionistDashboard() {
     setRegCheckOut(""); setRegGuests("1"); setRegRequests("");
   };
 
-  const handleCheckOut = (guestId: string, name: string) => {
-    updateGuestStatus(guestId, "checked_out");
-    toast.success(`${name} ${t("receptionist", "checkedOutSuccess")}`);
+  const handleCheckOut = async (guestId: string, name: string) => {
+    try {
+      const res = await fetch(`/api/receptionist/guests/${guestId}/checkout`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`${name} ${t("receptionist", "checkedOutSuccess")}`);
+        fetchGuests();
+      } else {
+        toast.error(data.error || "Failed to check out");
+      }
+    } catch (error) {
+      toast.error("Failed to check out guest");
+    }
   };
 
-  const handleViewGuest = (guest: ReturnType<typeof getGuestsByBranch>[0]) => {
+  const handleViewGuest = (guest: any) => {
     setSelectedGuest(guest);
     setShowViewDialog(true);
   };
 
-  const handleGenerateReceipt = (guest: ReturnType<typeof getGuestsByBranch>[0]) => {
+  const handleGenerateReceipt = (guest: any) => {
     const nights = Math.max(1, Math.ceil((new Date(guest.checkOutDate).getTime() - new Date(guest.checkInDate).getTime()) / (1000 * 60 * 60 * 24)));
     const roomInfo = branchRooms.find((r) => r.number === guest.roomNumber);
     const roomRate = roomInfo?.price || 234000;
@@ -338,7 +363,7 @@ export default function ReceptionistDashboard() {
     setShowReceiptDialog(true);
   };
 
-  const handlePayPalPayment = (guest: ReturnType<typeof getGuestsByBranch>[0]) => {
+  const handlePayPalPayment = (guest: any) => {
     const nights = Math.max(1, Math.ceil((new Date(guest.checkOutDate).getTime() - new Date(guest.checkInDate).getTime()) / (1000 * 60 * 60 * 24)));
     const roomInfo = branchRooms.find((r) => r.number === guest.roomNumber);
     const roomRate = roomInfo?.price || 234000;
@@ -516,23 +541,6 @@ export default function ReceptionistDashboard() {
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium">{t("receptionist", "roomNumber")} *</Label>
-                      <Select value={regRoom} onValueChange={setRegRoom}>
-                        <SelectTrigger className="mt-1"><SelectValue placeholder={t("receptionist", "selectRoom")} /></SelectTrigger>
-                        <SelectContent>
-                          {availableRooms.length > 0 ? (
-                            availableRooms.map((r) => (
-                              <SelectItem key={r.id} value={r.number}>
-                                {isRw ? "Icyumba" : "Room"} {r.number} • {getRoomTypeLabel(r.type)} • {formatCurrency(r.price)}/{isRw ? "ijoro" : "night"}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="manual" disabled>{t("receptionist", "noAvailableRooms")}</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
                       <Label className="text-sm font-medium">{t("receptionist", "numberOfGuests")}</Label>
                       <Select value={regGuests} onValueChange={setRegGuests}>
                         <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
@@ -551,6 +559,12 @@ export default function ReceptionistDashboard() {
                       <Label className="text-sm font-medium">{t("receptionist", "checkOutDate")} *</Label>
                       <Input type="date" value={regCheckOut} onChange={(e) => setRegCheckOut(e.target.value)} className="mt-1" />
                     </div>
+                  </div>
+                  <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <p className="text-xs text-emerald-800 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4" />
+                      {isRw ? "Icyumba kiboneka kizatangwa ku buryo bwikora" : "An available room will be automatically assigned"}
+                    </p>
                   </div>
                 </div>
                 <Separator />

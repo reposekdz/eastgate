@@ -95,37 +95,47 @@ export default function StaffPage() {
   const fetchStaff = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (!isSuperUser && user?.branchId) {
-        params.append("branchId", user.branchId);
-      }
-      params.append("_t", Date.now().toString());
+      const url = `/api/staff`;
+      console.log("🔍 Fetching from:", url);
       
-      console.log("Fetching staff with params:", params.toString());
-      console.log("User info:", { role: user?.role, branchId: user?.branchId, isSuperUser });
+      const res = await fetch(url);
+      console.log("📡 Response:", res.status, res.statusText);
       
-      const res = await fetch(`/api/staff?${params}`, {
-        cache: "no-store",
-        headers: {
-          "Cache-Control": "no-cache",
-        },
-      });
-      
-      console.log("Response status:", res.status);
-      const data = await res.json();
-      console.log("Full API Response:", JSON.stringify(data, null, 2));
-      
-      if (data.success && (data.staff || data.data?.staff)) {
-        const staffArray = data.staff || data.data?.staff || [];
-        setStaff(staffArray);
-        console.log("✅ Staff loaded:", staffArray.length, "members");
-      } else {
-        console.error("❌ Staff API error:", data);
+      if (!res.ok) {
+        console.error("❌ HTTP Error:", res.status);
+        toast.error(`Server error: ${res.status}`);
         setStaff([]);
+        setLoading(false);
+        return;
+      }
+      
+      const data = await res.json();
+      console.log("📦 Full Response:", JSON.stringify(data, null, 2));
+      
+      // Handle different response structures
+      let staffData = [];
+      if (data.success && Array.isArray(data.staff)) {
+        staffData = data.staff;
+      } else if (data.data && Array.isArray(data.data.staff)) {
+        staffData = data.data.staff;
+      } else if (Array.isArray(data.staff)) {
+        staffData = data.staff;
+      } else if (Array.isArray(data)) {
+        staffData = data;
+      }
+      
+      console.log("👥 Staff array:", staffData);
+      setStaff(staffData);
+      
+      if (staffData.length > 0) {
+        console.log("✅ Loaded", staffData.length, "staff members");
+      } else {
+        console.warn("⚠️ No staff found in database");
       }
     } catch (error) {
-      console.error("❌ Fetch staff exception:", error);
+      console.error("❌ Exception:", error);
       toast.error("Failed to fetch staff");
+      setStaff([]);
     } finally {
       setLoading(false);
     }
@@ -135,60 +145,91 @@ export default function StaffPage() {
     try {
       const res = await fetch("/api/branches");
       const data = await res.json();
+      console.log("Branches API response:", data);
       if (data.success && data.branches) {
         setBranches(data.branches);
+        console.log("✅ Branches loaded:", data.branches.length);
       } else if (data.branches) {
         setBranches(data.branches);
+        console.log("✅ Branches loaded (alt):", data.branches.length);
+      } else {
+        console.error("❌ No branches in response");
       }
     } catch (error) {
-      console.error("Failed to fetch branches");
+      console.error("❌ Failed to fetch branches:", error);
+      toast.error("Failed to load branches");
     }
   };
 
   const handleAddStaff = async () => {
-    if (!newStaff.name || !newStaff.email || !newStaff.password || !newStaff.role || !newStaff.branchId) {
+    if (!newStaff.name || !newStaff.email || !newStaff.password || !newStaff.role || !newStaff.branchId || !newStaff.department) {
       toast.error("Please fill all required fields");
       return;
     }
 
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newStaff.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    // Phone validation (if provided)
+    if (newStaff.phone) {
+      const phoneRegex = /^\+?[0-9]{10,15}$/;
+      if (!phoneRegex.test(newStaff.phone.replace(/\s/g, ""))) {
+        toast.error("Please enter a valid phone number");
+        return;
+      }
+    }
+
+    if (newStaff.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    // Check for duplicate email
+    const emailExists = staff.some(s => s.email.toLowerCase() === newStaff.email.toLowerCase());
+    if (emailExists) {
+      toast.error("This email is already registered");
+      return;
+    }
+
+    // Check for duplicate phone
+    if (newStaff.phone) {
+      const phoneExists = staff.some(s => s.phone === newStaff.phone);
+      if (phoneExists) {
+        toast.error("This phone number is already registered");
+        return;
+      }
+    }
+
     setAddLoading(true);
     try {
-      console.log("Creating staff:", newStaff);
+      const payload = {
+        ...newStaff,
+        role: newStaff.role.toUpperCase(),
+      };
+      
       const res = await fetch("/api/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newStaff),
+        body: JSON.stringify(payload),
       });
+      
       const data = await res.json();
-      console.log("Create staff response:", data);
+      
       if (data.success) {
-        const createdStaff = {
-          id: data.staff?.id || Date.now().toString(),
-          name: data.staff?.name || newStaff.name,
-          email: data.staff?.email || newStaff.email,
-          phone: data.staff?.phone || newStaff.phone,
-          role: data.staff?.role || newStaff.role,
-          department: data.staff?.department || newStaff.department,
-          shift: data.staff?.shift || newStaff.shift,
-          branchId: data.staff?.branchId || newStaff.branchId,
-          status: data.staff?.status || "active",
-          avatar: data.staff?.avatar || null,
-        };
-        console.log("Created staff object:", createdStaff);
-        toast.success(`Staff member added: ${createdStaff.name}`);
-        
-        // Don't add to local state - just fetch from server
+        toast.success(`✅ ${newStaff.name} added successfully!`);
         setShowAddDialog(false);
         setNewStaff({ name: "", email: "", phone: "", password: "", role: "", department: "", shift: "Morning", branchId: "" });
-        
-        // Fetch from server immediately
-        fetchStaff();
+        setTimeout(() => fetchStaff(), 500);
       } else {
-        toast.error(data.error || "Failed to add staff");
+        const errorMsg = data.errors?.[0]?.message || data.error || "Failed to add staff";
+        toast.error(errorMsg);
       }
     } catch (error) {
-      console.error("Add staff error:", error);
-      toast.error("Failed to add staff");
+      toast.error("Network error. Please try again.");
     } finally {
       setAddLoading(false);
     }
@@ -470,14 +511,17 @@ export default function StaffPage() {
               <Input value={newStaff.department} onChange={(e) => setNewStaff({ ...newStaff, department: e.target.value })} placeholder="Front Desk, Kitchen, etc." />
             </div>
             <div className="space-y-2">
-              <Label>Branch *</Label>
-              <Select value={newStaff.branchId} onValueChange={(v) => setNewStaff({ ...newStaff, branchId: v })}>
+              <Label>Branch * ({branches.length} available)</Label>
+              <Select value={newStaff.branchId} onValueChange={(v) => {
+                console.log("Branch selected:", v);
+                setNewStaff({ ...newStaff, branchId: v });
+              }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select branch" />
+                  <SelectValue placeholder={branches.length > 0 ? "Select branch" : "Loading..."} />
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    <SelectItem key={b.id} value={b.id}>{b.name} - {b.location || b.city}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

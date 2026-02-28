@@ -48,7 +48,7 @@ export default function DashboardTopbar({
       <SidebarTrigger className="-ml-1 text-slate-custom hover:text-charcoal" />
       <Separator orientation="vertical" className="h-5" />
 
-      {/* Branch name */}
+      {/* Branch name and department */}
       {showBranchSelector && isSuperRole ? (
         <Select value={selectedBranchId} onValueChange={setSelectedBranch}>
           <SelectTrigger className="w-[180px] h-8 text-sm border-dashed">
@@ -63,9 +63,16 @@ export default function DashboardTopbar({
           </SelectContent>
         </Select>
       ) : (
-        <span className="text-sm font-medium text-charcoal">
-          {user?.branchName || "EastGate Hotel"}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold text-charcoal leading-tight">
+            {user?.branchName || "EastGate Hotel"}
+          </span>
+          {user?.department && (
+            <span className="text-[10px] text-text-muted-custom leading-tight">
+              {user.department}
+            </span>
+          )}
+        </div>
       )}
 
       <div className="flex-1" />
@@ -93,7 +100,7 @@ export default function DashboardTopbar({
                 {user?.name || "User"}
               </span>
               <span className="text-[10px] text-text-muted-custom leading-tight">
-                {user?.branchName}
+                {user?.department || user?.role}
               </span>
             </div>
           </div>

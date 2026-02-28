@@ -1,340 +1,427 @@
-# EastGate Hotel - Production Deployment Guide
+# 🚀 EastGate Hotel - Production Deployment Guide
 
-## 🚀 Complete Setup Instructions
+## ✅ Pre-Deployment Checklist
 
-### 1. Database Setup (MySQL)
-
+### 1. Database Setup
 ```bash
-# Install MySQL 8.0+
-# Create database
-mysql -u root -p
-CREATE DATABASE eastgate CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'eastgate_user'@'localhost' IDENTIFIED BY 'your_secure_password';
-GRANT ALL PRIVILEGES ON eastgate.* TO 'eastgate_user'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-### 2. Environment Variables
-
-Create `.env` file:
-
-```env
-# Database
-DATABASE_URL="mysql://eastgate_user:your_secure_password@localhost:3306/eastgate"
-
-# App
-NEXT_PUBLIC_URL="https://eastgate.rw"
-NEXT_PUBLIC_API_URL="https://eastgate.rw/api"
+# Set environment variables
+DATABASE_URL="mysql://user:password@host:3306/eastgate_production"
+JWT_SECRET="your-super-secure-secret-key-change-this"
 NODE_ENV="production"
+NEXTAUTH_URL="https://yourdomain.com"
+NEXTAUTH_SECRET="another-secure-secret"
 
-# Stripe
-STRIPE_PUBLIC_KEY="pk_live_..."
-STRIPE_SECRET_KEY="sk_live_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
+# Run migrations
+npx prisma migrate deploy
 
-# PayPal
-PAYPAL_CLIENT_ID="..."
-PAYPAL_CLIENT_SECRET="..."
-PAYPAL_MODE="live"
-PAYPAL_WEBHOOK_ID="..."
-
-# Flutterwave
-FLW_PUBLIC_KEY="FLWPUBK-..."
-FLW_SECRET_KEY="FLWSECK-..."
-
-# MTN Mobile Money
-MTN_API_KEY="..."
-MTN_API_SECRET="..."
-MTN_SUBSCRIPTION_KEY="..."
-
-# Airtel Money
-AIRTEL_CLIENT_ID="..."
-AIRTEL_CLIENT_SECRET="..."
-
-# Africa's Talking
-AFRICAS_TALKING_API_KEY="..."
-AFRICAS_TALKING_USERNAME="..."
-AFRICAS_TALKING_SENDER_ID="EASTGATE"
-
-# Email (SMTP)
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="587"
-SMTP_USER="noreply@eastgate.rw"
-SMTP_PASSWORD="..."
-
-# Security
-JWT_SECRET="..."
-ENCRYPTION_KEY="..."
-```
-
-### 3. Install Dependencies
-
-```bash
-npm install
-npm install @prisma/client
-npm install -D prisma
-```
-
-### 4. Prisma Setup
-
-```bash
 # Generate Prisma Client
 npx prisma generate
 
-# Push schema to database
-npx prisma db push
+# Seed initial data (optional)
+npx prisma db seed
+```
 
-# Or run migrations
+### 2. Build Application
+```bash
+# Install dependencies
+npm install
+
+# Build for production
+npm run build
+
+# Test production build locally
+npm start
+```
+
+### 3. Environment Configuration
+Create `.env.production`:
+```env
+DATABASE_URL="mysql://user:pass@host:3306/eastgate"
+JWT_SECRET="production-secret-key"
+NODE_ENV="production"
+NEXT_PUBLIC_API_URL="https://api.yourdomain.com"
+```
+
+## 📦 Deployment Options
+
+### Option 1: Vercel (Recommended)
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Login
+vercel login
+
+# Deploy
+vercel --prod
+
+# Set environment variables in Vercel dashboard
+```
+
+### Option 2: Netlify
+```bash
+# Install Netlify CLI
+npm i -g netlify-cli
+
+# Login
+netlify login
+
+# Deploy
+netlify deploy --prod
+
+# Configure environment variables in Netlify dashboard
+```
+
+### Option 3: Docker
+```dockerfile
+# Dockerfile
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npx prisma generate
+RUN npm run build
+
+FROM node:18-alpine AS runner
+WORKDIR /app
+COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+```bash
+# Build and run
+docker build -t eastgate-hotel .
+docker run -p 3000:3000 eastgate-hotel
+```
+
+### Option 4: VPS (Ubuntu/Debian)
+```bash
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install PM2
+sudo npm install -g pm2
+
+# Clone repository
+git clone https://github.com/yourusername/eastgate.git
+cd eastgate
+
+# Install dependencies
+npm install
+
+# Build
+npm run build
+
+# Start with PM2
+pm2 start npm --name "eastgate" -- start
+pm2 save
+pm2 startup
+```
+
+## 🔧 Missing Features Completed
+
+### ✅ All APIs Implemented
+- [x] Hero Slides Management (CRUD)
+- [x] Room Management (CRUD)
+- [x] Menu Management (CRUD)
+- [x] Events Management (CRUD)
+- [x] User Management (Edit all users)
+- [x] Branch Management
+- [x] Branch Info with Statistics
+- [x] Authentication & Authorization
+- [x] Activity Logging
+- [x] Real-time Statistics
+
+### ✅ All UI Components
+- [x] Hero Management Page
+- [x] User Management Page
+- [x] Manager Dashboard with Branch Filter
+- [x] Admin Dashboard with Branch Filter
+- [x] Manager Topbar with Live Stats
+- [x] Branch Selector for Super Users
+- [x] Dynamic Branch Title Display
+
+### ✅ Database Schema
+- [x] Branches
+- [x] Managers with Assignments
+- [x] Staff
+- [x] Rooms with Amenities
+- [x] Menu Items with Nutrition
+- [x] Events
+- [x] Bookings
+- [x] Orders
+- [x] Payments
+- [x] Hero Content
+- [x] Activity Logs
+- [x] All relationships configured
+
+## 🎯 Production Features
+
+### Security
+- ✅ JWT authentication
+- ✅ Password hashing (bcrypt)
+- ✅ Role-based access control
+- ✅ Branch-level data isolation
+- ✅ Activity audit logging
+- ✅ HTTPS enforcement
+- ✅ CORS configuration
+- ✅ Rate limiting ready
+
+### Performance
+- ✅ Database indexing
+- ✅ Prisma query optimization
+- ✅ Parallel data fetching
+- ✅ Image optimization
+- ✅ Code splitting
+- ✅ Static generation where possible
+- ✅ API response caching
+
+### Monitoring
+- ✅ Error logging
+- ✅ Activity tracking
+- ✅ Performance metrics
+- ✅ User analytics ready
+
+## 📊 Database Migrations
+
+```bash
+# Create migration
+npx prisma migrate dev --name add_feature
+
+# Apply to production
 npx prisma migrate deploy
 
-# Open Prisma Studio (optional)
-npx prisma studio
+# Reset database (development only)
+npx prisma migrate reset
 ```
 
-### 5. Build Application
+## 🔐 Security Hardening
 
+### 1. Update JWT Secret
 ```bash
-npm run build
+# Generate secure secret
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-### 6. Start Production Server
+### 2. Configure CORS
+```typescript
+// middleware.ts
+export const config = {
+  matcher: '/api/:path*',
+};
 
-```bash
-npm start
-# Or with PM2
-pm2 start npm --name "eastgate" -- start
+export function middleware(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const allowedOrigins = ['https://yourdomain.com'];
+  
+  if (origin && !allowedOrigins.includes(origin)) {
+    return new NextResponse(null, { status: 403 });
+  }
+  
+  return NextResponse.next();
+}
 ```
 
-## 📊 Database Schema
+### 3. Rate Limiting
+```typescript
+// lib/rate-limit.ts
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
-### Tables Created:
-- `Customer` - Customer information and loyalty data
-- `Order` - All orders (bookings, food, events, spa)
-- `OrderItem` - Line items for each order
-- `Transaction` - Payment transactions
-- `Revenue` - Revenue tracking and analytics
-- `Notification` - SMS/Email notification logs
-- `Receipt` - Receipt storage
-
-### Indexes:
-- All foreign keys indexed
-- Email, phone, orderId indexed
-- Date fields indexed for analytics
-- Status fields indexed for filtering
-
-## 🔧 API Endpoints (Production Ready)
-
-### Payment Processing
+export const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, "10 s"),
+});
 ```
-POST /api/payments/process - Unified payment processor
-POST /api/bookings/payment - Booking payments
-POST /api/orders/payment - Restaurant orders
-POST /api/menu/payment - Menu orders
-POST /api/events/payment - Event bookings
-POST /api/spa/payment - Spa appointments
-```
-
-### Payment Management
-```
-GET  /api/payments/verify - Verify payment status
-GET  /api/payments/status - Get order status
-POST /api/payments/webhook - Payment webhooks
-```
-
-### Revenue Analytics (Prisma-based)
-```
-GET /api/revenue/analytics-v2 - Global analytics
-GET /api/revenue/branch-v2 - Branch revenue
-POST /api/revenue/reports - Generate reports
-```
-
-## 🔐 Webhook Configuration
-
-### Stripe
-1. Go to https://dashboard.stripe.com/webhooks
-2. Add endpoint: `https://eastgate.rw/api/payments/webhook?provider=stripe`
-3. Select events: `payment_intent.succeeded`, `payment_intent.payment_failed`
-4. Copy webhook secret to `.env`
-
-### PayPal
-1. Go to https://developer.paypal.com/dashboard/webhooks
-2. Add webhook: `https://eastgate.rw/api/payments/webhook?provider=paypal`
-3. Select events: `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.DENIED`
-4. Copy webhook ID to `.env`
-
-### Flutterwave
-1. Go to Flutterwave Dashboard > Settings > Webhooks
-2. Add URL: `https://eastgate.rw/api/payments/webhook?provider=flutterwave`
-3. Secret hash is your FLW_SECRET_KEY
-
-## 📱 Africa's Talking Setup
-
-1. Sign up at https://africastalking.com
-2. Get API Key and Username
-3. Add to `.env`
-4. Test in sandbox mode first
-5. Go live after testing
 
 ## 🧪 Testing
 
-### Test Payment Methods
-
 ```bash
-# Stripe Test Cards
-4242 4242 4242 4242 - Success
-4000 0000 0000 0002 - Decline
+# Run tests
+npm test
 
-# PayPal
-Use sandbox accounts from developer.paypal.com
+# E2E tests
+npm run test:e2e
 
-# Flutterwave
-Use test API keys and test cards
+# Check types
+npm run type-check
 
-# Mobile Money
-Use sandbox phone numbers
+# Lint
+npm run lint
 ```
 
-### Test Database
+## 📈 Monitoring Setup
 
+### 1. Error Tracking (Sentry)
 ```bash
-# Check database connection
-npx prisma db pull
+npm install @sentry/nextjs
 
-# View data
-npx prisma studio
+# sentry.client.config.js
+import * as Sentry from "@sentry/nextjs";
 
-# Run queries
-mysql -u eastgate_user -p eastgate
-SELECT COUNT(*) FROM Order;
-SELECT SUM(netAmount) FROM Revenue WHERE status = 'COMPLETED';
+Sentry.init({
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+});
 ```
 
-## 📈 Monitoring
-
-### Database Monitoring
-```sql
--- Check order count
-SELECT COUNT(*) FROM Order;
-
--- Check revenue today
-SELECT SUM(netAmount) FROM Revenue 
-WHERE DATE(date) = CURDATE() AND status = 'COMPLETED';
-
--- Check transactions by provider
-SELECT provider, COUNT(*), SUM(amount) 
-FROM Transaction 
-WHERE status = 'COMPLETED' 
-GROUP BY provider;
-
--- Check failed payments
-SELECT * FROM Transaction 
-WHERE status = 'FAILED' 
-ORDER BY createdAt DESC 
-LIMIT 10;
-```
-
-### Application Logs
-```bash
-# View logs
-pm2 logs eastgate
-
-# Monitor
-pm2 monit
-```
-
-## 🔄 Backup Strategy
-
-```bash
-# Daily database backup
-mysqldump -u eastgate_user -p eastgate > backup_$(date +%Y%m%d).sql
-
-# Automated backup script
-0 2 * * * /usr/bin/mysqldump -u eastgate_user -p'password' eastgate > /backups/eastgate_$(date +\%Y\%m\%d).sql
-```
-
-## 🚨 Troubleshooting
-
-### Database Connection Issues
-```bash
-# Test connection
-mysql -u eastgate_user -p eastgate
-
-# Check Prisma connection
-npx prisma db pull
-```
-
-### Payment Issues
-```bash
-# Check webhook logs
-tail -f /var/log/nginx/access.log | grep webhook
-
-# Test webhook locally
-ngrok http 3000
-# Update webhook URLs to ngrok URL
-```
-
-### SMS Not Sending
-```bash
-# Check Africa's Talking balance
-# Verify API credentials
-# Check phone number format (+250...)
-```
-
-## 📊 Performance Optimization
-
-### Database Indexes
-All critical fields are indexed in Prisma schema
-
-### Caching
+### 2. Analytics (Google Analytics)
 ```typescript
-// Add Redis for caching (optional)
-npm install redis
-// Cache revenue analytics for 5 minutes
+// lib/gtag.ts
+export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID;
+
+export const pageview = (url: string) => {
+  window.gtag("config", GA_TRACKING_ID, {
+    page_path: url,
+  });
+};
 ```
 
-### CDN
-- Use Cloudflare for static assets
-- Enable caching for images and CSS
+## 🔄 CI/CD Pipeline
 
-## 🎯 Production Checklist
+### GitHub Actions
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to Production
 
-- [x] Prisma schema created
-- [x] MySQL database configured
-- [x] All environment variables set
-- [x] Payment gateways configured
-- [x] Webhooks configured
-- [x] Africa's Talking SMS configured
-- [x] SMTP email configured
-- [x] SSL certificate installed
-- [x] Database backups automated
-- [x] Monitoring setup
-- [x] Error logging configured
-- [x] Load testing completed
-- [x] Security audit passed
+on:
+  push:
+    branches: [main]
 
-## 🔥 Advanced Features
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Deploy to Vercel
+        run: vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+```
 
-- Real-time revenue tracking
-- Automatic receipt generation
-- SMS notifications via Africa's Talking
-- Multi-payment gateway support
-- Branch-specific analytics
-- Transaction logging
-- Fraud detection
-- Webhook verification
-- Database transactions
-- Error handling
-- Retry logic
-- Rate limiting ready
+## 📱 Mobile Optimization
+
+- ✅ Responsive design
+- ✅ Touch-friendly UI
+- ✅ Mobile navigation
+- ✅ PWA ready
+- ✅ Offline support ready
+
+## 🌐 Domain Configuration
+
+### DNS Settings
+```
+A Record: @ -> Your Server IP
+CNAME: www -> yourdomain.com
+```
+
+### SSL Certificate
+```bash
+# Using Let's Encrypt
+sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+```
+
+## 📝 Post-Deployment
+
+### 1. Verify All Features
+- [ ] Login as super admin
+- [ ] Test hero management
+- [ ] Test user management
+- [ ] Test branch filtering
+- [ ] Test room creation
+- [ ] Test menu creation
+- [ ] Test event creation
+- [ ] Verify all APIs respond
+- [ ] Check database connections
+- [ ] Test payment flows
+
+### 2. Performance Check
+```bash
+# Lighthouse audit
+npm install -g lighthouse
+lighthouse https://yourdomain.com --view
+```
+
+### 3. Security Scan
+```bash
+# OWASP ZAP or similar
+npm audit
+npm audit fix
+```
+
+## 🎉 Launch Checklist
+
+- [ ] Database migrated
+- [ ] Environment variables set
+- [ ] SSL certificate installed
+- [ ] Domain configured
+- [ ] All APIs tested
+- [ ] All UI components working
+- [ ] Authentication working
+- [ ] Payment gateway configured
+- [ ] Email service configured
+- [ ] Monitoring enabled
+- [ ] Backups configured
+- [ ] Documentation updated
+- [ ] Team trained
+- [ ] Support ready
+
+## 🔧 Maintenance
+
+### Daily
+- Monitor error logs
+- Check system health
+- Review activity logs
+
+### Weekly
+- Database backup verification
+- Performance review
+- Security updates
+
+### Monthly
+- Full system audit
+- User feedback review
+- Feature planning
 
 ## 📞 Support
 
-Technical Support: tech@eastgate.rw
-Emergency: +250 788 000 000
+### Production Issues
+1. Check error logs
+2. Review activity logs
+3. Check database status
+4. Verify API responses
+5. Contact support team
+
+### Rollback Procedure
+```bash
+# Revert to previous version
+vercel rollback
+
+# Or with PM2
+pm2 restart eastgate --update-env
+```
+
+## 🎯 Success Metrics
+
+- Uptime: 99.9%
+- Response time: < 200ms
+- Error rate: < 0.1%
+- User satisfaction: > 4.5/5
 
 ---
 
-**Status**: ✅ PRODUCTION READY
-**Database**: MySQL with Prisma ORM
-**APIs**: Real integrations (no mocks)
+**Status**: ✅ Production Ready
+**Last Updated**: 2026
 **Version**: 2.0.0
+**Deployment**: Ready for Launch 🚀

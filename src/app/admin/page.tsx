@@ -11,45 +11,81 @@ import QuickActions from "@/components/admin/dashboard/QuickActions";
 import TodaySummary from "@/components/admin/dashboard/TodaySummary";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useI18n } from "@/lib/i18n/context";
 import { useAuthStore } from "@/lib/store/auth-store";
-import { Shield, Lock, Building2, LayoutDashboard, TrendingUp, CalendarCheck, CreditCard } from "lucide-react";
+import { useBranchStore } from "@/lib/store/branch-store";
+import { Shield, Lock, Building2, LayoutDashboard, TrendingUp, CalendarCheck, CreditCard, Filter } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminDashboard() {
   const { t, isRw } = useI18n();
   const { user } = useAuthStore();
-  const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  const isBranchAdmin = user?.role === "BRANCH_MANAGER" || user?.role === "MANAGER";
+  const { getBranches } = useBranchStore();
+  const isSuperAdmin = user?.role === "super_admin";
+  const isSuperManager = user?.role === "super_manager";
+  const isSuperRole = isSuperAdmin || isSuperManager;
+  const isBranchAdmin = user?.role === "branch_manager" || user?.role === "branch_admin";
   const [tab, setTab] = useState("overview");
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>(user?.branchId || "all");
+
+  const userRole = user?.role || "guest";
+  const branchId = user?.branchId || "all";
+  const allBranches = getBranches(userRole, branchId);
+  
+  const activeBranch = allBranches.find(b => b.id === selectedBranchFilter);
+  const activeBranchName = activeBranch?.name || "All Branches";
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="h-10 w-10 bg-emerald rounded-xl flex items-center justify-center shadow-lg">
-            <Building2 className="h-5 w-5 text-white" />
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-emerald rounded-xl flex items-center justify-center shadow-lg">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="heading-md text-charcoal">
+                {isSuperRole ? activeBranchName : user?.branchName || t("common", "dashboard")}
+              </h1>
+              <p className="body-sm text-text-muted-custom mt-0.5">
+                {isRw
+                  ? `Murakaze nanone, ${user?.name || "Umuyobozi"}. Iki ni ibigenda muri EastGate uyu munsi.`
+                  : `Welcome back, ${user?.name || "Admin"}. Here's what's happening at EastGate today.`}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="heading-md text-charcoal">
-              {isSuperAdmin
-                ? t("management", "superAdminDashboard")
-                : isBranchAdmin
-                  ? t("dashboard", "branchAdminDashboard")
-                  : t("common", "dashboard")}
-            </h1>
-            <p className="body-sm text-text-muted-custom mt-0.5">
-              {isRw
-                ? `Murakaze nanone, ${user?.name || "Umuyobozi"}. Iki ni ibigenda muri EastGate uyu munsi.`
-                : `Welcome back, ${user?.name || "Admin"}. Here's what's happening at EastGate today.`}
-            </p>
-          </div>
+          {/* Branch Filter for Super Users */}
+          {isSuperRole && (
+            <Select value={selectedBranchFilter} onValueChange={setSelectedBranchFilter}>
+              <SelectTrigger className="w-[200px] h-9 border-emerald/30">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter Branch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    All Branches
+                  </div>
+                </SelectItem>
+                {allBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      {branch.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
       {/* Super Admin Notice */}
-      {isSuperAdmin && (
+      {isSuperRole && (
         <Card className="bg-gradient-to-r from-emerald/5 to-gold/5 border-emerald/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -59,7 +95,9 @@ export default function AdminDashboard() {
                   {isRw ? "Ikibaho cy'Umunyamabanga Mukuru — Gucunga Sisitemu Yose" : "Super Admin Panel — Full System Control"}
                 </p>
                 <p className="text-xs text-text-muted-custom">
-                  {t("management", "accountsNote")}
+                  {selectedBranchFilter === "all" 
+                    ? (isRw ? "Ureba amashami yose" : "Viewing all branches") 
+                    : (isRw ? `Ureba: ${activeBranchName}` : `Viewing: ${activeBranchName}`)}
                 </p>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
@@ -72,7 +110,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Branch Admin notice */}
-      {isBranchAdmin && !isSuperAdmin && (
+      {isBranchAdmin && !isSuperRole && (
         <Card className="bg-gradient-to-r from-indigo-50 to-emerald/5 border-indigo-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">

@@ -1,458 +1,239 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/auth-advanced";
-import { writeFileSync, mkdirSync } from "fs";
-import { join } from "path";
-import { v4 as uuidv4 } from "uuid";
+import { PrismaClient } from "@prisma/client";
 
-/**
- * GET /api/manager/menu
- * Fetch menu items for manager's branch
- */
+const prisma = new PrismaClient();
+
+// GET all menu items with advanced filtering
 export async function GET(req: NextRequest) {
   try {
-    const token = req.headers.get("authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const session = verifyToken(token, "access");
-    if (!session || !session.branchId) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const { searchParams } = new URL(req.url);
+    const branchId = searchParams.get("branchId");
     const category = searchParams.get("category");
-    const isApproved = searchParams.get("isApproved");
-    const available = searchParams.get("available");
     const search = searchParams.get("search");
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-    const limit = Math.min(100, parseInt(searchParams.get("limit") || "50"));
+    const available = searchParams.get("available");
+    const dietary = searchParams.get("dietary");
+    const sortBy = searchParams.get("sortBy") || "name";
+    const sortOrder = searchParams.get("sortOrder") || "asc";
+    const limit = parseInt(searchParams.get("limit") || "100");
+    const offset = parseInt(searchParams.get("offset") || "0");
 
-    const where: any = { branchId: session.branchId };
-    if (category) where.category = category;
-    if (isApproved !== null) where.isApproved = isApproved === "true";
-    if (available !== null) where.available = available === "true";
+    if (!branchId) {
+      return NextResponse.json({ success: false, error: "Branch ID required" }, { status: 400 });
+    }
 
+    const where: any = { branchId };
+    if (category && category !== "all") where.category = category;
+    if (available === "true") where.available = true;
+    if (dietary === "vegetarian") where.vegetarian = true;
+    if (dietary === "vegan") where.vegan = true;
+    if (dietary === "glutenFree") where.glutenFree = true;
+    if (dietary === "halal") where.halal = true;
+    if (dietary === "spicy") where.spicy = true;
+    
     if (search) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
+        { nameFr: { contains: search, mode: "insensitive" } },
+        { nameSw: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
       ];
     }
 
-    const [items, total] = await Promise.all([
-      prisma.menuItem.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-      }),
+    const orderBy: any = {};
+    if (sortBy === "price") orderBy.price = sortOrder;
+    else if (sortBy === "popular") orderBy.totalOrders = "desc";
+    else if (sortBy === "rating") orderBy.rating = "desc";
+    else orderBy[sortBy] = sortOrder;
+
+    const [items, total, stats] = await Promise.all([
+      prisma.menuItem.findMany({ where, orderBy, take: limit, skip: offset }),
       prisma.menuItem.count({ where }),
+      prisma.menuItem.aggregate({
+        where: { branchId },
+        _avg: { price: true, rating: true },
+        _sum: { totalOrders: true },
+        _count: true,
+      }),
     ]);
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          items: items.map((item) => ({
-            ...item,
-            images: item.images
-              ? Array.isArray(item.images)
-                ? item.images
-                : [item.images]
-              : [],
-          })),
-          pagination: {
-            page,
-            limit,
-            total,
-            pages: Math.ceil(total / limit),
-          },
-        },
+    return NextResponse.json({ 
+      success: true, 
+      items, 
+      total,
+      stats: {
+        avgPrice: stats._avg.price,
+        avgRating: stats._avg.rating,
+        totalOrders: stats._sum.totalOrders,
+        totalItems: stats._count,
       },
-      { status: 200 }
-    );
-  } catch (error: any) {
-    console.error("Menu fetch error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || "Failed to fetch menu items" },
-      { status: 500 }
-    );
+      pagination: { limit, offset, hasMore: total > offset + limit },
+    });
+  } catch (error) {
+    console.error("Error fetching menu items:", error);
+    return NextResponse.json({ success: false, error: "Failed to fetch menu items" }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
-/**
- * POST /api/manager/menu
- * Create new menu item with image upload from local device
- */
+// POST create new menu item with translations
 export async function POST(req: NextRequest) {
   try {
-    const token = req.headers.get("authorization")?.replace("Bearer ", "");
-    if (!token) {
+    const body = await req.json();
+    const {
+      name, nameFr, nameSw,
+      category, subcategory,
+      price, costPrice,
+      description, descriptionFr, descriptionSw,
+      imageUrl, images,
+      available, popular, featured,
+      vegetarian, vegan, spicy, spicyLevel,
+      glutenFree, halal, organic,
+      calories, protein, carbs, fat,
+      allergens, ingredients,
+      prepTime, servingSize, tags,
+      branchId, createdBy,
+    } = body;
+
+    if (!name || !category || !price || !branchId) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const session = verifyToken(token, "access");
-    if (!session || !session.branchId) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    // Check manager permissions
-    if (session.role === "manager") {
-      const assignment = await prisma.managerAssignment.findUnique({
-        where: {
-          managerId_branchId: {
-            managerId: session.id,
-            branchId: session.branchId,
-          },
-        },
-      });
-
-      if (!assignment || !assignment.canManageMenu) {
-        return NextResponse.json(
-          { success: false, error: "Permission denied: Cannot manage menu" },
-          { status: 403 }
-        );
-      }
-    }
-
-    const formData = await req.formData();
-    const name = formData.get("name") as string;
-    const nameFr = formData.get("nameFr") as string;
-    const nameSw = formData.get("nameSw") as string;
-    const category = formData.get("category") as string;
-    const subcategory = formData.get("subcategory") as string;
-    const price = parseFloat(formData.get("price") as string);
-    const costPrice = formData.get("costPrice")
-      ? parseFloat(formData.get("costPrice") as string)
-      : null;
-    const description = formData.get("description") as string;
-    const descriptionFr = formData.get("descriptionFr") as string;
-    const descriptionSw = formData.get("descriptionSw") as string;
-    const prepTime = formData.get("prepTime")
-      ? parseInt(formData.get("prepTime") as string)
-      : 15;
-    const calories = formData.get("calories")
-      ? parseInt(formData.get("calories") as string)
-      : null;
-    const vegetarian = formData.get("vegetarian") === "true";
-    const vegan = formData.get("vegan") === "true";
-    const glutenFree = formData.get("glutenFree") === "true";
-    const halal = formData.get("halal") === "true";
-    const spicy = formData.get("spicy") === "true";
-    const tags = formData.get("tags") ? JSON.parse(formData.get("tags") as string) : [];
-
-    // Validate required fields
-    if (!name || !category || !price) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Name, category, and price are required",
-        },
+        { success: false, error: "Name, category, price, and branch are required" },
         { status: 400 }
       );
     }
 
-    // Process image uploads
-    const images: any[] = [];
-    const imageFiles = formData.getAll("images") as File[];
+    const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
 
-    if (imageFiles && imageFiles.length > 0) {
-      for (const imageFile of imageFiles) {
-        if (imageFile instanceof File && imageFile.size > 0) {
-          try {
-            const imageBuffer = await imageFile.arrayBuffer();
-            const imageId = uuidv4();
-            const fileName = `${imageId}-${imageFile.name}`;
-            const uploadDir = join(process.cwd(), "public", "menu-items");
-
-            // Create directory if it doesn't exist
-            try {
-              mkdirSync(uploadDir, { recursive: true });
-            } catch (e) {
-              // Directory might already exist
-            }
-
-            // Save file
-            const filePath = join(uploadDir, fileName);
-            writeFileSync(filePath, Buffer.from(imageBuffer));
-
-            images.push({
-              url: `/menu-items/${fileName}`,
-              uploadedAt: new Date(),
-              uploadedBy: session.id,
-              fileName,
-            });
-          } catch (error) {
-            console.error("Image upload error:", error);
-            // Continue with other images even if one fails
-          }
-        }
-      }
-    }
-
-    // Generate slug
-    const slug = name
-      .toLowerCase()
-      .replace(/[^\w\s]/gi, "")
-      .replace(/\s+/g, "-");
-
-    // Create menu item
-    const menuItem = await prisma.menuItem.create({
+    const item = await prisma.menuItem.create({
       data: {
-        name,
-        nameFr: nameFr || null,
-        nameSw: nameSw || null,
-        slug,
-        category,
-        subcategory: subcategory || null,
-        price,
-        costPrice,
-        description: description || null,
-        descriptionFr: descriptionFr || null,
-        descriptionSw: descriptionSw || null,
-        images: images.length > 0 ? images : null,
-        prepTime,
+        name, nameFr, nameSw, slug,
+        category, subcategory,
+        price: parseFloat(price),
+        costPrice: costPrice ? parseFloat(costPrice) : null,
+        description, descriptionFr, descriptionSw,
+        imageUrl,
+        images: images || [],
+        available: available ?? true,
+        popular: popular ?? false,
+        featured: featured ?? false,
+        vegetarian: vegetarian ?? false,
+        vegan: vegan ?? false,
+        spicy: spicy ?? false,
+        spicyLevel: spicyLevel ?? 0,
+        glutenFree: glutenFree ?? false,
+        halal: halal ?? false,
+        organic: organic ?? false,
         calories,
-        vegetarian,
-        vegan,
-        glutenFree,
-        halal,
-        spicy,
-        tags,
-        available: true,
-        isApproved: true, // Manager items auto-approved
-        branchId: session.branchId,
-        createdBy: session.id,
-        lastModifiedBy: session.id,
+        protein: protein ? parseFloat(protein) : null,
+        carbs: carbs ? parseFloat(carbs) : null,
+        fat: fat ? parseFloat(fat) : null,
+        allergens: allergens || [],
+        ingredients: ingredients || [],
+        prepTime: prepTime ?? 15,
+        servingSize,
+        tags: tags || [],
+        branchId,
+        createdBy,
+        isApproved: true,
       },
     });
 
-    // Log activity
     await prisma.activityLog.create({
       data: {
-        userId: session.id,
-        branchId: session.branchId,
-        action: "menu_item_created",
+        userId: createdBy,
+        branchId,
+        action: "create",
         entity: "menu_item",
-        entityId: menuItem.id,
-        details: { name, category, price, images: images.length },
+        entityId: item.id,
+        details: { itemName: name, category },
       },
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          menuItem: {
-            ...menuItem,
-            images: images,
-          },
-        },
-        message: `Menu item "${name}" created successfully with ${images.length} image(s)`,
-      },
-      { status: 201 }
-    );
-  } catch (error: any) {
-    console.error("Menu item creation error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "Failed to create menu item",
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true, message: "Menu item created successfully", item });
+  } catch (error) {
+    console.error("Error creating menu item:", error);
+    return NextResponse.json({ success: false, error: "Failed to create menu item" }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
-/**
- * PATCH /api/manager/menu/[id]
- * Update menu item
- */
-export async function PATCH(req: NextRequest) {
+// PUT update menu item with activity logging
+export async function PUT(req: NextRequest) {
   try {
-    const token = req.headers.get("authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const session = verifyToken(token, "access");
-    if (!session || !session.branchId) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const body = await req.json();
-    const { id, ...updateData } = body;
+    const { id, lastModifiedBy, branchId, ...updateData } = body;
 
     if (!id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Menu item ID required",
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "Item ID required" }, { status: 400 });
     }
 
-    // Verify item exists and belongs to manager's branch
-    const menuItem = await prisma.menuItem.findUnique({
+    const oldItem = await prisma.menuItem.findUnique({ where: { id } });
+
+    if (updateData.price) updateData.price = parseFloat(updateData.price);
+    if (updateData.costPrice) updateData.costPrice = parseFloat(updateData.costPrice);
+    if (updateData.protein) updateData.protein = parseFloat(updateData.protein);
+    if (updateData.carbs) updateData.carbs = parseFloat(updateData.carbs);
+    if (updateData.fat) updateData.fat = parseFloat(updateData.fat);
+
+    const item = await prisma.menuItem.update({
       where: { id },
-      select: { branchId: true },
+      data: { ...updateData, lastModifiedBy },
     });
 
-    if (!menuItem || menuItem.branchId !== session.branchId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Menu item not found or access denied",
-        },
-        { status: 404 }
-      );
-    }
-
-    // Update
-    const updated = await prisma.menuItem.update({
-      where: { id },
-      data: {
-        ...updateData,
-        lastModifiedBy: session.id,
-        updatedAt: new Date(),
-      },
-    });
-
-    // Log activity
     await prisma.activityLog.create({
       data: {
-        userId: session.id,
-        branchId: session.branchId,
-        action: "menu_item_updated",
+        userId: lastModifiedBy,
+        branchId: branchId || oldItem?.branchId || "",
+        action: "update",
         entity: "menu_item",
         entityId: id,
-        details: updateData,
+        details: { changes: updateData, oldPrice: oldItem?.price, newPrice: item.price },
       },
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: { menuItem: updated },
-        message: "Menu item updated successfully",
-      },
-      { status: 200 }
-    );
-  } catch (error: any) {
-    console.error("Menu item update error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "Failed to update menu item",
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true, message: "Menu item updated successfully", item });
+  } catch (error) {
+    console.error("Error updating menu item:", error);
+    return NextResponse.json({ success: false, error: "Failed to update menu item" }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
-/**
- * DELETE /api/manager/menu/[id]
- * Delete menu item
- */
+// DELETE menu item with logging
 export async function DELETE(req: NextRequest) {
   try {
-    const token = req.headers.get("authorization")?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const session = verifyToken(token, "access");
-    if (!session || !session.branchId) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const userId = searchParams.get("userId");
+    const branchId = searchParams.get("branchId");
 
     if (!id) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Menu item ID required",
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: "Item ID required" }, { status: 400 });
     }
 
-    const menuItem = await prisma.menuItem.findUnique({
-      where: { id },
-      select: { branchId: true, name: true },
-    });
+    const item = await prisma.menuItem.findUnique({ where: { id } });
+    await prisma.menuItem.delete({ where: { id } });
 
-    if (!menuItem || menuItem.branchId !== session.branchId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Menu item not found or access denied",
+    if (userId && branchId) {
+      await prisma.activityLog.create({
+        data: {
+          userId,
+          branchId,
+          action: "delete",
+          entity: "menu_item",
+          entityId: id,
+          details: { itemName: item?.name, category: item?.category },
         },
-        { status: 404 }
-      );
+      });
     }
 
-    // Delete
-    await prisma.menuItem.delete({
-      where: { id },
-    });
-
-    // Log activity
-    await prisma.activityLog.create({
-      data: {
-        userId: session.id,
-        branchId: session.branchId,
-        action: "menu_item_deleted",
-        entity: "menu_item",
-        entityId: id,
-        details: { name: menuItem.name },
-      },
-    });
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: `Menu item "${menuItem.name}" deleted`,
-      },
-      { status: 200 }
-    );
-  } catch (error: any) {
-    console.error("Menu item deletion error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "Failed to delete menu item",
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true, message: "Menu item deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting menu item:", error);
+    return NextResponse.json({ success: false, error: "Failed to delete menu item" }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

@@ -15,7 +15,7 @@ export default function PublicLayout({
     <I18nProvider>
       <CurrencyProvider>
         <Navbar />
-        <main className="min-h-screen pb-20 md:pb-0">{children}</main>
+        <main className="min-h-screen pb-24 md:pb-0 overflow-x-hidden w-full max-w-[100vw]">{children}</main>
         <Footer />
         <BottomNav />
         <LiveChatWidget />

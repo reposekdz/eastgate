@@ -82,20 +82,20 @@ export default function MenuPage() {
     const fetchMenu = async () => {
       setLoading(true);
       try {
-        const params = new URLSearchParams({
-          branchId: selectedBranch,
-          available: "true",
-          limit: "100",
-          sortBy,
-          sortOrder: "asc",
-        });
-
-        const res = await fetch(`/api/menu?${params}`);
+        const res = await fetch(`/api/menu?branchId=${selectedBranch}`);
         const data = await res.json();
 
         if (data.success) {
-          setMenuItems(data.menuItems);
-          setCategories(data.categories);
+          setMenuItems(data.items);
+          
+          const categoryCounts = data.items.reduce((acc: Record<string, number>, item: MenuItem) => {
+            acc[item.category] = (acc[item.category] || 0) + 1;
+            return acc;
+          }, {});
+          
+          setCategories(
+            Object.entries(categoryCounts).map(([name, count]) => ({ name, count: count as number }))
+          );
         } else {
           toast.error("Failed to load menu");
         }

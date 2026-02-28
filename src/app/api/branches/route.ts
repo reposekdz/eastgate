@@ -1,39 +1,73 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth-advanced";
 
-const prisma = new PrismaClient();
+export const dynamic = "force-dynamic";
 
-// GET - Fetch all branches
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const isActive = searchParams.get("isActive");
-
-    const where: any = {};
-    if (isActive !== null) where.isActive = isActive === "true";
-
     const branches = await prisma.branch.findMany({
-      where,
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        location: true,
+        city: true,
+        slug: true,
+      },
       orderBy: { name: "asc" },
-      include: {
-        _count: {
-          select: {
-            rooms: true,
-            bookings: true,
-            staff: true,
-          },
-        },
+    });
+
+    return NextResponse.json({
+      success: true,
+      branches,
+    });
+  } catch (error) {
+    console.error("Error fetching branches:", error);
+    return NextResponse.json({ error: "Failed to fetch branches" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const token = request.headers.get("authorization")?.replace("Bearer ", "");
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const decoded = verifyToken(token, "access") as any;
+    if (!decoded || decoded.role !== "super_admin") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { name, location, city, phone, email, totalRooms } = body;
+
+    const branch = await prisma.branch.create({
+      data: {
+        name,
+        slug: name.toLowerCase().replace(/\s+/g, "-"),
+        location,
+        city,
+        phone,
+        email,
+        totalRooms: totalRooms || 0,
+        isActive: true,
       },
     });
 
-    return NextResponse.json({ success: true, branches });
+    await prisma.activityLog.create({
+      data: {
+        userId: decoded.userId,
+        branchId: branch.id,
+        action: "create",
+        entity: "branch",
+        entityId: branch.id,
+        details: { name, location },
+      },
+    });
+
+    return NextResponse.json({ success: true, branch });
   } catch (error) {
-    console.error("Branches fetch error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch branches" },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    console.error("Error creating branch:", error);
+    return NextResponse.json({ error: "Failed to create branch" }, { status: 500 });
   }
 }

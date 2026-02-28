@@ -43,6 +43,14 @@ export async function GET(req: NextRequest) {
         imageUrl: true,
         description: true,
         branchId: true,
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            location: true,
+            city: true,
+          },
+        },
       },
       skip: (page - 1) * limit,
       take: limit,
