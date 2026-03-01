@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,7 @@ import {
 import { useAuthStore } from "@/lib/store/auth-store";
 import type { GuestStatus, IdType } from "@/stores/guest-store";
 import { useI18n } from "@/lib/i18n/context";
-import { countries, searchCountries } from "@/lib/countries";
+import { COUNTRIES } from "@/lib/countries";
 import CountrySelect from "@/components/shared/CountrySelect";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReceiptDialog, { type ReceiptData } from "@/components/receptionist/ReceiptDialog";
@@ -102,20 +102,8 @@ interface ActivityItem {
   time: string;
   guest?: string;
   room?: string;
+  branchId?: string;
 }
-
-const mockActivities: ActivityItem[] = [
-  { id: "act-1", type: "check_in", message: "Checked in to Room 201", messageRw: "Yinjiye mu Cyumba 201", time: "2 min ago", guest: "James Okafor", room: "201" },
-  { id: "act-2", type: "service", message: "Extra towels requested", messageRw: "Amaservieti yongeyeho yasabwe", time: "8 min ago", guest: "Sarah Mitchell", room: "101" },
-  { id: "act-3", type: "booking", message: "New reservation confirmed", messageRw: "Ifatwa rishya ryemejwe", time: "15 min ago", guest: "Elena Petrova", room: "302" },
-  { id: "act-4", type: "alert", message: "VIP guest arriving in 30 min", messageRw: "Umushyitsi VIP azagera mu minota 30", time: "20 min ago", guest: "Mohammed Al-Rashid", room: "105" },
-  { id: "act-5", type: "check_out", message: "Checked out from Room 304", messageRw: "Yasohotse mu Cyumba 304", time: "25 min ago", guest: "Ingrid Johansson", room: "304" },
-  { id: "act-6", type: "payment", message: "Room charge payment received", messageRw: "Kwishyura icyumba byakiriwe", time: "32 min ago", guest: "Victoria Laurent", room: "301" },
-  { id: "act-7", type: "service", message: "Room service ordered — Lunch", messageRw: "Serivisi y'icyumba yasabwe — Ifunguro", time: "40 min ago", guest: "Amara Chen", room: "204" },
-  { id: "act-8", type: "check_in", message: "Walk-in guest registered", messageRw: "Umushyitsi ahageze yanditswe", time: "45 min ago", guest: "David Kirabo", room: "305" },
-  { id: "act-9", type: "alert", message: "Maintenance completed — Room 203 ready", messageRw: "Gukosorwa byarangiye — Icyumba 203 cyateguwe", time: "55 min ago", room: "203" },
-  { id: "act-10", type: "booking", message: "Booking cancelled by guest", messageRw: "Ifatwa ryahagaritswe n'umushyitsi", time: "1 hr ago", guest: "Fatima Hassan", room: "103" },
-];
 
 // Service request types
 interface ServiceRequest {
@@ -127,16 +115,8 @@ interface ServiceRequest {
   priority: "low" | "medium" | "high" | "urgent";
   status: "pending" | "in_progress" | "completed";
   time: string;
+  branchId?: string;
 }
-
-const mockServiceRequests: ServiceRequest[] = [
-  { id: "sr-1", guest: "Sarah Mitchell", room: "101", type: "Extra Pillows", typeRw: "Umusego Wongeyeho", priority: "low", status: "pending", time: "5 min ago" },
-  { id: "sr-2", guest: "James Okafor", room: "201", type: "Room Cleaning", typeRw: "Gusukura Icyumba", priority: "medium", status: "in_progress", time: "12 min ago" },
-  { id: "sr-3", guest: "Victoria Laurent", room: "301", type: "Airport Transfer", typeRw: "Guhura ku Kibuga", priority: "high", status: "pending", time: "18 min ago" },
-  { id: "sr-4", guest: "Amara Chen", room: "204", type: "WiFi Issue", typeRw: "Ikibazo cya WiFi", priority: "urgent", status: "pending", time: "3 min ago" },
-  { id: "sr-5", guest: "David Kirabo", room: "305", type: "Late Check-out", typeRw: "Gusohoka Buhoro", priority: "medium", status: "completed", time: "30 min ago" },
-  { id: "sr-6", guest: "Lisa Wang", room: "402", type: "Room Service", typeRw: "Serivisi y'Icyumba", priority: "low", status: "in_progress", time: "22 min ago" },
-];
 
 export default function ReceptionistDashboard() {
   const { user } = useAuthStore();
@@ -146,6 +126,14 @@ export default function ReceptionistDashboard() {
 
   const [guests, setGuests] = useState<any[]>([]);
   const [loadingGuests, setLoadingGuests] = useState(true);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+  const [realtimeRooms, setRealtimeRooms] = useState<any[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
   const getBookings = useBranchStore((s) => s.getBookings);
   const getStaff = useBranchStore((s) => s.getStaff);
@@ -165,7 +153,7 @@ export default function ReceptionistDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
-  const [selectedGuest, setSelectedGuest] = useState<ReturnType<typeof getGuestsByBranch>[0] | null>(null);
+  const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [roomFloorFilter, setRoomFloorFilter] = useState("all");
   const [roomStatusFilter, setRoomStatusFilter] = useState("all");
   const [serviceFilter, setServiceFilter] = useState("all");
@@ -188,10 +176,26 @@ export default function ReceptionistDashboard() {
   const [regGuests, setRegGuests] = useState("1");
   const [regRequests, setRegRequests] = useState("");
 
-  // Fetch guests from API
+  // Fetch all data from APIs
   useEffect(() => {
     fetchGuests();
+    fetchActivities();
+    fetchServiceRequests();
+    fetchRooms();
+    fetchStats();
   }, [userBranchId]);
+
+  // Auto-refresh data every 30 seconds if live updates enabled
+  useEffect(() => {
+    if (!liveUpdates) return;
+    const interval = setInterval(() => {
+      fetchActivities();
+      fetchServiceRequests();
+      fetchRooms();
+      fetchStats();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [liveUpdates, userBranchId]);
 
   const fetchGuests = async () => {
     setLoadingGuests(true);
@@ -208,28 +212,123 @@ export default function ReceptionistDashboard() {
     }
   };
 
+  const fetchActivities = async () => {
+    setLoadingActivities(true);
+    try {
+      const res = await fetch(`/api/receptionist/activities?branchId=${userBranchId}&limit=10`);
+      const data = await res.json();
+      if (data.success) {
+        const formattedActivities = data.activities.map((act: any) => ({
+          ...act,
+          time: getTimeAgo(act.time)
+        }));
+        setActivities(formattedActivities);
+      }
+    } catch (error) {
+      console.error("Failed to fetch activities:", error);
+    } finally {
+      setLoadingActivities(false);
+    }
+  };
+
+  const fetchServiceRequests = async () => {
+    setLoadingServices(true);
+    try {
+      const res = await fetch(`/api/receptionist/service-requests?branchId=${userBranchId}`);
+      const data = await res.json();
+      if (data.success) {
+        const formattedRequests = data.serviceRequests.map((sr: any) => ({
+          ...sr,
+          time: getTimeAgo(sr.time)
+        }));
+        setServiceRequests(formattedRequests);
+      }
+    } catch (error) {
+      console.error("Failed to fetch service requests:", error);
+    } finally {
+      setLoadingServices(false);
+    }
+  };
+
+  const fetchRooms = async () => {
+    setLoadingRooms(true);
+    try {
+      const res = await fetch(`/api/receptionist/rooms?branchId=${userBranchId}`);
+      const data = await res.json();
+      if (data.success) {
+        setRealtimeRooms(data.rooms);
+      }
+    } catch (error) {
+      console.error("Failed to fetch rooms:", error);
+    } finally {
+      setLoadingRooms(false);
+    }
+  };
+
+  const getTimeAgo = (timestamp: string) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffMs = now.getTime() - time.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMins / 60);
+    
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hr ago`;
+    return `${Math.floor(diffHours / 24)} day ago`;
+  };
+
+  const fetchStats = async () => {
+    setLoadingStats(true);
+    try {
+      const res = await fetch(`/api/receptionist/stats?branchId=${userBranchId}`);
+      const data = await res.json();
+      if (data.success) {
+        setDashboardStats(data.stats);
+      }
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
   const branchGuests = guests;
   const activeGuests = guests.filter(g => g.status === "checked_in");
 
-  // Room stats
+  // Use realtime rooms data instead of branch rooms for room status board
+  const displayRooms = realtimeRooms.length > 0 ? realtimeRooms : branchRooms;
+
+  // Room stats - use realtime rooms if available
   const roomStats = useMemo(() => {
-    const total = branchRooms.length;
-    const occupied = branchRooms.filter((r) => r.status === "occupied").length;
-    const available = branchRooms.filter((r) => r.status === "available").length;
-    const cleaning = branchRooms.filter((r) => r.status === "cleaning").length;
-    const maintenance = branchRooms.filter((r) => r.status === "maintenance").length;
-    const reserved = branchRooms.filter((r) => r.status === "reserved").length;
+    const rooms = displayRooms.length > 0 ? displayRooms : branchRooms;
+    const total = rooms.length;
+    const occupied = rooms.filter((r) => r.status === "occupied").length;
+    const available = rooms.filter((r) => r.status === "available").length;
+    const cleaning = rooms.filter((r) => r.status === "cleaning").length;
+    const maintenance = rooms.filter((r) => r.status === "maintenance").length;
+    const reserved = rooms.filter((r) => r.status === "reserved").length;
     return { total, occupied, available, cleaning, maintenance, reserved };
-  }, [branchRooms]);
+  }, [displayRooms, branchRooms]);
+
+  // Use dashboard stats if available, fallback to calculated values
+  const displayStats = dashboardStats || {
+    activeGuests: activeGuests.length,
+    expectedArrivals: branchBookings.filter((b) => b.status === "confirmed").length,
+    checkOuts: branchGuests.filter((g) => g.status === "checked_out").length,
+    availableRooms: roomStats.available,
+    cleaningRooms: roomStats.cleaning,
+    maintenanceRooms: roomStats.maintenance
+  };
 
   // Filtered rooms
   const filteredRooms = useMemo(() => {
-    return branchRooms.filter((r) => {
+    return displayRooms.filter((r) => {
       const floorMatch = roomFloorFilter === "all" || r.floor.toString() === roomFloorFilter;
       const statusMatch = roomStatusFilter === "all" || r.status === roomStatusFilter;
       return floorMatch && statusMatch;
     });
-  }, [branchRooms, roomFloorFilter, roomStatusFilter]);
+  }, [displayRooms, roomFloorFilter, roomStatusFilter]);
 
   // Filter guests
   const filteredGuests = branchGuests.filter((g) => {
@@ -261,12 +360,12 @@ export default function ReceptionistDashboard() {
   });
 
   // Filtered service requests
-  const filteredServiceRequests = mockServiceRequests.filter((sr) =>
+  const filteredServiceRequests = serviceRequests.filter((sr) =>
     serviceFilter === "all" ? true : sr.status === serviceFilter
   );
 
-  // Unique floors
-  const floors = [...new Set(branchRooms.map((r) => r.floor))].sort();
+  // Unique floors - use realtime rooms if available
+  const floors = [...new Set(displayRooms.length > 0 ? displayRooms.map((r) => r.floor) : branchRooms.map((r) => r.floor))].sort();
 
   const handleRegister = async () => {
     if (!regName || !regPhone || !regIdNumber || !regCheckOut) {
@@ -589,7 +688,7 @@ export default function ReceptionistDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-emerald-900">{t("receptionist", "activeGuests")}</p>
-                <p className="text-2xl font-bold text-emerald-700 mt-0.5">{activeGuests.length}</p>
+                <p className="text-2xl font-bold text-emerald-700 mt-0.5">{displayStats.activeGuests}</p>
               </div>
               <div className="h-10 w-10 bg-emerald-600 rounded-lg flex items-center justify-center shadow">
                 <UserCheck className="h-5 w-5 text-white" />
@@ -602,7 +701,7 @@ export default function ReceptionistDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-blue-900">{t("receptionist", "expectedArrivals")}</p>
-                <p className="text-2xl font-bold text-blue-700 mt-0.5">{branchBookings.filter((b) => b.status === "confirmed").length}</p>
+                <p className="text-2xl font-bold text-blue-700 mt-0.5">{displayStats.expectedArrivals}</p>
               </div>
               <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center shadow"><LogIn className="h-5 w-5 text-white" /></div>
             </div>
@@ -613,7 +712,7 @@ export default function ReceptionistDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-orange-900">{t("receptionist", "checkOuts")}</p>
-                <p className="text-2xl font-bold text-orange-700 mt-0.5">{branchGuests.filter((g) => g.status === "checked_out").length}</p>
+                <p className="text-2xl font-bold text-orange-700 mt-0.5">{displayStats.checkOuts}</p>
               </div>
               <div className="h-10 w-10 bg-orange-600 rounded-lg flex items-center justify-center shadow"><LogOut className="h-5 w-5 text-white" /></div>
             </div>
@@ -624,7 +723,7 @@ export default function ReceptionistDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-green-900">{t("receptionist", "availableRooms")}</p>
-                <p className="text-2xl font-bold text-green-700 mt-0.5">{roomStats.available}</p>
+                <p className="text-2xl font-bold text-green-700 mt-0.5">{displayStats.availableRooms}</p>
               </div>
               <div className="h-10 w-10 bg-green-600 rounded-lg flex items-center justify-center shadow"><DoorOpen className="h-5 w-5 text-white" /></div>
             </div>
@@ -635,7 +734,7 @@ export default function ReceptionistDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-yellow-900">{t("receptionist", "cleaning")}</p>
-                <p className="text-2xl font-bold text-yellow-700 mt-0.5">{roomStats.cleaning}</p>
+                <p className="text-2xl font-bold text-yellow-700 mt-0.5">{displayStats.cleaningRooms}</p>
               </div>
               <div className="h-10 w-10 bg-yellow-600 rounded-lg flex items-center justify-center shadow"><Sparkles className="h-5 w-5 text-white" /></div>
             </div>
@@ -646,7 +745,7 @@ export default function ReceptionistDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-red-900">{t("receptionist", "maintenance")}</p>
-                <p className="text-2xl font-bold text-red-700 mt-0.5">{roomStats.maintenance}</p>
+                <p className="text-2xl font-bold text-red-700 mt-0.5">{displayStats.maintenanceRooms}</p>
               </div>
               <div className="h-10 w-10 bg-red-600 rounded-lg flex items-center justify-center shadow"><Wrench className="h-5 w-5 text-white" /></div>
             </div>
@@ -716,25 +815,37 @@ export default function ReceptionistDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-1 max-h-[400px] overflow-y-auto">
-                  {mockActivities.map((activity) => (
-                    <div key={activity.id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-pearl/50 transition-colors">
-                      <div className="h-8 w-8 rounded-lg bg-pearl flex items-center justify-center shrink-0 mt-0.5">
-                        {getActivityIcon(activity.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-charcoal truncate">{activity.guest || (isRw ? "Sisitemu" : "System")}</p>
-                          {activity.room && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                              {isRw ? "Icyumba" : "Room"} {activity.room}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-text-muted-custom mt-0.5">{isRw ? activity.messageRw : activity.message}</p>
-                      </div>
-                      <span className="text-[10px] text-text-muted-custom whitespace-nowrap">{activity.time}</span>
+                  {loadingActivities ? (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="h-5 w-5 animate-spin text-emerald" />
+                      <span className="ml-2 text-sm text-text-muted-custom">Loading activities...</span>
                     </div>
-                  ))}
+                  ) : activities.length === 0 ? (
+                    <div className="text-center py-8 text-text-muted-custom">
+                      <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No recent activities</p>
+                    </div>
+                  ) : (
+                    activities.map((activity) => (
+                      <div key={activity.id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-pearl/50 transition-colors">
+                        <div className="h-8 w-8 rounded-lg bg-pearl flex items-center justify-center shrink-0 mt-0.5">
+                          {getActivityIcon(activity.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-charcoal truncate">{activity.guest || (isRw ? "Sisitemu" : "System")}</p>
+                            {activity.room && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                {isRw ? "Icyumba" : "Room"} {activity.room}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-text-muted-custom mt-0.5">{isRw ? activity.messageRw : activity.message}</p>
+                        </div>
+                        <span className="text-[10px] text-text-muted-custom whitespace-nowrap">{activity.time}</span>
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -764,9 +875,9 @@ export default function ReceptionistDashboard() {
                     <MessageSquare className="h-5 w-5 text-orange-500" />
                     {t("common", "services")}
                   </Button>
-                  <Button variant="outline" className="h-auto py-3 flex-col gap-1.5 text-xs" onClick={() => toast.info(t("receptionist", "generatingReport"))}>
-                    <Printer className="h-5 w-5 text-slate-500" />
-                    {t("receptionist", "printReport")}
+                  <Button variant="outline" className="h-auto py-3 flex-col gap-1.5 text-xs" onClick={() => { fetchActivities(); fetchServiceRequests(); fetchRooms(); fetchStats(); toast.success("Data refreshed!"); }}>
+                    <RefreshCw className="h-5 w-5 text-slate-500" />
+                    {t("receptionist", "refresh")}
                   </Button>
                   <Button variant="outline" className="h-auto py-3 flex-col gap-1.5 text-xs" onClick={() => toast.info(t("receptionist", "callingHousekeeping"))}>
                     <Sparkles className="h-5 w-5 text-yellow-500" />
@@ -838,31 +949,38 @@ export default function ReceptionistDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {filteredRooms.map((room) => (
-                  <div
-                    key={room.id}
-                    className={`border-2 rounded-xl p-3 transition-all hover:shadow-md cursor-pointer ${getRoomStatusBorder(room.status)}`}
-                    onClick={() => {
-                      if (room.status === "available") {
-                        setRegRoom(room.number);
-                        setShowRegisterDialog(true);
-                      } else {
-                        toast.info(`${isRw ? "Icyumba" : "Room"} ${room.number}: ${getRoomStatusLabel(room.status)}${room.currentGuest ? ` — ${room.currentGuest}` : ""}`);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-heading font-bold text-lg text-charcoal">{room.number}</span>
-                      <div className={`h-3 w-3 rounded-full ${getRoomStatusColor(room.status)}`} />
+              {loadingRooms ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="h-6 w-6 animate-spin text-emerald" />
+                  <span className="ml-3 text-text-muted-custom">Loading rooms...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {filteredRooms.map((room) => (
+                    <div
+                      key={room.id}
+                      className={`border-2 rounded-xl p-3 transition-all hover:shadow-md cursor-pointer ${getRoomStatusBorder(room.status)}`}
+                      onClick={() => {
+                        if (room.status === "available") {
+                          setRegRoom(room.number);
+                          setShowRegisterDialog(true);
+                        } else {
+                          toast.info(`${isRw ? "Icyumba" : "Room"} ${room.number}: ${getRoomStatusLabel(room.status)}${room.currentGuest ? ` — ${room.currentGuest}` : ""}`);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-heading font-bold text-lg text-charcoal">{room.number}</span>
+                        <div className={`h-3 w-3 rounded-full ${getRoomStatusColor(room.status)}`} />
+                      </div>
+                      <p className="text-[10px] text-text-muted-custom capitalize">{getRoomTypeLabel(room.type)}</p>
+                      <p className="text-[10px] font-medium text-charcoal mt-0.5">{formatCurrency(room.price)}/{isRw ? "ijoro" : "night"}</p>
+                      {room.currentGuest && (<p className="text-[10px] text-blue-600 mt-1 truncate">👤 {room.currentGuest}</p>)}
+                      {room.status === "available" && (<p className="text-[10px] text-emerald font-medium mt-1">✓ {t("receptionist", "ready")}</p>)}
                     </div>
-                    <p className="text-[10px] text-text-muted-custom capitalize">{getRoomTypeLabel(room.type)}</p>
-                    <p className="text-[10px] font-medium text-charcoal mt-0.5">{formatCurrency(room.price)}/{isRw ? "ijoro" : "night"}</p>
-                    {room.currentGuest && (<p className="text-[10px] text-blue-600 mt-1 truncate">👤 {room.currentGuest}</p>)}
-                    {room.status === "available" && (<p className="text-[10px] text-emerald font-medium mt-1">✓ {t("receptionist", "ready")}</p>)}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1078,35 +1196,50 @@ export default function ReceptionistDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredServiceRequests.map((sr) => (
-                      <TableRow key={sr.id}>
-                        <TableCell className="font-medium">{sr.guest}</TableCell>
-                        <TableCell><Badge variant="outline">{sr.room}</Badge></TableCell>
-                        <TableCell>{isRw ? sr.typeRw : sr.type}</TableCell>
-                        <TableCell><Badge className={getPriorityColor(sr.priority)}>{isRw ? (sr.priority === "low" ? "Hasi" : sr.priority === "medium" ? "Hagati" : sr.priority === "high" ? "Hejuru" : "Byihutirwa") : sr.priority}</Badge></TableCell>
-                        <TableCell><Badge className={getServiceStatusColor(sr.status)}>{sr.status.replace("_", " ")}</Badge></TableCell>
-                        <TableCell className="text-sm text-text-muted-custom">{sr.time}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {sr.status === "pending" && (
-                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => toast.success(`${t("receptionist", "assignedService")} ${sr.room}`)}>
-                                <ArrowUpRight className="mr-1 h-3 w-3" /> {t("receptionist", "assign")}
-                              </Button>
-                            )}
-                            {sr.status === "in_progress" && (
-                              <Button size="sm" className="h-7 text-xs bg-emerald hover:bg-emerald-dark text-white" onClick={() => toast.success(`${isRw ? sr.typeRw : sr.type} ${t("receptionist", "completedService")} ${sr.room}`)}>
-                                <CheckCircle2 className="mr-1 h-3 w-3" /> {t("receptionist", "complete")}
-                              </Button>
-                            )}
-                            {sr.status === "completed" && (
-                              <Badge className="bg-green-100 text-green-700 text-[10px]">
-                                <CheckCircle2 className="mr-1 h-3 w-3" /> {t("receptionist", "done")}
-                              </Badge>
-                            )}
-                          </div>
+                    {loadingServices ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8">
+                          <RefreshCw className="h-5 w-5 animate-spin text-emerald mx-auto mb-2" />
+                          <p className="text-text-muted-custom">Loading service requests...</p>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : filteredServiceRequests.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-text-muted-custom">
+                          No service requests found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredServiceRequests.map((sr) => (
+                        <TableRow key={sr.id}>
+                          <TableCell className="font-medium">{sr.guest}</TableCell>
+                          <TableCell><Badge variant="outline">{sr.room}</Badge></TableCell>
+                          <TableCell>{isRw ? sr.typeRw : sr.type}</TableCell>
+                          <TableCell><Badge className={getPriorityColor(sr.priority)}>{isRw ? (sr.priority === "low" ? "Hasi" : sr.priority === "medium" ? "Hagati" : sr.priority === "high" ? "Hejuru" : "Byihutirwa") : sr.priority}</Badge></TableCell>
+                          <TableCell><Badge className={getServiceStatusColor(sr.status)}>{sr.status.replace("_", " ")}</Badge></TableCell>
+                          <TableCell className="text-sm text-text-muted-custom">{sr.time}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {sr.status === "pending" && (
+                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => toast.success(`${t("receptionist", "assignedService")} ${sr.room}`)}>
+                                  <ArrowUpRight className="mr-1 h-3 w-3" /> {t("receptionist", "assign")}
+                                </Button>
+                              )}
+                              {sr.status === "in_progress" && (
+                                <Button size="sm" className="h-7 text-xs bg-emerald hover:bg-emerald-dark text-white" onClick={() => toast.success(`${isRw ? sr.typeRw : sr.type} ${t("receptionist", "completedService")} ${sr.room}`)}>
+                                  <CheckCircle2 className="mr-1 h-3 w-3" /> {t("receptionist", "complete")}
+                                </Button>
+                              )}
+                              {sr.status === "completed" && (
+                                <Badge className="bg-green-100 text-green-700 text-[10px]">
+                                  <CheckCircle2 className="mr-1 h-3 w-3" /> {t("receptionist", "done")}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

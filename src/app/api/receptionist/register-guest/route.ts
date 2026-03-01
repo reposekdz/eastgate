@@ -1,173 +1,277 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { verifyToken } from "@/lib/auth-advanced/jwt";
-import { validateEmail, validatePhone } from "@/lib/validators";
-
-const prisma = new PrismaClient();
+import { NextRequest } from "next/server";
+import prisma from "@/lib/prisma";
+import { successResponse, errorResponse } from "@/lib/validators";
+import { cookies } from "next/headers";
 
 /**
  * POST /api/receptionist/register-guest
- * Register a new guest and check them in
- * Requires: RECEPTIONIST role or higher
- * Body: { name, email?, phone, idNumber, nationality?, address?, dateOfBirth?, roomId, checkIn, checkOut, numberOfGuests?, specialRequests?, branchId? }
+ * Register new guest with automatic booking creation
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { name, email, phone, idNumber, nationality, address, dateOfBirth, roomId, checkIn, checkOut, numberOfGuests, specialRequests, branchId } = body;
-
-    // Comprehensive validation
-    if (!name || name.trim().length < 2) {
-      return NextResponse.json({ success: false, error: "Guest name must be at least 2 characters" }, { status: 400 });
-    }
-    if (!phone || !validatePhone(phone)) {
-      return NextResponse.json({ success: false, error: "Valid phone number is required" }, { status: 400 });
-    }
-    if (!idNumber || idNumber.toString().trim().length < 5) {
-      return NextResponse.json({ success: false, error: "Valid ID number is required" }, { status: 400 });
-    }
-    if (email && !validateEmail(email)) {
-      return NextResponse.json({ success: false, error: "Invalid email format" }, { status: 400 });
-    }
-    // Room ID is now optional - will auto-assign if not provided
-
-    const checkInDate = new Date(checkIn);
-    const checkOutDate = new Date(checkOut);
-    if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
-      return NextResponse.json({ success: false, error: "Invalid check-in or check-out date" }, { status: 400 });
-    }
-    if (checkInDate >= checkOutDate) {
-      return NextResponse.json({ success: false, error: "Check-out date must be after check-in date" }, { status: 400 });
-    }
-    if (checkInDate < new Date()) {
-      return NextResponse.json({ success: false, error: "Check-in date cannot be in the past" }, { status: 400 });
-    }
-
-    // Get available room (auto-assign if roomId not provided)
-    let room;
-    if (roomId) {
-      room = await prisma.room.findUnique({ where: { id: roomId } });
-      if (!room || room.status !== "available") {
-        return NextResponse.json({ success: false, error: "Room is not available" }, { status: 409 });
-      }
-    } else {
-      // Auto-assign first available room in branch
-      room = await prisma.room.findFirst({
-        where: {
-          status: "available",
-          branchId: branchId || undefined,
-        },
-        orderBy: { roomNumber: "asc" },
-      });
-      if (!room) {
-        return NextResponse.json({ success: false, error: "No available rooms" }, { status: 409 });
-      }
-    }
-
-    // Verify branch if specified
-    if (branchId) {
-      const branch = await prisma.branch.findUnique({ where: { id: branchId } });
-      if (!branch) {
-        return NextResponse.json({ success: false, error: "Invalid branch ID" }, { status: 400 });
-      }
-    }
-
-    // Find or create guest
-    let guest = await prisma.guest.findFirst({
-      where: {
-        AND: [
-          { idNumber },
-          { phone },
-        ],
-      },
-    });
-
-    if (!guest) {
-      guest = await prisma.guest.create({
-        data: {
-          name,
-          email: email || null,
-          phone,
-          idNumber,
-          nationality: nationality || "Rwanda",
-          address: address || null,
-          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-          loyaltyTier: "bronze",
-          totalSpent: 0,
-          visitCount: 0,
-          branchId: branchId || room.branchId,
-        },
-      });
-    } else {
-      // Update guest info if check-in after long time
-      guest = await prisma.guest.update({
-        where: { id: guest.id },
-        data: {
-          lastVisit: new Date(),
-          visitCount: { increment: 1 },
-        },
-      });
-    }
-
-    // Calculate booking amount
-    const days = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (days < 1 || days > 365) {
-      return NextResponse.json({ success: false, error: "Booking must be between 1 and 365 days" }, { status: 400 });
-    }
-    const totalAmount = room.price * days;
-
-    // Create booking
-    const booking = await prisma.booking.create({
-      data: {
-        guestId: guest.id,
-        guestName: name,
-        guestEmail: email || null,
-        guestPhone: phone,
-        roomId,
-        roomNumber: room.roomNumber,
-        roomType: room.type,
-        checkIn: checkInDate,
-        checkOut: checkOutDate,
-        numberOfGuests: Math.max(1, numberOfGuests || 1),
-        totalAmount,
-        status: "checked_in",
-        specialRequests: specialRequests || null,
-        branchId: branchId || room.branchId,
-        paymentStatus: "paid",
-        checkedInAt: new Date(),
-      },
-    });
-
-    // Update room status
-    await prisma.room.update({
-      where: { id: roomId },
-      data: { status: "occupied" },
-    });
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Guest registered and checked in successfully",
-        booking,
-        guest,
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("Error registering guest:", error);
+    // Authentication check
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.get("eastgate-auth");
     
-    if (error instanceof SyntaxError) {
-      return NextResponse.json(
-        { success: false, error: "Invalid JSON in request body" },
-        { status: 400 }
+    if (!authCookie) {
+      return errorResponse("Unauthorized", [], 401);
+    }
+
+    let authData;
+    try {
+      authData = JSON.parse(decodeURIComponent(authCookie.value));
+    } catch {
+      return errorResponse("Invalid auth data", [], 401);
+    }
+
+    if (!authData.isAuthenticated || !authData.user) {
+      return errorResponse("Unauthorized", [], 401);
+    }
+
+    const user = authData.user;
+    
+    // Only receptionists and managers can register guests
+    const canRegisterGuest = ["receptionist", "branch_manager", "branch_admin", "super_admin", "super_manager"].includes(user.role);
+    
+    if (!canRegisterGuest) {
+      return errorResponse("Insufficient permissions", [{
+        field: "role",
+        message: "Only receptionists and managers can register guests",
+        code: "FORBIDDEN"
+      }], 403);
+    }
+
+    const body = await req.json();
+    const {
+      // Guest details
+      name,
+      email,
+      phone,
+      nationality,
+      idNumber,
+      address,
+      dateOfBirth,
+      // Booking details
+      roomId,
+      checkIn,
+      checkOut,
+      adults,
+      children,
+      infants,
+      specialRequests,
+      paymentMethod,
+      paymentStatus,
+      totalAmount,
+    } = body;
+
+    // Use user's branch
+    const branchId = user.branchId;
+
+    // Validation
+    const required = { name, email, phone, roomId, checkIn, checkOut };
+    const missing = Object.entries(required)
+      .filter(([_, v]) => !v)
+      .map(([k]) => k);
+
+    if (missing.length > 0) {
+      return errorResponse(
+        "Validation failed",
+        missing.map(field => ({
+          field,
+          message: `${field} is required`,
+          code: "REQUIRED"
+        })),
+        400
       );
     }
 
-    return NextResponse.json(
-      { success: false, error: "Failed to register guest" },
-      { status: 500 }
+    // Validate dates
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (checkInDate < today) {
+      return errorResponse("Invalid dates", [{
+        field: "checkIn",
+        message: "Check-in date cannot be in the past",
+        code: "INVALID"
+      }], 400);
+    }
+
+    if (checkOutDate <= checkInDate) {
+      return errorResponse("Invalid dates", [{
+        field: "checkOut",
+        message: "Check-out date must be after check-in date",
+        code: "INVALID"
+      }], 400);
+    }
+
+    // Check if guest already exists
+    let existingGuest = await prisma.guest.findUnique({
+      where: { email }
+    });
+
+    // Check room exists and is available
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: { branch: true },
+    });
+
+    if (!room) {
+      return errorResponse("Room not found", [{
+        field: "roomId",
+        message: "Room does not exist",
+        code: "NOT_FOUND"
+      }], 404);
+    }
+
+    // Check room availability
+    const conflictingBookings = await prisma.booking.count({
+      where: {
+        roomId,
+        status: { in: ["pending", "confirmed", "checked_in"] },
+        OR: [{
+          checkIn: { lte: checkOutDate },
+          checkOut: { gte: checkInDate },
+        }],
+      },
+    });
+
+    if (conflictingBookings > 0) {
+      return errorResponse("Room not available", [{
+        field: "availability",
+        message: "Room is already booked for these dates",
+        code: "CONFLICT"
+      }], 409);
+    }
+
+    // Calculate nights and total
+    const nights = Math.ceil(
+      (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
     );
-  } finally {
-    await prisma.$disconnect();
+    const calculatedTotal = totalAmount || (nights * room.price);
+
+    // Start transaction
+    const result = await prisma.$transaction(async (tx) => {
+      let guest;
+      
+      if (existingGuest) {
+        // Update existing guest
+        guest = await tx.guest.update({
+          where: { id: existingGuest.id },
+          data: {
+            name,
+            phone,
+            nationality: nationality || existingGuest.nationality,
+            idNumber: idNumber || existingGuest.idNumber,
+            address: address || existingGuest.address,
+            dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : existingGuest.dateOfBirth,
+            lastVisit: new Date(),
+            totalSpent: { increment: calculatedTotal },
+          }
+        });
+      } else {
+        // Create new guest
+        guest = await tx.guest.create({
+          data: {
+            name,
+            email,
+            phone,
+            nationality: nationality || "Rwanda",
+            idNumber,
+            address,
+            dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+            avatar: `https://i.pravatar.cc/40?u=${email}`,
+            lastVisit: new Date(),
+            totalSpent: calculatedTotal,
+            loyaltyTier: calculatedTotal >= 500000 ? "gold" : calculatedTotal >= 200000 ? "silver" : null as any,
+            branch: {
+              connect: { id: branchId }
+            }
+          }
+        });
+      }
+
+      // Generate booking reference
+      const bookingCount = await tx.booking.count();
+      const bookingRef = `BK${String(bookingCount + 1).padStart(8, "0")}`;
+
+      // Create booking
+      const booking = await tx.booking.create({
+        data: {
+          bookingRef,
+          guestId: guest.id,
+          guestName: name,
+          guestEmail: email,
+          guestPhone: phone,
+          roomId,
+          roomNumber: room.number,
+          roomType: room.type,
+          checkIn: checkInDate,
+          checkOut: checkOutDate,
+          nights,
+          adults: adults || 1,
+          children: children || 0,
+          infants: infants || 0,
+          totalAmount: calculatedTotal,
+          specialRequests: specialRequests || null,
+          paymentMethod: paymentMethod || "cash",
+          paymentStatus: paymentStatus || "pending",
+          status: paymentStatus === "paid" ? "confirmed" : "pending",
+          branchId,
+        },
+        include: {
+          guest: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              avatar: true,
+              loyaltyTier: true,
+              totalSpent: true,
+            }
+          },
+          room: {
+            select: {
+              id: true,
+              number: true,
+              type: true,
+              floor: true,
+              price: true,
+              imageUrl: true,
+            }
+          },
+          branch: {
+            select: {
+              id: true,
+              name: true,
+              location: true,
+            }
+          }
+        }
+      });
+
+      // Update room status if payment is confirmed
+      if (paymentStatus === "paid") {
+        await tx.room.update({
+          where: { id: roomId },
+          data: { status: "reserved" }
+        });
+      }
+
+      return { guest, booking };
+    });
+
+    return successResponse({
+      message: "Guest registered and booking created successfully",
+      guest: result.guest,
+      booking: result.booking,
+    }, 201);
+
+  } catch (error: any) {
+    console.error("Guest registration error:", error);
+    return errorResponse("Failed to register guest", [], 500);
   }
 }

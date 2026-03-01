@@ -1,14 +1,11 @@
+"use client";
+
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import WaiterSidebar from "@/components/waiter/WaiterSidebar";
 import WaiterTopbar from "@/components/waiter/WaiterTopbar";
 import AuthGuard from "@/components/shared/AuthGuard";
 import { Toaster } from "@/components/ui/sonner";
 import { StaffToolbar } from "@/components/staff/StaffToolbar";
-
-export const metadata = {
-  title: "Waiter Dashboard | EastGate Hotel Rwanda",
-  description: "Waiter service dashboard for EastGate Hotel",
-};
 
 export default function WaiterLayout({
   children,

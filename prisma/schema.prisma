@@ -300,6 +300,7 @@ model Booking {
   adults          Int       @default(1)
   children        Int       @default(0)
   infants         Int       @default(0)
+  numberOfGuests  Int       @default(1)
   status          String    @default("pending") @db.VarChar(20)
   source          String    @default("website") @db.VarChar(50)
   totalAmount     Float     @db.Float
@@ -1044,4 +1045,51 @@ model Assignment {
   @@index([staffId])
   @@index([status])
   @@map("assignments")
+}
+
+// ============================================
+// SERVICE REQUESTS & HOUSEKEEPING
+// ============================================
+
+model ServiceRequest {
+  id          String    @id @default(cuid())
+  roomNumber  String    @db.VarChar(20)
+  guestName   String    @db.VarChar(100)
+  guestId     String?   @db.VarChar(50)
+  type        String    @db.VarChar(50)
+  request     String    @db.Text
+  status      String    @default("pending") @db.VarChar(20)
+  priority    String    @default("medium") @db.VarChar(20)
+  assignedTo  String?   @db.VarChar(50)
+  branchId    String    @db.VarChar(50)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([branchId])
+  @@index([status])
+  @@index([priority])
+  @@map("service_requests")
+}
+
+model HousekeepingTask {
+  id                  String    @id @default(cuid())
+  roomNumber          String    @db.VarChar(20)
+  floor               Int
+  type                String    @db.VarChar(50)
+  status              String    @default("pending") @db.VarChar(20)
+  priority            String    @default("medium") @db.VarChar(20)
+  assignedTo          String?   @db.VarChar(100)
+  startTime           DateTime?
+  estimatedCompletion DateTime?
+  completedAt         DateTime?
+  notes               String?   @db.Text
+  branchId            String    @db.VarChar(50)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([branchId])
+  @@index([status])
+  @@index([priority])
+  @@map("housekeeping_tasks")
 }

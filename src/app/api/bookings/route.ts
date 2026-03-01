@@ -1,13 +1,34 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { successResponse, errorResponse } from "@/lib/validators";
+import { cookies } from "next/headers";
 
 /**
  * GET /api/bookings
- * Fetch bookings with advanced filtering
+ * Fetch bookings with advanced filtering and role-based access
  */
 export async function GET(req: NextRequest) {
   try {
+    // Authentication check
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.get("eastgate-auth");
+    
+    if (!authCookie) {
+      return errorResponse("Unauthorized", [], 401);
+    }
+
+    let authData;
+    try {
+      authData = JSON.parse(decodeURIComponent(authCookie.value));
+    } catch {
+      return errorResponse("Invalid auth data", [], 401);
+    }
+
+    if (!authData.isAuthenticated || !authData.user) {
+      return errorResponse("Unauthorized", [], 401);
+    }
+
+    const user = authData.user;
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const branchId = searchParams.get("branchId");
@@ -24,7 +45,19 @@ export async function GET(req: NextRequest) {
 
     const where: any = {};
 
-    if (branchId) where.branchId = branchId;
+    // Role-based filtering - all branch staff can see bookings
+    const isSuperRole = ["super_admin", "super_manager"].includes(user.role.toLowerCase());
+    const isBranchStaff = ["branch_manager", "branch_admin", "receptionist", "waiter", "restaurant_staff"].includes(user.role.toLowerCase());
+    
+    // Apply branch filtering based on role
+    if (!isSuperRole) {
+      // All branch staff can only see their branch bookings
+      where.branchId = user.branchId;
+    } else if (branchId && branchId !== "all") {
+      // Super users can filter by specific branch
+      where.branchId = branchId;
+    }
+
     if (status) where.status = status;
     if (roomId) where.roomId = roomId;
     if (guestId) where.guestId = guestId;
@@ -96,7 +129,7 @@ export async function GET(req: NextRequest) {
       prisma.booking.count({ where }),
       prisma.booking.groupBy({
         by: ["status"],
-        where: branchId ? { branchId } : {},
+        where: where.branchId ? { branchId: where.branchId } : {},
         _count: true,
         _sum: {
           totalAmount: true,
@@ -124,6 +157,8 @@ export async function GET(req: NextRequest) {
         total,
         pages: Math.ceil(total / limit),
       },
+      userRole: user.role,
+      branchFilter: where.branchId || "all",
     });
   } catch (error: any) {
     console.error("Bookings fetch error:", error);
@@ -133,10 +168,42 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/bookings
- * Create new booking
+ * Create new booking with role-based permissions
  */
 export async function POST(req: NextRequest) {
   try {
+    // Authentication check
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.get("eastgate-auth");
+    
+    if (!authCookie) {
+      return errorResponse("Unauthorized", [], 401);
+    }
+
+    let authData;
+    try {
+      authData = JSON.parse(decodeURIComponent(authCookie.value));
+    } catch {
+      return errorResponse("Invalid auth data", [], 401);
+    }
+
+    if (!authData.isAuthenticated || !authData.user) {
+      return errorResponse("Unauthorized", [], 401);
+    }
+
+    const user = authData.user;
+    
+    // All branch staff can create bookings
+    const canCreateBooking = ["receptionist", "branch_manager", "branch_admin", "super_admin", "super_manager", "waiter", "restaurant_staff"].includes(user.role.toLowerCase());
+    
+    if (!canCreateBooking) {
+      return errorResponse("Insufficient permissions", [{
+        field: "role",
+        message: "Only receptionists and managers can create bookings",
+        code: "FORBIDDEN"
+      }], 403);
+    }
+
     const body = await req.json();
     const {
       roomId,
@@ -154,8 +221,11 @@ export async function POST(req: NextRequest) {
       branchId,
     } = body;
 
+    // Use user's branch if not super role
+    const finalBranchId = ["super_admin", "super_manager"].includes(user.role.toLowerCase()) ? branchId : user.branchId;
+
     // Validation
-    const required = { roomId, guestName, guestEmail, checkIn, checkOut, branchId };
+    const required = { roomId, guestName, guestEmail, checkIn, checkOut, branchId: finalBranchId };
     const missing = Object.entries(required)
       .filter(([_, v]) => !v)
       .map(([k]) => k);
@@ -273,7 +343,7 @@ export async function POST(req: NextRequest) {
         specialRequests: specialRequests || null,
         paymentMethod: paymentMethod || "card",
         status: "pending",
-        branchId,
+        branchId: finalBranchId,
       },
       include: {
         room: {

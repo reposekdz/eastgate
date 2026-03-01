@@ -5,19 +5,18 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Users, TrendingUp, Star, Calendar, UserPlus, Bed, Phone, Mail, User, Trash2 } from "lucide-react";
+import { Search, User, Phone, Mail, UserPlus, Users, Bed } from "lucide-react";
 import { toast } from "sonner";
 import { COUNTRIES } from "@/lib/countries";
 
-export default function ManagerGuestsPage() {
+export default function GuestsPage() {
   const { user } = useAuthStore();
   const [guests, setGuests] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showRegisterDialog, setShowRegisterDialog] = useState(false);
@@ -57,7 +56,6 @@ export default function ManagerGuestsPage() {
       const data = await res.json();
       if (data.success) {
         setGuests(data.data.guests || []);
-        setStats(data.data.stats || {});
       }
     } catch (error) {
       toast.error("Failed to fetch guests");
@@ -68,7 +66,15 @@ export default function ManagerGuestsPage() {
 
   const fetchRooms = async () => {
     try {
-      const res = await fetch(`/api/rooms?branchId=${user?.branchId}&status=available`);
+      const checkInDate = assignmentData.checkIn;
+      const checkOutDate = assignmentData.checkOut;
+      
+      let url = `/api/rooms/availability?branchId=${user?.branchId}`;
+      if (checkInDate && checkOutDate) {
+        url += `&checkIn=${checkInDate}&checkOut=${checkOutDate}`;
+      }
+      
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
         setRooms(data.data.rooms || []);
@@ -117,6 +123,29 @@ export default function ManagerGuestsPage() {
     }
   };
 
+  const handleDeleteGuest = async (guestId: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/guests/${guestId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`${name} deleted successfully`);
+        fetchGuests();
+      } else {
+        toast.error(data.message || "Failed to delete guest");
+      }
+    } catch (error) {
+      toast.error("Failed to delete guest");
+    }
+  };
+
   const handleAssignRoom = async () => {
     if (!assignmentData.roomId || !assignmentData.checkIn || !assignmentData.checkOut) {
       toast.error("Please fill in all required fields");
@@ -157,29 +186,6 @@ export default function ManagerGuestsPage() {
     }
   };
 
-  const handleDeleteGuest = async (guestId: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/guests/${guestId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`${name} deleted successfully`);
-        fetchGuests();
-      } else {
-        toast.error(data.message || "Failed to delete guest");
-      }
-    } catch (error) {
-      toast.error("Failed to delete guest");
-    }
-  };
-
   const filteredGuests = guests.filter((g) =>
     g.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     g.phone?.includes(searchTerm) ||
@@ -190,15 +196,15 @@ export default function ManagerGuestsPage() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Guest Management</h1>
-          <p className="text-muted-foreground">Monitor and manage branch guests</p>
+          <h1 className="text-3xl font-bold">Guest Registry</h1>
+          <p className="text-muted-foreground">Manage guest registrations and room assignments</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={showRegisterDialog} onOpenChange={setShowRegisterDialog}>
             <DialogTrigger asChild>
               <Button>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Register Guest
+                Register New Guest
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
@@ -291,48 +297,6 @@ export default function ManagerGuestsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Guests</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total || 0}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gold Members</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.gold || 0}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">RWF {(stats.totalRevenue || 0).toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{guests.filter(g => new Date(g.createdAt).getMonth() === new Date().getMonth()).length}</div>
-          </CardContent>
-        </Card>
-      </div>
-
       <div className="relative">
         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input
@@ -354,6 +318,29 @@ export default function ManagerGuestsPage() {
             </Card>
           ))}
         </div>
+      ) : filteredGuests.length === 0 ? (
+        <Card className="border-2 border-dashed border-gray-300">
+          <CardContent className="p-12 text-center">
+            <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+              <Users className="w-12 h-12 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-3">
+              {searchTerm ? "No guests found" : "No guests registered"}
+            </h3>
+            <p className="text-gray-500 mb-6 max-w-md mx-auto">
+              {searchTerm 
+                ? `No guests match your search for "${searchTerm}".`
+                : "No guests have been registered yet. Start by registering your first guest."
+              }
+            </p>
+            {!searchTerm && (
+              <Button onClick={() => setShowRegisterDialog(true)}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Register First Guest
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4">
           {filteredGuests.map((guest) => (
@@ -410,7 +397,7 @@ export default function ManagerGuestsPage() {
                     variant="destructive"
                     onClick={() => handleDeleteGuest(guest.id, guest.name)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    Delete
                   </Button>
                 </div>
               </div>
@@ -424,26 +411,12 @@ export default function ManagerGuestsPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Assign Room to {selectedGuest?.name}</DialogTitle>
-            <DialogDescription>Select room and dates for guest assignment</DialogDescription>
+            <DialogDescription>
+              Select dates first, then choose from available rooms
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="room">Room *</Label>
-              <Select value={assignmentData.roomId} onValueChange={(value) => setAssignmentData(prev => ({ ...prev, roomId: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select room" />
-                </SelectTrigger>
-                <SelectContent>
-                  {rooms.map((room) => (
-                    <SelectItem key={room.id} value={room.id}>
-                      Room {room.number} - {room.type} (RWF {room.price.toLocaleString()}/night)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="checkIn">Check-in *</Label>
@@ -451,7 +424,13 @@ export default function ManagerGuestsPage() {
                   id="checkIn"
                   type="date"
                   value={assignmentData.checkIn}
-                  onChange={(e) => setAssignmentData(prev => ({ ...prev, checkIn: e.target.value }))}
+                  onChange={(e) => {
+                    setAssignmentData(prev => ({ ...prev, checkIn: e.target.value, roomId: "" }));
+                    if (e.target.value && assignmentData.checkOut) {
+                      setTimeout(fetchRooms, 100);
+                    }
+                  }}
+                  min={new Date().toISOString().split('T')[0]}
                 />
               </div>
               <div>
@@ -460,9 +439,48 @@ export default function ManagerGuestsPage() {
                   id="checkOut"
                   type="date"
                   value={assignmentData.checkOut}
-                  onChange={(e) => setAssignmentData(prev => ({ ...prev, checkOut: e.target.value }))}
+                  onChange={(e) => {
+                    setAssignmentData(prev => ({ ...prev, checkOut: e.target.value, roomId: "" }));
+                    if (assignmentData.checkIn && e.target.value) {
+                      setTimeout(fetchRooms, 100);
+                    }
+                  }}
+                  min={assignmentData.checkIn || new Date().toISOString().split('T')[0]}
                 />
               </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="room">Available Rooms *</Label>
+              <Select 
+                value={assignmentData.roomId} 
+                onValueChange={(value) => setAssignmentData(prev => ({ ...prev, roomId: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select available room" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rooms.length === 0 ? (
+                    <SelectItem value="no-rooms" disabled>
+                      {assignmentData.checkIn && assignmentData.checkOut 
+                        ? "No rooms available for selected dates" 
+                        : "Please select dates first"
+                      }
+                    </SelectItem>
+                  ) : (
+                    rooms.map((room) => (
+                      <SelectItem key={room.id} value={room.id}>
+                        Room {room.number} - {room.type} - Floor {room.floor} (RWF {room.price.toLocaleString()}/night)
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {assignmentData.checkIn && assignmentData.checkOut && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {rooms.length} available rooms for {assignmentData.checkIn} to {assignmentData.checkOut}
+                </p>
+              )}
             </div>
             
             <div className="flex gap-3 pt-4">
@@ -475,7 +493,7 @@ export default function ManagerGuestsPage() {
               </Button>
               <Button
                 onClick={handleAssignRoom}
-                disabled={isAssigning}
+                disabled={isAssigning || !assignmentData.roomId}
                 className="flex-1"
               >
                 {isAssigning ? "Assigning..." : "Assign Room"}
