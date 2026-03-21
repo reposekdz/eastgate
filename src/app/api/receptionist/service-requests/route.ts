@@ -1,82 +1,124 @@
-import { NextRequest } from "next/server";
-import { successResponse, errorResponse } from "@/lib/validators";
-import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
-interface ServiceRequest {
-  id: string;
-  guest: string;
-  room: string;
-  type: string;
-  typeRw: string;
-  priority: "low" | "medium" | "high" | "urgent";
-  status: "pending" | "in_progress" | "completed";
-  time: string;
-  branchId?: string;
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const branchId = searchParams.get("branchId");
+  const status = searchParams.get("status");
+  const priority = searchParams.get("priority");
+
+  try {
+    const where: any = {};
+    if (branchId) where.branchId = branchId;
+    if (status && status !== "all") where.status = status;
+    if (priority && priority !== "all") where.priority = priority;
+
+    const serviceRequests = await prisma.serviceRequest.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const formattedRequests = serviceRequests.map((sr: any) => ({
+      id: sr.id,
+      guest: sr.guestName,
+      room: sr.roomNumber,
+      type: sr.type,
+      typeRw: getTypeRw(sr.type),
+      priority: sr.priority,
+      status: sr.status,
+      time: sr.createdAt.toISOString(),
+      branchId: sr.branchId,
+    }));
+
+    return NextResponse.json({
+      success: true,
+      serviceRequests: formattedRequests,
+      total: formattedRequests.length,
+      summary: {
+        pending: formattedRequests.filter((sr: any) => sr.status === "pending").length,
+        inProgress: formattedRequests.filter((sr: any) => sr.status === "in_progress").length,
+        completed: formattedRequests.filter((sr: any) => sr.status === "completed").length,
+        urgent: formattedRequests.filter((sr: any) => sr.priority === "urgent").length,
+      },
+    });
+  } catch (error) {
+    console.error("Service requests fetch error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch service requests" },
+      { status: 500 }
+    );
+  }
 }
 
-export async function GET(req: NextRequest) {
+function getTypeRw(type: string): string {
+  const translations: Record<string, string> = {
+    "Extra Pillows": "Umusego Wongeyeho",
+    "Room Cleaning": "Gusukura Icyumba",
+    "Airport Transfer": "Guhura ku Kibuga",
+    "WiFi Issue": "Ikibazo cya WiFi",
+    "Late Check-out": "Gusohoka Buhoro",
+    "Towels": "Amaservieti",
+    "Maintenance": "Gusana",
+    "Room Service": "Serivisi y'Icyumba",
+  };
+  return translations[type] || type;
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const authCookie = cookieStore.get("eastgate-auth");
-    
-    if (!authCookie) {
-      return errorResponse("Unauthorized", [], 401);
-    }
+    const body = await request.json();
+    const { roomNumber, guestName, guestId, type, request: requestText, priority, branchId } = body;
 
-    const { searchParams } = new URL(req.url);
-    const branchId = searchParams.get("branchId");
-
-    // Mock service request data - replace with real database queries
-    const serviceRequests: ServiceRequest[] = [
-      {
-        id: "sr-1",
-        guest: "Sarah Wilson",
-        room: "201",
-        type: "Extra towels requested",
-        typeRw: "Amapeshyi y'inyongera yasabwe",
-        priority: "medium",
+    const newServiceRequest = await prisma.serviceRequest.create({
+      data: {
+        roomNumber,
+        guestName,
+        guestId,
+        type,
+        request: requestText,
+        priority: priority || "medium",
         status: "pending",
-        time: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-        branchId
+        branchId,
       },
-      {
-        id: "sr-2",
-        guest: "David Brown",
-        room: "105",
-        type: "Air conditioning not working",
-        typeRw: "Ikirere gikora nabi",
-        priority: "high",
-        status: "in_progress",
-        time: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-        branchId
-      },
-      {
-        id: "sr-3",
-        guest: "Lisa Chen",
-        room: "308",
-        type: "Room service - dinner",
-        typeRw: "Serivisi y'icyumba - ifunguro rya nimugoroba",
-        priority: "low",
-        status: "completed",
-        time: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-        branchId
-      },
-      {
-        id: "sr-4",
-        guest: "Robert Taylor",
-        room: "150",
-        type: "Bathroom leak urgent repair",
-        typeRw: "Gusana kwa salle de bain gukeneye gusanwa byihutirwa",
-        priority: "urgent",
-        status: "pending",
-        time: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        branchId
-      }
-    ];
+    });
 
-    return successResponse({ serviceRequests });
-  } catch (error: any) {
-    console.error("Service requests fetch error:", error);
-    return errorResponse("Failed to fetch service requests", [], 500);
+    return NextResponse.json({
+      success: true,
+      serviceRequest: newServiceRequest,
+    });
+  } catch (error) {
+    console.error("Service request creation error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to create service request" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, status, assignedTo, priority } = body;
+
+    const updatedServiceRequest = await prisma.serviceRequest.update({
+      where: { id },
+      data: {
+        ...(status && { status }),
+        ...(assignedTo && { assignedTo }),
+        ...(priority && { priority }),
+        ...(status === "completed" && { completedAt: new Date() }),
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      serviceRequest: updatedServiceRequest,
+    });
+  } catch (error) {
+    console.error("Service request update error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to update service request" },
+      { status: 500 }
+    );
   }
 }

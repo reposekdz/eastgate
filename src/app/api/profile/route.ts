@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { verifyToken } from "@/lib/jwt";
+import { prisma } from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth-advanced";
 import bcrypt from "bcryptjs";
 
 export async function GET(req: NextRequest) {
@@ -10,12 +10,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+    const decoded = verifyToken(token, "access");
     if (!decoded) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const staff = await db.staff.findUnique({
+    const staff = await prisma.staff.findUnique({
       where: { id: decoded.userId },
       include: { branch: true },
     });
@@ -49,7 +49,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
+    const decoded = verifyToken(token, "access");
     if (!decoded) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
@@ -57,7 +57,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const { name, email, phone, currentPassword, newPassword } = body;
 
-    const staff = await db.staff.findUnique({
+    const staff = await prisma.staff.findUnique({
       where: { id: decoded.userId },
     });
 
@@ -79,7 +79,7 @@ export async function PUT(req: NextRequest) {
 
     // Check if email is already taken by another user
     if (email && email !== staff.email) {
-      const existing = await db.staff.findUnique({ where: { email } });
+      const existing = await prisma.staff.findUnique({ where: { email } });
       if (existing) {
         return NextResponse.json({ error: "Email already in use" }, { status: 400 });
       }
@@ -94,14 +94,14 @@ export async function PUT(req: NextRequest) {
       updateData.password = await bcrypt.hash(newPassword, 10);
     }
 
-    const updated = await db.staff.update({
+    const updated = await prisma.staff.update({
       where: { id: decoded.userId },
       data: updateData,
       include: { branch: true },
     });
 
     // Log activity
-    await db.activityLog.create({
+    await prisma.activityLog.create({
       data: {
         userId: decoded.userId,
         action: "UPDATE",
